@@ -1,7 +1,7 @@
 // ============================================================
 // service-worker.js — PWA Cache Strategy
 // ============================================================
-const CACHE_NAME = 'absensi-v1.0';
+const CACHE_NAME = 'absensi-v3.0';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
