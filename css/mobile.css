@@ -1,0 +1,82 @@
+/* ============================================================
+   mobile.css — Responsive overrides & mobile polish
+   ============================================================ */
+
+/* ─── Fix untuk iOS Safari notch / bottom bar ─────────────── */
+.page-content {
+  padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 16px);
+}
+.bottom-nav {
+  padding-bottom: env(safe-area-inset-bottom);
+  height: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom));
+}
+
+/* ─── Stat grid mobile 2 kolom jika layar kecil ───────────── */
+@media (max-width: 360px) {
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ─── Admin sidebar mobile: overlay saat collapsible ─────── */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 300;
+    width: 260px !important;
+  }
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 0 0 40px rgba(0,0,0,0.3);
+  }
+  .admin-main {
+    margin-left: 0 !important;
+  }
+  .sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 299;
+  }
+  .sidebar-backdrop.show { display: block; }
+
+  .admin-content { padding: 16px; }
+  .stat-grid-admin { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ─── Tabel responsif di mobile ────────────────────────────── */
+@media (max-width: 600px) {
+  .simple-table { font-size: 12px; }
+  .simple-table th, .simple-table td { padding: 8px 6px; }
+}
+
+/* ─── Form grid 1 kolom di mobile ──────────────────────────── */
+@media (max-width: 480px) {
+  [style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ─── Card padding lebih kecil di HP kecil ─────────────────── */
+@media (max-width: 380px) {
+  .card { padding: 12px; }
+  .login-card { padding: 24px 16px; }
+}
+
+/* ─── Tombol absen lebih besar di touchscreen ───────────────── */
+@media (max-width: 480px) {
+  .absen-btn { min-height: 100px; }
+  .absen-btn__icon { font-size: 36px; }
+}
+
+/* ─── Modal bottom sheet di mobile ─────────────────────────── */
+@media (max-width: 520px) {
+  #modal-pengajuan > div,
+  #modal-lembur > div,
+  #modal-ttd > div {
+    border-radius: 20px 20px 0 0;
+    margin-bottom: 0;
+    max-height: 92vh;
+  }
+}
