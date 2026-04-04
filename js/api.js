@@ -4,8 +4,8 @@
 
 const CONFIG = {
   // ⚠️ GANTI dengan URL deployment GAS Anda
-  GAS_URL    : 'https://script.google.com/macros/s/GANTI_DENGAN_DEPLOYMENT_ID/exec',
-  APP_VERSION: '1.0.0'
+  GAS_URL    : 'https://script.google.com/macros/s/AKfycbxAxBW-phRZqd_emCupGJKegyyDdUcXArGLAmf_LKg4HOVNrE-7D7hR9Z-BH_sJdxGKuA/exec',
+  APP_VERSION: '3.0.0'
 };
 
 async function callAPI(action, payload = {}) {
