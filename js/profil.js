@@ -121,7 +121,7 @@ async function loadHalamanProfil() {
 
       <!-- LOGOUT -->
       <button class="btn btn--danger btn--full" style="margin-bottom:20px"
-        onclick="confirmLogout()">
+        onclick="doLogoutFromProfil()">
         🚪 Logout
       </button>`;
 
@@ -268,7 +268,7 @@ async function installPWA() {
 }
 
 // ─── Logout ───────────────────────────────────────────────────
-function confirmLogout() {
+function doLogoutFromProfil() {
   showModal('🚪 Logout',
     'Anda akan keluar dari aplikasi. Sesi akan berakhir.',
     () => doLogout(),
