@@ -4,7 +4,7 @@
 
 const CONFIG = {
   // ⚠️ GANTI dengan URL deployment GAS Anda
-  GAS_URL    : 'https://script.google.com/macros/s/GANTI_DENGAN_DEPLOYMENT_ID/exec',
+  GAS_URL    : 'https://script.google.com/macros/s/AKfycbwnfe1WdDvRYGa2xZ8iOlNsEnl1xvunMk6ePtiY2gi7BA1vBDSMFMInqpM9BBddn4qWCg/exec',
   APP_VERSION: '1.0.0'
 };
 
