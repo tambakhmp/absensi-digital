@@ -274,18 +274,9 @@ async function loadDashboardAdmin() {
   }
 }
 
-// Alias untuk kompatibilitas admin_pages.js
-const loadDashboardAdminV3 = loadDashboardAdmin;
+// loadDashboardAdminV3 didefinisikan di admin_pages.js
 
-function _sc(icon, label, value, color) {
-  return `<div class="stat-card-admin">
-    <div class="stat-card-admin__icon" style="background:${color}22;color:${color}">${icon}</div>
-    <div>
-      <div class="stat-card-admin__num">${value ?? 0}</div>
-      <div class="stat-card-admin__label">${label}</div>
-    </div>
-  </div>`;
-}
+// _sc didefinisikan di admin_pages.js
 
 function _renderUltahAdmin(ultah) {
   const el = document.getElementById('ultah-section');
