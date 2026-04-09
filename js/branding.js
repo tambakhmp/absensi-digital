@@ -5,7 +5,7 @@
 let _brandingLoaded = false;
 
 async function loadBranding(role = 'karyawan') {
-  if (_brandingLoaded) return;
+  // Selalu load ulang karena bg mungkin beda per role
   try {
     let s;
     const token = localStorage.getItem('session_token');
@@ -25,24 +25,55 @@ async function loadBranding(role = 'karyawan') {
 
     // Nama instansi
     const namaInstansi = s.nama_instansi || 'Sistem Absensi';
+    // Update semua elemen nama instansi
     document.querySelectorAll('.nama-instansi').forEach(el => el.textContent = namaInstansi);
-
-    // Update halaman login secara spesifik
+    const mobileNama = document.getElementById('mobile-nama-instansi');
+    if (mobileNama) mobileNama.textContent = namaInstansi;
     const loginNama = document.getElementById('login-nama-instansi');
     if (loginNama) loginNama.textContent = namaInstansi;
-
     const loginSub = document.getElementById('login-subtitle');
     if (loginSub && s.login_subtitle) loginSub.textContent = s.login_subtitle;
+    document.title = namaInstansi + ' — Absensi';
 
-    const loginLogoWrap = document.getElementById('login-logo-wrap');
-    if (loginLogoWrap) {
-      const logoUrl2 = typeof normalizeDriveUrlFrontend === 'function'
-        ? normalizeDriveUrlFrontend(s.logo_url || '') : (s.logo_url || '');
-      if (logoUrl2 && logoUrl2.startsWith('http')) {
-        loginLogoWrap.innerHTML = `<img src="${logoUrl2}" style="width:70px;height:70px;
-          object-fit:contain;border-radius:12px"
-          onerror="this.parentElement.innerHTML='📋'">`;
+    // Update logo di SEMUA tempat — tanpa background, hanya gambar saja
+    const logoUrl = typeof normalizeDriveUrlFrontend === 'function'
+      ? normalizeDriveUrlFrontend(s.logo_url || '') : (s.logo_url || '');
+
+    if (logoUrl && logoUrl.startsWith('http')) {
+      // Login page logo
+      const loginWrap = document.getElementById('login-logo-wrap');
+      if (loginWrap) {
+        loginWrap.innerHTML = `<img src="${logoUrl}"
+          style="max-width:88px;max-height:88px;object-fit:contain;border-radius:0;background:none"
+          onerror="this.style.display='none';document.getElementById('login-logo-placeholder').style.display='block'">`;
       }
+      // Mobile header logo
+      const mobileImg  = document.getElementById('mobile-logo-img');
+      const mobileIcon = document.getElementById('mobile-logo-icon');
+      if (mobileImg) {
+        mobileImg.src = logoUrl;
+        mobileImg.style.display = 'block';
+        mobileImg.onerror = () => { mobileImg.style.display='none'; if(mobileIcon) mobileIcon.style.display='block'; };
+        if (mobileIcon) mobileIcon.style.display = 'none';
+      }
+      // Admin topbar logo
+      const adminImg  = document.getElementById('admin-logo-img');
+      const adminIcon = document.getElementById('admin-logo-icon');
+      if (adminImg) {
+        adminImg.src = logoUrl;
+        adminImg.style.display = 'block';
+        adminImg.onerror = () => { adminImg.style.display='none'; if(adminIcon) adminIcon.style.display='block'; };
+        if (adminIcon) adminIcon.style.display = 'none';
+      }
+      // Sidebar logo
+      document.querySelectorAll('.logo-instansi').forEach(el => {
+        el.src = logoUrl;
+        el.style.display = 'block';
+        el.style.background = 'none';
+        el.style.objectFit = 'contain';
+        el.style.borderRadius = '0';
+        el.onerror = () => { el.style.display = 'none'; };
+      });
     }
     document.querySelectorAll('.singkatan-instansi').forEach(el => el.textContent = s.singkatan_instansi || '');
 
