@@ -77,17 +77,7 @@ async function loadBranding(role = 'karyawan') {
     }
     document.querySelectorAll('.singkatan-instansi').forEach(el => el.textContent = s.singkatan_instansi || '');
 
-    // Logo — normalisasi URL Drive agar bisa tampil sebagai <img>
-    const logoUrl = typeof normalizeDriveUrlFrontend === 'function'
-      ? normalizeDriveUrlFrontend(s.logo_url || '')
-      : (s.logo_url || '');
-    document.querySelectorAll('.logo-instansi').forEach(el => {
-      if (logoUrl && logoUrl.startsWith('http')) {
-        el.src = logoUrl;
-        el.style.display = 'block';
-        el.onerror = () => el.style.display = 'none';
-      }
-    });
+    // logo-instansi selector sudah dihandle di blok logo di atas
 
     // CSS Variables warna
     const primer = s.warna_primer || '#2D6CDF';
