@@ -494,25 +494,4 @@ function confirmLogout(){
 }
 
 // ─── Chart 6 Bulan ───────────────────────────────────────────
-function renderChart6Bulan(chartData){
-  const canvas=document.getElementById('chart-6bulan');
-  if(!canvas||typeof Chart==='undefined') return;
-  if(canvas._chart){try{canvas._chart.destroy();}catch(e){}}
-  canvas._chart=new Chart(canvas,{
-    type:'bar',
-    data:{
-      labels:chartData.map(d=>d.label),
-      datasets:[
-        {label:'Hadir',     data:chartData.map(d=>d.hadir),     backgroundColor:'#1A9E74'},
-        {label:'Terlambat', data:chartData.map(d=>d.terlambat), backgroundColor:'#D97706'},
-        {label:'Alfa',      data:chartData.map(d=>d.alfa),      backgroundColor:'#E53E3E'},
-        {label:'Izin',      data:chartData.map(d=>d.izin),      backgroundColor:'#2D6CDF'},
-        {label:'Sakit',     data:chartData.map(d=>d.sakit),     backgroundColor:'#6B7280'},
-        {label:'Dinas Luar',data:chartData.map(d=>d.dinas_luar),backgroundColor:'#EA580C'}
-      ]
-    },
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{position:'bottom',labels:{font:{size:11}}}},
-      scales:{x:{grid:{display:false}},y:{beginAtZero:true,ticks:{stepSize:1}}}}
-  });
-}
+// renderChart6Bulan ada di dashboard.js
