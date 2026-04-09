@@ -4,7 +4,7 @@
 
 const CONFIG = {
   // ⚠️ GANTI dengan URL deployment GAS Anda
-  GAS_URL    : 'https://script.google.com/macros/s/AKfycbzKtOZCHnJ-gSYaOrXAZkuY7_OwXMZkaXkGCc-V-ZL2RLmN_rHBemU7gOB4JXmlv_nr/exec',
+  GAS_URL    : 'https://script.google.com/macros/s/AKfycbylcMYWQPdor-46pRanVfhrpmNka1FFZVX8RzfdHlP5cBbgzicdDywCr3eh4vU9J-GWzg/exec',
   APP_VERSION: '5.0.0'
 };
 
