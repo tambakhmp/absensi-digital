@@ -271,7 +271,15 @@ async function exportRekapExcel(bulan, tahun) {
   try {
     if (typeof XLSX === 'undefined') throw new Error('Library SheetJS belum dimuat');
 
-    const data = await callAPI('getRekapSemua', { bulan, tahun });
+    const rekapPayload = {};
+    if (tanggalDari && tanggalKe) {
+      rekapPayload.tanggal_dari = tanggalDari;
+      rekapPayload.tanggal_ke   = tanggalKe;
+    } else {
+      rekapPayload.bulan = bulan;
+      rekapPayload.tahun = tahun;
+    }
+    const data = await callAPI('getRekapSemua', rekapPayload);
     if (!data) throw new Error('Data tidak tersedia');
 
     const BULAN  = ['Januari','Februari','Maret','April','Mei','Juni',
@@ -370,6 +378,10 @@ async function exportRekapExcel(bulan, tahun) {
     });
 
     const namaFile = 'Rekap_Semua_Karyawan_' + label.replace(' ','_') + '.xlsx';
+    // Sheet rekap harian dengan kode per tanggal
+    if (wsHarian) {
+      XLSX.utils.book_append_sheet(wb, wsHarian, 'Rekap Harian');
+    }
     XLSX.writeFile(wb, namaFile);
     showToast('Excel berhasil diunduh! 📊', 'success');
 
@@ -624,13 +636,21 @@ async function cetakSuratSP(idSP) {
 // ─────────────────────────────────────────────────────────────
 // REKAP LEMBUR BULANAN — PDF + EXCEL
 // ─────────────────────────────────────────────────────────────
-async function cetakRekapLemburPDF(bulan, tahun) {
+async function cetakRekapLemburPDF(bulan, tahun, tanggalDari, tanggalKe) {
   showToast('Membuat rekap lembur...', 'info', 2000);
   const ok1 = await _ensureJsPDF();
   if (!ok1 || !window.jspdf?.jsPDF) { showToast('Library PDF tidak tersedia. Muat ulang halaman.','error',6000); return; }
 
   try {
-    const data = await callAPI('getRekapLembur', { bulan, tahun });
+    const lemburPayload = {};
+    if (tanggalDari && tanggalKe) {
+      lemburPayload.tanggal_dari = tanggalDari;
+      lemburPayload.tanggal_ke   = tanggalKe;
+    } else {
+      lemburPayload.bulan = bulan;
+      lemburPayload.tahun = tahun;
+    }
+    const data = await callAPI('getRekapLembur', lemburPayload);
     if (!data) throw new Error('Data tidak tersedia');
 
     const { jsPDF } = window.jspdf;
@@ -724,7 +744,7 @@ async function cetakRekapLemburPDF(bulan, tahun) {
   }
 }
 
-async function exportRekapLemburExcel(bulan, tahun) {
+async function exportRekapLemburExcel(bulan, tahun, tanggalDari, tanggalKe) {
   const ok3 = await _ensureXLSX();
   if (!ok3 || typeof XLSX === 'undefined') {
     showToast('Library Excel tidak tersedia, export CSV...', 'warning', 3000);
@@ -733,7 +753,15 @@ async function exportRekapLemburExcel(bulan, tahun) {
   }
   try {
     if (typeof XLSX === 'undefined') throw new Error('SheetJS belum dimuat');
-    const data = await callAPI('getRekapLembur', { bulan, tahun });
+    const lemburPayload = {};
+    if (tanggalDari && tanggalKe) {
+      lemburPayload.tanggal_dari = tanggalDari;
+      lemburPayload.tanggal_ke   = tanggalKe;
+    } else {
+      lemburPayload.bulan = bulan;
+      lemburPayload.tahun = tahun;
+    }
+    const data = await callAPI('getRekapLembur', lemburPayload);
     const BULAN = ['Januari','Februari','Maret','April','Mei','Juni',
                    'Juli','Agustus','September','Oktober','November','Desember'];
     const label = BULAN[parseInt(bulan)-1] + ' ' + tahun;
@@ -882,7 +910,15 @@ function _nowTanggal() {
 // ─── FALLBACK: Export CSV jika XLSX gagal ───────────────────
 async function _exportFallbackCSV(bulan, tahun) {
   try {
-    const data = await callAPI('getRekapSemua', { bulan, tahun });
+    const rekapPayload = {};
+    if (tanggalDari && tanggalKe) {
+      rekapPayload.tanggal_dari = tanggalDari;
+      rekapPayload.tanggal_ke   = tanggalKe;
+    } else {
+      rekapPayload.bulan = bulan;
+      rekapPayload.tahun = tahun;
+    }
+    const data = await callAPI('getRekapSemua', rekapPayload);
     if (!data || data.length === 0) { showToast('Tidak ada data', 'warning'); return; }
     const BULAN = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
     const label = BULAN[parseInt(bulan)-1] + '_' + tahun;
@@ -905,7 +941,15 @@ async function _exportFallbackCSV(bulan, tahun) {
 
 async function _exportFallbackCSVLembur(bulan, tahun) {
   try {
-    const data = await callAPI('getRekapLembur', { bulan, tahun });
+    const lemburPayload = {};
+    if (tanggalDari && tanggalKe) {
+      lemburPayload.tanggal_dari = tanggalDari;
+      lemburPayload.tanggal_ke   = tanggalKe;
+    } else {
+      lemburPayload.bulan = bulan;
+      lemburPayload.tahun = tahun;
+    }
+    const data = await callAPI('getRekapLembur', lemburPayload);
     if (!data || !data.lembur || data.lembur.length === 0) { showToast('Tidak ada data lembur', 'warning'); return; }
     const BULAN = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
     const label = BULAN[parseInt(bulan)-1] + '_' + tahun;
@@ -922,4 +966,49 @@ async function _exportFallbackCSVLembur(bulan, tahun) {
     URL.revokeObjectURL(url);
     showToast('File CSV Lembur berhasil didownload ✅', 'success');
   } catch(e) { showToast('Gagal: ' + e.message, 'error'); }
+}
+
+// ─── Helper: Buat worksheet rekap harian ─────────────────────
+function _buatWorksheetHarian(data, absensiHarian, instansiInfo, label) {
+  if (!data || !data.length || !XLSX) return null;
+  const tanggalSet = new Set();
+  (absensiHarian||[]).forEach(a=>{ if(a.tanggal) tanggalSet.add(a.tanggal); });
+  const tanggals = Array.from(tanggalSet).sort();
+  const KODE = {hadir:'H',terlambat:'T',alfa:'A',izin:'I',sakit:'S',cuti:'C',dinas_luar:'DL',libur:'L'};
+  const namaInst = instansiInfo?.nama_instansi || 'INSTANSI';
+  const rows = [
+    [namaInst],
+    [instansiInfo?.alamat_instansi||''],
+    ['REKAP ABSENSI - ' + label.toUpperCase()],
+    [],
+    ['No','NIK','Nama','Jabatan','Dept',
+      ...tanggals.map(t=>{const p=t.split('/');return p[0]+'/'+p[1];}),
+      'Hadir','Telat','Alfa','Izin','Sakit','Cuti','DL','Skor']
+  ];
+  data.forEach((k,i)=>{
+    const row=[i+1,k.nik||'',k.nama_lengkap||'',k.jabatan||'',k.departemen||''];
+    let h=0,t2=0,a=0,iz=0,s=0,c2=0,dl=0;
+    tanggals.forEach(tgl=>{
+      const ab=(absensiHarian||[]).find(x=>String(x.id_karyawan)===String(k.id_karyawan)&&x.tanggal===tgl);
+      const kode=ab?(KODE[ab.status]||ab.status.substring(0,2).toUpperCase()):'L';
+      row.push(kode);
+      if(kode==='H')h++; else if(kode==='T'){h++;t2++;} else if(kode==='A')a++;
+      else if(kode==='I')iz++; else if(kode==='S')s++; else if(kode==='C')c2++;
+      else if(kode==='DL')dl++;
+    });
+    const skor=(h*100)+(t2*60)+(iz*80)+(s*90)+(c2*85)+(dl*95)-(a*150);
+    row.push(h,t2,a,iz,s,c2,dl,skor);
+    rows.push(row);
+  });
+  rows.push([]);
+  rows.push(['H=Hadir T=Terlambat A=Alfa I=Izin S=Sakit C=Cuti DL=Dinas Luar L=Libur']);
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:4},{wch:14},{wch:22},{wch:18},{wch:14},...tanggals.map(()=>({wch:5})),
+    {wch:7},{wch:7},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6},{wch:8}];
+  ws['!merges']=[
+    {s:{r:0,c:0},e:{r:0,c:4+tanggals.length+7}},
+    {s:{r:1,c:0},e:{r:1,c:4+tanggals.length+7}},
+    {s:{r:2,c:0},e:{r:2,c:4+tanggals.length+7}},
+  ];
+  return ws;
 }
