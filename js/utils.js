@@ -263,202 +263,41 @@ function fromInputDate(yyyymmdd) {
 }
 
 // ─── Fungsi tambahan v5 ───────────────────────────────────────
-function fromInputDate(str) {
-  // Konversi format input date (yyyy-MM-dd) ke dd/MM/yyyy
-  if (!str) return '';
-  if (str.includes('/')) return str; // sudah format dd/MM/yyyy
-  const p = str.split('-');
-  if (p.length === 3) return p[2]+'/'+p[1]+'/'+p[0];
-  return str;
-}
+// [DUPLIKAT DIHAPUS: fromInputDate]
 
-function bulanNama(b) {
-  return ['Januari','Februari','Maret','April','Mei','Juni',
-    'Juli','Agustus','September','Oktober','November','Desember'][parseInt(b)-1]||'';
-}
+// [DUPLIKAT DIHAPUS: bulanNama]
 
-function greetingWaktu() {
-  const h = new Date().getHours();
-  if (h < 11) return 'Selamat Pagi 🌅';
-  if (h < 15) return 'Selamat Siang ☀️';
-  if (h < 18) return 'Selamat Sore 🌇';
-  return 'Selamat Malam 🌙';
-}
+// [DUPLIKAT DIHAPUS: greetingWaktu]
 
-function tanggalHariIni() {
-  const now = new Date();
-  const hari = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'][now.getDay()];
-  const tgl  = now.getDate();
-  const bln  = bulanNama(now.getMonth()+1);
-  const thn  = now.getFullYear();
-  return `${hari}, ${tgl} ${bln} ${thn}`;
-}
+// [DUPLIKAT DIHAPUS: tanggalHariIni]
 
-function formatTanggal(str) {
-  if (!str) return '-';
-  str = String(str);
-  if (str.includes('/')) {
-    const p = str.split('/');
-    if (p.length >= 3) return p[0]+' '+bulanNama(p[1])+' '+p[2];
-  }
-  return str;
-}
+// [DUPLIKAT DIHAPUS: formatTanggal]
 
-function formatRupiah(n) {
-  if (!n && n !== 0) return 'Rp 0';
-  return 'Rp ' + parseInt(n).toLocaleString('id-ID');
-}
+// [DUPLIKAT DIHAPUS: formatRupiah]
 
-function badgeStatus(status) {
-  const map = {
-    hadir     : ['#EBF8EE','#1A9E74','Hadir'],
-    terlambat : ['#FFFAF0','#D97706','Terlambat'],
-    alfa      : ['#FFF5F5','#E53E3E','Alfa'],
-    izin      : ['#EFF6FF','#2D6CDF','Izin'],
-    sakit     : ['#F5F3FF','#6B7280','Sakit'],
-    cuti      : ['#F3E8FF','#6C63FF','Cuti'],
-    dinas_luar: ['#FFF3E0','#EA580C','Dinas Luar'],
-    pending   : ['#FFF8F0','#D97706','Pending'],
-    disetujui : ['#EBF8EE','#1A9E74','Disetujui'],
-    ditolak   : ['#FFF5F5','#E53E3E','Ditolak'],
-    belum_dibayar:['#FFF8F0','#D97706','Belum Bayar'],
-    aktif     : ['#EBF8EE','#1A9E74','Aktif'],
-    kadaluarsa: ['#F1F5F9','#94A3B8','Kadaluarsa'],
-    SP1       : ['#FFFAF0','#D97706','SP1'],
-    SP2       : ['#FFF3E0','#C05621','SP2'],
-    SP3       : ['#FFF5F5','#C53030','SP3']
-  };
-  const [bg,color,label] = map[status] || ['#F1F5F9','#64748B', status||'-'];
-  return `<span style="background:${bg};color:${color};border:1px solid ${color}33;
-    padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap">
-    ${label}</span>`;
-}
+// [DUPLIKAT DIHAPUS: badgeStatus]
 
-function skeletonCard(n=1) {
-  return Array(n).fill(0).map(()=>`
-    <div style="background:#fff;border-radius:12px;padding:16px;margin-bottom:10px;border:1px solid #E2E8F0">
-      <div style="height:14px;background:#F1F5F9;border-radius:6px;width:60%;margin-bottom:10px"></div>
-      <div style="height:11px;background:#F8FAFC;border-radius:6px;width:85%;margin-bottom:6px"></div>
-      <div style="height:11px;background:#F8FAFC;border-radius:6px;width:70%"></div>
-    </div>`).join('');
-}
+// [DUPLIKAT DIHAPUS: skeletonCard]
 
-function showLoading(containerId, msg='Memuat...') {
-  const el = document.getElementById(containerId);
-  if (el) el.innerHTML = `<div style="text-align:center;padding:40px;color:#94A3B8">
-    <div style="width:36px;height:36px;border:3px solid #E2E8F0;border-top-color:#2D6CDF;
-      border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px"></div>
-    <div style="font-size:13px">${msg}</div></div>`;
-}
+// [DUPLIKAT DIHAPUS: showLoading]
 
-function showEmpty(containerId, msg='Tidak ada data') {
-  const el = document.getElementById(containerId);
-  if (el) el.innerHTML = `<div style="text-align:center;padding:40px;color:#94A3B8">
-    <div style="font-size:36px;margin-bottom:8px">📭</div>
-    <div style="font-size:13px">${msg}</div></div>`;
-}
+// [DUPLIKAT DIHAPUS: showEmpty]
 
-function showError(containerId, msg) {
-  const el = document.getElementById(containerId);
-  if (el) el.innerHTML = `<div style="background:#FFF5F5;border:1px solid #FC8181;
-    border-radius:10px;padding:16px;color:#C53030;font-size:13px;text-align:center">
-    ⚠️ ${msg}</div>`;
-}
+// [DUPLIKAT DIHAPUS: showError]
 
-function showToast(msg, type='success', duration=4000) {
-  const colors = { success:'#1A9E74', error:'#E53E3E', warning:'#D97706', info:'#2D6CDF' };
-  const old = document.getElementById('toast-msg');
-  if (old) old.remove();
-  const t = document.createElement('div');
-  t.id = 'toast-msg';
-  t.style.cssText = `position:fixed;top:20px;left:50%;transform:translateX(-50%);
-    background:${colors[type]||colors.success};color:#fff;padding:12px 22px;
-    border-radius:30px;font-size:13px;font-weight:600;z-index:99999;
-    box-shadow:0 4px 20px rgba(0,0,0,.18);max-width:88vw;text-align:center;
-    animation:fadeInScale .2s ease;word-break:break-word`;
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(() => t?.remove(), duration);
-}
+// [DUPLIKAT DIHAPUS: showToast]
 
-function showModal(title, body, onConfirm, confirmLabel='OK') {
-  document.getElementById('modal-overlay')?.remove();
-  const m = document.createElement('div');
-  m.id = 'modal-overlay';
-  m.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9100;
-    display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px)`;
-  m.innerHTML = `
-    <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:440px;
-      max-height:90vh;overflow-y:auto;animation:fadeInScale .2s ease">
-      <h3 style="margin:0 0 12px;font-size:17px;font-weight:700">${title}</h3>
-      <div style="font-size:14px;color:#475569;line-height:1.6;margin-bottom:20px">${body||''}</div>
-      <div style="display:flex;gap:10px">
-        <button onclick="document.getElementById('modal-overlay').remove()"
-          class="btn btn--ghost" style="flex:1">Batal</button>
-        ${onConfirm ? `<button id="btn-modal-confirm" class="btn btn--primary" style="flex:2">
-          <div class="spinner-btn"></div><span class="btn-text">${confirmLabel}</span>
-        </button>` : ''}
-      </div>
-    </div>`;
-  document.body.appendChild(m);
-  if (onConfirm) {
-    const btn = document.getElementById('btn-modal-confirm');
-    btn.onclick = async () => {
-      btn.disabled = true; btn.classList.add('loading');
-      try { await onConfirm(); document.getElementById('modal-overlay')?.remove(); }
-      catch(e) { showToast(e.message,'error'); btn.disabled=false; btn.classList.remove('loading'); }
-    };
-  }
-}
+// [DUPLIKAT DIHAPUS: showModal]
 
-function showConfetti() {
-  for (let i=0; i<40; i++) {
-    const c = document.createElement('div');
-    c.style.cssText = `position:fixed;top:-20px;left:${Math.random()*100}vw;
-      width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;
-      background:${['#2D6CDF','#1A9E74','#D97706','#E53E3E','#6C63FF'][Math.floor(Math.random()*5)]};
-      border-radius:${Math.random()>0.5?'50%':'0'};pointer-events:none;z-index:99998;
-      animation:confettiFall ${2+Math.random()*2}s ease ${Math.random()*2}s forwards`;
-    document.body.appendChild(c);
-    setTimeout(()=>c.remove(), 5000);
-  }
-}
+// [DUPLIKAT DIHAPUS: showConfetti]
 
-function cekUlangTahunSaya(tanggalLahir, nama) {
-  if (!tanggalLahir) return null;
-  const now  = new Date();
-  const p    = String(tanggalLahir).split('/');
-  if (p.length < 2) return null;
-  if (parseInt(p[0])===now.getDate() && parseInt(p[1])-1===now.getMonth()) {
-    const umur = p[2] ? now.getFullYear()-parseInt(p[2]) : 0;
-    return `🎂 Selamat Ulang Tahun ke-${umur}, ${nama}! Semoga sehat & sukses selalu! 🎉`;
-  }
-  return null;
-}
+// [DUPLIKAT DIHAPUS: cekUlangTahunSaya]
 
-function getPhotoSrc(url, nama, size=48) {
-  if (url && url !== '' && url !== 'null') {
-    if (url.startsWith('data:') || url.startsWith('http')) return url;
-  }
-  return avatarInisial(nama||'U', size);
-}
+// [DUPLIKAT DIHAPUS: getPhotoSrc]
 
-function avatarInisial(nama, size=48) {
-  const colors = ['#2D6CDF','#1A9E74','#D97706','#6C63FF','#0891B2','#EA580C'];
-  const inisial = (nama||'U').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
-  const color   = colors[inisial.charCodeAt(0)%colors.length];
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
-    <rect width="${size}" height="${size}" rx="${size/2}" fill="${color}"/>
-    <text x="${size/2}" y="${size/2+4}" text-anchor="middle" font-size="${size*0.38}"
-      font-family="sans-serif" fill="white" font-weight="700">${inisial}</text></svg>`;
-  return 'data:image/svg+xml;base64,' + btoa(svg);
-}
+// [DUPLIKAT DIHAPUS: avatarInisial]
 
-function hitungJarak(lat1, lon1, lat2, lon2) {
-  const R = 6371000, dLat=(lat2-lat1)*Math.PI/180, dLon=(lon2-lon1)*Math.PI/180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
+// [DUPLIKAT DIHAPUS: hitungJarak]
 
 function settingInput(id, label, map, type='text') {
   return `<div class="form-group" style="margin-bottom:0">
