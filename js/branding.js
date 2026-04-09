@@ -126,6 +126,4 @@ async function _loadBrandingPublic() {
   }
 }
 
-function resetBrandingCache() {
-  _brandingLoaded = false;
-}
+// [DUPLIKAT DIHAPUS: resetBrandingCache]
