@@ -36,8 +36,10 @@ function renderLoginPage() {
       <div class="login-card">
         <div class="login-logo">
           <div id="login-logo-wrap"
-            style="width:80px;height:80px;border-radius:18px;background:linear-gradient(135deg,#2D6CDF,#1A9E74);
-            margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:36px">📋</div>
+            style="width:88px;height:88px;margin:0 auto 14px;
+            display:flex;align-items:center;justify-content:center">
+            <span id="login-logo-placeholder" style="font-size:52px">📋</span>
+          </div>
           <h1 class="nama-instansi" id="login-nama-instansi">Sistem Absensi</h1>
           <p class="login-subtitle" id="login-subtitle">Masuk dengan akun karyawan Anda</p>
         </div>
@@ -106,13 +108,19 @@ function renderKaryawanLayout() {
   document.getElementById('app').innerHTML = `
     <div id="app-bg"></div><div id="app-overlay"></div>
     <header class="mobile-header">
-      <div class="mobile-header__left">
-        <img class="logo-instansi mobile-header__logo"
-          src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="">
-        <span class="mobile-header__title nama-instansi">Absensi</span>
+      <div class="mobile-header__left" style="display:flex;align-items:center;gap:8px">
+        <div id="mobile-logo-wrap" style="width:32px;height:32px;flex-shrink:0;display:flex;align-items:center">
+          <img class="logo-instansi" id="mobile-logo-img"
+            src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
+            alt="" style="width:32px;height:32px;object-fit:contain;border-radius:6px;display:none">
+          <span id="mobile-logo-icon" style="font-size:22px">📋</span>
+        </div>
+        <span class="mobile-header__title nama-instansi" id="mobile-nama-instansi"
+          style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;
+          text-overflow:ellipsis;max-width:200px">Absensi</span>
       </div>
       <div class="mobile-header__right">
-        <button class="icon-btn" onclick="switchTab('pengajuan')" title="Pengumuman">🔔</button>
+        <button class="icon-btn" onclick="switchTab('pengajuan')" title="Notifikasi">🔔</button>
       </div>
     </header>
     <main id="main-content" style="min-height:calc(100vh - 56px - 64px);overflow-y:auto"></main>
@@ -129,6 +137,9 @@ function renderKaryawanLayout() {
         <span class="nav-icon">👤</span><span>Profil</span></button>
     </nav>`;
   switchTab('dashboard');
+  // Reload branding untuk update logo di mobile header
+  const sess2 = getSession();
+  if (sess2) loadBranding(sess2.role || 'karyawan');
 }
 
 function switchTab(tab) {
@@ -402,7 +413,14 @@ function renderAdminLayout() {
             <button onclick="toggleSidebar()"
               style="background:#F1F5F9;border:none;border-radius:8px;padding:8px 12px;
               cursor:pointer;font-size:16px">☰</button>
-            <h2 id="admin-title" style="font-size:16px;font-weight:700;margin:0;color:#1E293B;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Dashboard</h2>
+            <div id="admin-logo-wrap" style="width:28px;height:28px;flex-shrink:0;display:flex;align-items:center">
+              <img class="logo-instansi" id="admin-logo-img"
+                src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
+                style="width:28px;height:28px;object-fit:contain;border-radius:4px;display:none" alt="">
+              <span id="admin-logo-icon" style="font-size:18px">📋</span>
+            </div>
+            <h2 id="admin-title" style="font-size:15px;font-weight:700;margin:0;color:#1E293B;
+              max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Dashboard</h2>
           </div>
           <div style="display:flex;align-items:center;gap:10px">
             <span style="font-size:13px;color:#64748B;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${user?.nama||'Admin'}</span>
@@ -440,6 +458,9 @@ function renderAdminLayout() {
   });
 
   loadDashboardAdminV3();
+  // Load branding untuk update logo dan nama di topbar
+  const sess = getSession();
+  if (sess) loadBranding(sess.role || 'admin');
 }
 
 function _si2(page,icon,label){
