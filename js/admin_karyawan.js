@@ -435,52 +435,261 @@ async function lihatProfilKaryawan(idKaryawan) {
   try {
     const k = await callAPI('getKaryawanById', { id_karyawan: idKaryawan });
     if (!k) return;
+    const instansi = await callAPI('getMultipleSetting',{keys:'nama_instansi,singkatan_instansi,alamat_instansi'});
     const modal = document.createElement('div');
     modal.id    = 'modal-profil-k';
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px);overflow-y:auto';
+    const fotoSrc = getPhotoSrc(k.foto_profil_url, k.nama_lengkap, 90);
     modal.innerHTML = `
-      <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;animation:fadeInScale 0.2s ease">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-          <h3 style="margin:0;font-size:17px">👤 Profil Karyawan</h3>
+      <div style="background:#fff;border-radius:20px;padding:0;width:100%;max-width:520px;overflow:hidden;animation:fadeInScale 0.2s ease">
+        <!-- Header bar -->
+        <div style="background:linear-gradient(135deg,var(--color-primer,#2D6CDF),var(--color-sekunder,#1A9E74));
+          padding:16px 20px;display:flex;justify-content:space-between;align-items:center">
+          <span style="color:#fff;font-weight:700;font-size:15px">👤 Profil Karyawan</span>
           <button onclick="document.getElementById('modal-profil-k').remove()"
-            style="background:#F1F5F9;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer">✕</button>
+            style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:30px;height:30px;
+            color:#fff;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center">✕</button>
         </div>
-        <div style="text-align:center;margin-bottom:16px">
-          <img src="${getPhotoSrc(k.foto_profil_url, k.nama_lengkap, 80)}"
-            style="width:80px;height:80px;border-radius:50%;object-fit:cover;margin:0 auto 8px"
-            onerror="this.src='${avatarInisial(k.nama_lengkap,80)}'">
-          <div style="font-weight:700;font-size:17px">${k.nama_lengkap}</div>
-          <div style="font-size:13px;color:#64748B">${k.jabatan} · ${k.departemen}</div>
-        </div>
-        ${[
-          ['NIK', k.nik], ['No. HP', k.no_hp], ['Email', k.email],
-          ['Bergabung', formatTanggal(k.tanggal_masuk)],
-          ['Tanggal Lahir', formatTanggal(k.tanggal_lahir)],
-          ['Jenis Kelamin', k.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan'],
-          ['Pendidikan', k.pendidikan_terakhir],
-          ['Alamat', k.alamat], ['Atasan', k.nama_atasan],
-          ['Username', k.username], ['Role', k.role]
-        ].map(r => `<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid #F1F5F9">
-          <span style="font-size:12px;color:#94A3B8;min-width:100px">${r[0]}</span>
-          <span style="font-size:13px;color:#1E293B;font-weight:500">${r[1]||'-'}</span>
-        </div>`).join('')}
-        ${k.tanda_tangan_url ? `
-          <div style="margin-top:12px">
-            <p style="font-size:12px;color:#64748B;margin-bottom:6px">Tanda Tangan Digital:</p>
-            <img src="${k.tanda_tangan_url}" style="max-height:60px;border:1px dashed #CBD5E0;
-              border-radius:8px;padding:6px;background:#F8FAFC;max-width:100%">
-          </div>` : ''}
-        <div style="display:flex;gap:8px;margin-top:16px">
-          <button class="btn btn--primary" style="flex:1;font-size:13px"
 
-          </button>
-          <button class="btn btn--ghost" style="flex:1;font-size:13px"
-            onclick="document.getElementById('modal-profil-k').remove();tampilFormEditKaryawan('${k.id_karyawan}')">
-            ✏️ Edit
-          </button>
+        <!-- Data karyawan -->
+        <div style="padding:20px;max-height:70vh;overflow-y:auto">
+          <div style="display:flex;gap:16px;align-items:center;margin-bottom:20px">
+            <img src="${fotoSrc}"
+              style="width:80px;height:80px;border-radius:50%;object-fit:cover;
+              border:3px solid var(--color-primer,#2D6CDF);flex-shrink:0"
+              onerror="this.src='${avatarInisial(k.nama_lengkap,80)}'">
+            <div>
+              <div style="font-weight:700;font-size:18px;color:#1E293B">${k.nama_lengkap}</div>
+              <div style="font-size:13px;color:#64748B;margin-top:2px">${k.jabatan||'-'} · ${k.departemen||'-'}</div>
+              <div style="font-size:12px;color:#94A3B8;margin-top:2px">NIK: ${k.nik||'-'}</div>
+              <span style="display:inline-block;margin-top:6px;padding:2px 10px;border-radius:20px;font-size:11px;
+                font-weight:700;background:${String(k.status_aktif).toLowerCase()==='true'?'#EBF8EE':'#FFF5F5'};
+                color:${String(k.status_aktif).toLowerCase()==='true'?'#1A9E74':'#E53E3E'}">
+                ${String(k.status_aktif).toLowerCase()==='true'?'✅ Aktif':'❌ Non-aktif'}
+              </span>
+            </div>
+          </div>
+
+          <!-- Info rows -->
+          <div style="background:#F8FAFC;border-radius:12px;padding:4px 0;margin-bottom:16px">
+            ${[
+              ['📱','No. HP', k.no_hp],
+              ['📧','Email', k.email],
+              ['🎂','Tanggal Lahir', formatTanggal(k.tanggal_lahir)],
+              ['⚧️','Jenis Kelamin', k.jenis_kelamin==='L'?'Laki-laki':'Perempuan'],
+              ['🎓','Pendidikan', k.pendidikan_terakhir],
+              ['📅','Bergabung', formatTanggal(k.tanggal_masuk)],
+              ['👨‍💼','Atasan', k.nama_atasan],
+              ['🏠','Alamat', k.alamat],
+              ['🔑','Username', k.username],
+              ['🛡️','Role', k.role]
+            ].map(r=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;
+              border-bottom:1px solid #F1F5F9">
+              <span style="font-size:14px;width:20px;text-align:center;flex-shrink:0">${r[0]}</span>
+              <span style="font-size:12px;color:#94A3B8;min-width:110px;flex-shrink:0">${r[1]}</span>
+              <span style="font-size:13px;color:#1E293B;font-weight:500;word-break:break-word">${r[2]||'-'}</span>
+            </div>`).join('')}
+          </div>
+
+          <!-- ID Card Preview -->
+          <div style="margin-bottom:16px">
+            <p style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;
+              letter-spacing:.6px;margin-bottom:10px">🪪 ID Card</p>
+            <div id="idcard-preview-${k.id_karyawan}" style="position:relative;width:320px;height:200px;
+              margin:0 auto;border-radius:16px;overflow:hidden;
+              box-shadow:0 8px 32px rgba(0,0,0,.18)">
+              ${_idCardHTML(k, instansi)}
+            </div>
+          </div>
+
+          <!-- Tombol aksi — proporsional tengah -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
+            <button class="btn btn--primary" style="font-size:13px;padding:11px"
+              onclick="cetakIDCard('${k.id_karyawan}')">
+              🪪 Cetak ID Card
+            </button>
+            <button class="btn btn--ghost" style="font-size:13px;padding:11px"
+              onclick="document.getElementById('modal-profil-k').remove();tampilFormEditKaryawan('${k.id_karyawan}')">
+              ✏️ Edit Data
+            </button>
+          </div>
         </div>
       </div>`;
     document.body.appendChild(modal);
     modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
   } catch(e) { showToast(e.message, 'error'); }
+}
+
+// ─── ID CARD HTML (preview di modal + untuk cetak) ────────────
+function _idCardHTML(k, instansi) {
+  const nama   = k.nama_lengkap || '-';
+  const jabatan= k.jabatan      || '-';
+  const dept   = k.departemen   || '-';
+  const nik    = k.nik          || '-';
+  const foto   = getPhotoSrc(k.foto_profil_url, k.nama_lengkap, 80);
+  const namaInst = instansi?.nama_instansi || 'Instansi';
+  const singkatan= instansi?.singkatan_instansi || '';
+
+  return `
+    <div style="width:100%;height:100%;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);
+      position:relative;font-family:sans-serif;display:flex;flex-direction:column">
+      <!-- Lingkaran dekoratif -->
+      <div style="position:absolute;top:-40px;right:-40px;width:150px;height:150px;
+        border-radius:50%;background:rgba(255,255,255,.05);pointer-events:none"></div>
+      <div style="position:absolute;bottom:-30px;left:-30px;width:120px;height:120px;
+        border-radius:50%;background:rgba(255,255,255,.04);pointer-events:none"></div>
+
+      <!-- Header instansi -->
+      <div style="background:rgba(255,255,255,.08);padding:10px 14px;display:flex;
+        align-items:center;gap:8px;border-bottom:1px solid rgba(255,255,255,.1)">
+        <div style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,.15);
+          display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">🏢</div>
+        <div>
+          <div style="color:#fff;font-size:9px;font-weight:700;letter-spacing:.5px;
+            line-height:1.2;text-transform:uppercase">${namaInst}</div>
+          <div style="color:rgba(255,255,255,.5);font-size:8px">ID CARD KARYAWAN</div>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div style="flex:1;display:flex;padding:12px 14px;gap:12px;align-items:center">
+        <!-- Foto -->
+        <div style="flex-shrink:0">
+          <div style="width:72px;height:72px;border-radius:12px;border:2px solid rgba(255,255,255,.3);
+            overflow:hidden;background:#fff">
+            <img src="${foto}" style="width:100%;height:100%;object-fit:cover"
+              onerror="this.src='${avatarInisial(nama,72)}'">
+          </div>
+        </div>
+
+        <!-- Info -->
+        <div style="flex:1;min-width:0">
+          <div style="color:#fff;font-weight:700;font-size:13px;white-space:nowrap;
+            overflow:hidden;text-overflow:ellipsis;margin-bottom:3px">${nama}</div>
+          <div style="color:rgba(255,255,255,.7);font-size:10px;margin-bottom:2px">${jabatan}</div>
+          <div style="color:rgba(255,255,255,.5);font-size:9px;margin-bottom:8px">${dept}</div>
+
+          <!-- NIK box -->
+          <div style="background:rgba(255,255,255,.1);border-radius:6px;
+            padding:5px 8px;display:inline-block">
+            <div style="color:rgba(255,255,255,.5);font-size:7px;letter-spacing:.5px">NIK</div>
+            <div style="color:#fff;font-size:11px;font-weight:700;letter-spacing:1px">${nik}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer strip -->
+      <div style="background:linear-gradient(90deg,#2D6CDF,#1A9E74);height:6px"></div>
+    </div>`;
+}
+
+// ─── CETAK ID CARD — PDF ──────────────────────────────────────
+async function cetakIDCard(idKaryawan) {
+  showToast('Menyiapkan ID Card...','info',2000);
+  try {
+    const ok = await _ensureJsPDF();
+    if (!ok || !window.jspdf?.jsPDF) {
+      showToast('Library PDF tidak tersedia. Muat ulang halaman.','error',5000);
+      return;
+    }
+    const [k, instansi] = await Promise.all([
+      callAPI('getKaryawanById', { id_karyawan: idKaryawan }),
+      callAPI('getMultipleSetting', { keys:'nama_instansi,singkatan_instansi,alamat_instansi,logo_url' })
+    ]);
+    if (!k) throw new Error('Data karyawan tidak ditemukan');
+
+    const { jsPDF } = window.jspdf;
+    // Ukuran ID Card standar: 85.6mm x 54mm (CR80)
+    const doc = new jsPDF({ orientation:'landscape', unit:'mm',
+      format:[85.6, 54] });
+    const W=85.6, H=54;
+
+    // Background gradient simulasi
+    doc.setFillColor(26, 26, 46);
+    doc.rect(0,0,W,H,'F');
+
+    // Header strip instansi
+    doc.setFillColor(255,255,255,20);
+    doc.rect(0,0,W,14,'F');
+
+    // Nama instansi di header
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(7);
+    doc.text((instansi?.nama_instansi||'INSTANSI').toUpperCase(), 10, 7);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(5.5);
+    doc.setTextColor(200,200,220);
+    doc.text('ID CARD KARYAWAN', 10, 11);
+
+    // Foto karyawan
+    const fotoUrl = k.foto_profil_url ? normalizeDriveUrlFrontend(k.foto_profil_url) : '';
+    if (fotoUrl && fotoUrl.startsWith('http')) {
+      try {
+        const imgData = await _urlToBase64(fotoUrl);
+        doc.addImage(imgData,'JPEG', 5, 17, 20, 20);
+      } catch(e) {
+        // Jika foto gagal, gambar placeholder
+        doc.setFillColor(60,80,120);
+        doc.roundedRect(5, 17, 20, 20, 2, 2, 'F');
+        doc.setTextColor(255,255,255);
+        doc.setFontSize(10);
+        doc.text((k.nama_lengkap||'K')[0].toUpperCase(), 15, 30, {align:'center'});
+      }
+    } else {
+      doc.setFillColor(60,80,120);
+      doc.roundedRect(5, 17, 20, 20, 2, 2, 'F');
+      doc.setTextColor(255,255,255);
+      doc.setFontSize(10);
+      doc.text((k.nama_lengkap||'K')[0].toUpperCase(), 15, 30, {align:'center'});
+    }
+
+    // Info karyawan
+    const xInfo = 30;
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(9);
+    const namaLines = doc.splitTextToSize(k.nama_lengkap||'-', 52);
+    doc.text(namaLines[0], xInfo, 22);
+    if (namaLines[1]) doc.text(namaLines[1], xInfo, 26.5);
+
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(7);
+    doc.setTextColor(180,200,240);
+    doc.text(k.jabatan||'-', xInfo, 31);
+
+    doc.setFontSize(6.5);
+    doc.setTextColor(140,160,200);
+    doc.text(k.departemen||'-', xInfo, 35.5);
+
+    // NIK box
+    doc.setFillColor(255,255,255,25);
+    doc.roundedRect(xInfo, 39, 52, 8, 1.5, 1.5, 'F');
+    doc.setTextColor(140,160,200);
+    doc.setFontSize(5);
+    doc.text('NIK', xInfo+3, 43.5);
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(7.5);
+    doc.text(String(k.nik||'-'), xInfo+3, 46.5);
+
+    // Footer gradient strip
+    doc.setFillColor(45,108,223);
+    doc.rect(0, H-4, W/2, 4, 'F');
+    doc.setFillColor(26,158,116);
+    doc.rect(W/2, H-4, W/2, 4, 'F');
+
+    // Footer text
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(5);
+    doc.text(instansi?.alamat_instansi||'', W/2, H-1, {align:'center', maxWidth:W-10});
+
+    doc.save('IDCard_'+k.nama_lengkap.replace(/\s+/g,'_')+'.pdf');
+    showToast('ID Card berhasil didownload! 🪪','success');
+
+  } catch(e) {
+    showToast('Gagal cetak ID Card: '+e.message,'error',5000);
+    console.error(e);
+  }
 }
