@@ -566,10 +566,17 @@ async function cetakKwitansiKaryawan(idKaryawan, tanggalDari, tanggalKe) {
      ['Total Bayar',_fmtRp(totByr)]
     ].forEach((row,ri)=>{
       const isTot=ri===3;
-      if(isTot){doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setFillColor(235,248,238);doc.rect(mL,y-4,W-mL-mR,9,'F');}
-      else{doc.setFont('helvetica','normal');doc.setFontSize(10);}
-      doc.text(row[0],mL+3,y);doc.text(':',mL+47,y);doc.text(row[1],mL+51,y);
-      y+=isTot?9:6;
+      if(isTot){
+        doc.setFont('helvetica','bold');
+        doc.setFontSize(12);
+      } else {
+        doc.setFont('helvetica','normal');
+        doc.setFontSize(10);
+      }
+      doc.text(row[0],mL+3,y);
+      doc.text(':',mL+47,y);
+      doc.text(row[1],mL+51,y);
+      y+=isTot?8:6;
     });y+=4;
     doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text('Rincian Lembur:',mL,y);y+=6;
     // Kolom tabel: No=10|Tanggal=35|Jam=42|Durasi=23|Harga=30|Total=30 = 170mm
@@ -581,20 +588,27 @@ async function cetakKwitansiKaryawan(idKaryawan, tanggalDari, tanggalKe) {
       {label:'Harga/Jam',w:30,x:mL+110,    align:'right'},
       {label:'Total',   w:30, x:mL+140,    align:'right'},
     ];
-    // Header tabel
-    doc.setFillColor(45,108,223); doc.rect(mL,y-5,W-mL-mR,8,'F');
+    // Header tabel biru — tinggi 9mm, text di tengah
+    const hdrH2 = 9;
+    doc.setFillColor(45,108,223); doc.rect(mL, y, W-mL-mR, hdrH2, 'F');
     doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9);
     tCols.forEach(col=>{
-      const tx = col.align==='center'?col.x+col.w/2 : col.align==='right'?col.x+col.w-1:col.x+2;
-      doc.text(col.label, tx, y, {align:col.align==='right'?'right':'center'===col.align?'center':'left', maxWidth:col.w-2});
+      const ty = y + hdrH2/2 + 1.5; // vertikal tengah
+      const tx = col.align==='center' ? col.x+col.w/2
+               : col.align==='right'  ? col.x+col.w-2
+               : col.x+2;
+      const align = col.align==='right'?'right':col.align==='center'?'center':'left';
+      doc.text(col.label, tx, ty, {align, maxWidth:col.w-3});
     });
-    doc.setTextColor(0,0,0); y+=5;
+    doc.setTextColor(0,0,0); y += hdrH2;
 
+    const dataRowH = 8;
     doc.setFont('helvetica','normal');
     items.forEach((l,i)=>{
-      if(i%2===0){doc.setFillColor(248,250,252);doc.rect(mL,y-4,W-mL-mR,8,'F');}
-      else{doc.setFillColor(255,255,255);doc.rect(mL,y-4,W-mL-mR,8,'F');}
-      doc.setDrawColor(230,230,230); doc.line(mL,y+4,W-mR,y+4);
+      const bg = i%2===0 ? [248,250,252] : [255,255,255];
+      doc.setFillColor(...bg); doc.rect(mL,y,W-mL-mR,dataRowH,'F');
+      doc.setDrawColor(220,220,220); doc.setLineWidth(0.2);
+      doc.line(mL,y+dataRowH,W-mR,y+dataRowH);
       const row = [
         String(i+1),
         String(_fmtTgl(l.tanggal)||'-'),
@@ -603,11 +617,13 @@ async function cetakKwitansiKaryawan(idKaryawan, tanggalDari, tanggalKe) {
         String(_fmtRp(l.harga_per_jam)||'-'),
         String(_fmtRp(l.total_bayar)||'-'),
       ];
+      const ty = y + dataRowH/2 + 1.5; // vertikal tengah
       tCols.forEach((col,ci)=>{
-        const tx = col.align==='center'?col.x+col.w/2 : col.align==='right'?col.x+col.w-1:col.x+2;
-        doc.text(row[ci], tx, y, {align:col.align==='right'?'right':col.align==='center'?'center':'left', maxWidth:col.w-2});
+        const tx = col.align==='center'?col.x+col.w/2:col.align==='right'?col.x+col.w-2:col.x+2;
+        const align = col.align==='right'?'right':col.align==='center'?'center':'left';
+        doc.text(row[ci], tx, ty, {align, maxWidth:col.w-3});
       });
-      y+=8; if(y>250){doc.addPage();y=20;}
+      y+=dataRowH; if(y>250){doc.addPage();y=20;}
     });
     doc.setLineWidth(0.3);doc.line(mL,y,W-mR,y);y+=4;
     doc.setFillColor(255,248,220);doc.rect(mL,y-3,W-mL-mR,14,'F');
