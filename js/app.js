@@ -318,8 +318,36 @@ function tampilFormLembur(){
       ⏳ Menghitung...</div>
     <div class="form-group"><label class="form-label">Keterangan</label>
       <textarea class="form-control" id="lb-ket" rows="2" placeholder="Jelaskan pekerjaan lembur..."></textarea></div>
+    <div class="form-group">
+      <label class="form-label">📎 Foto Surat Perintah Lembur (SPL) <span style="color:#E53E3E">*</span></label>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button type="button" onclick="ambilFotoSPL('camera')"
+          style="flex:1;padding:10px;background:#EFF6FF;border:2px dashed #2D6CDF;
+          border-radius:10px;cursor:pointer;font-size:13px;color:#2D6CDF;font-weight:600">
+          📷 Foto Sekarang</button>
+        <button type="button" onclick="ambilFotoSPL('gallery')"
+          style="flex:1;padding:10px;background:#F8FAFC;border:2px dashed #94A3B8;
+          border-radius:10px;cursor:pointer;font-size:13px;color:#64748B;font-weight:600">
+          🖼️ Dari Galeri</button>
+      </div>
+      <input type="file" id="lb-spl-camera" accept="image/*" capture="environment"
+        style="display:none" onchange="onFotoSPLDipilih(this)">
+      <input type="file" id="lb-spl-gallery" accept="image/*"
+        style="display:none" onchange="onFotoSPLDipilih(this)">
+      <div id="preview-spl" style="display:none;margin-top:6px;text-align:center">
+        <img id="img-preview-spl" style="max-width:100%;max-height:160px;border-radius:8px;
+          border:2px solid #E2E8F0;object-fit:contain" src="" alt="Preview SPL">
+        <div style="display:flex;align-items:center;justify-content:space-between;
+          margin-top:6px;background:#EBF8EE;border-radius:8px;padding:7px 12px">
+          <span id="nama-spl" style="font-size:12px;color:#1A9E74;font-weight:600">✅ Foto terpilih</span>
+          <button type="button" onclick="hapusFotoSPL()"
+            style="background:#FFF5F5;border:1px solid #FC8181;border-radius:5px;
+            padding:3px 8px;font-size:11px;color:#E53E3E;cursor:pointer">✕ Hapus</button>
+        </div>
+      </div>
+    </div>
     <button class="btn btn--primary btn--full btn--lg" onclick="submitLemburKaryawan()">
-      <div class="spinner-btn"></div><span class="btn-text">📤 Kirim</span></button>
+      <div class="spinner-btn"></div><span class="btn-text">📤 Kirim Pengajuan</span></button>
   </div>`;
   document.body.appendChild(modal);
   previewHargaLembur();
