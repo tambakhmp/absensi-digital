@@ -109,10 +109,44 @@ function tampilFormPengajuan(jenis = '') {
           placeholder="Tuliskan alasan pengajuan..."></textarea>
       </div>
 
+      <!-- LAMPIRAN SURAT SAKIT -->
       <div class="form-group" id="grup-file-sakit" style="${jenis==='sakit'?'':'display:none'}">
-        <label class="form-label">Surat Sakit / Dokter <span class="required">*</span></label>
-        <input type="file" class="form-control" id="pjn-file" accept="image/*,.pdf">
-        <p class="form-hint">Wajib untuk pengajuan sakit. Foto/scan surat dokter.</p>
+        <label class="form-label">📎 Foto Surat Sakit / Dokter <span class="required">*</span></label>
+        <div style="display:flex;gap:10px;margin-bottom:10px">
+          <!-- Tombol kamera -->
+          <button type="button" onclick="ambilFotoSurat('camera')"
+            style="flex:1;padding:12px;background:#EFF6FF;border:2px dashed #2D6CDF;
+            border-radius:10px;cursor:pointer;font-size:13px;color:#2D6CDF;font-weight:600">
+            📷 Foto Sekarang
+          </button>
+          <!-- Tombol galeri -->
+          <button type="button" onclick="ambilFotoSurat('gallery')"
+            style="flex:1;padding:12px;background:#F8FAFC;border:2px dashed #94A3B8;
+            border-radius:10px;cursor:pointer;font-size:13px;color:#64748B;font-weight:600">
+            🖼️ Dari Galeri
+          </button>
+        </div>
+        <!-- Input tersembunyi -->
+        <input type="file" id="pjn-file-camera"  accept="image/*" capture="environment" style="display:none"
+          onchange="onFotoSuratDipilih(this)">
+        <input type="file" id="pjn-file-gallery" accept="image/*" style="display:none"
+          onchange="onFotoSuratDipilih(this)">
+        <!-- Preview foto -->
+        <div id="preview-surat-sakit" style="display:none;margin-top:10px;text-align:center">
+          <img id="img-preview-surat" style="max-width:100%;max-height:220px;
+            border-radius:10px;border:2px solid #E2E8F0;object-fit:contain" src="" alt="Preview">
+          <div style="display:flex;align-items:center;justify-content:space-between;
+            margin-top:8px;background:#EBF8EE;border-radius:8px;padding:8px 12px">
+            <span id="nama-file-surat" style="font-size:12px;color:#1A9E74;font-weight:600">
+              ✅ Foto terpilih</span>
+            <button type="button" onclick="hapusFotoSurat()"
+              style="background:#FFF5F5;border:1px solid #FC8181;border-radius:6px;
+              padding:4px 10px;font-size:11px;color:#E53E3E;cursor:pointer">
+              ✕ Hapus</button>
+          </div>
+        </div>
+        <p style="font-size:12px;color:#94A3B8;margin-top:6px">
+          Foto akan langsung terlihat oleh admin (bukan link)</p>
       </div>
 
       <button class="btn btn--primary btn--full btn--lg" onclick="submitPengajuanKaryawan()">
@@ -208,13 +242,26 @@ async function submitPengajuanKaryawan() {
       throw new Error('Surat sakit wajib dilampirkan');
     }
 
-    // Upload file jika ada
+    // Upload foto surat sakit jika ada - compress dulu
     let fileUrl = '';
-    if (fileInput?.files[0]) {
-      const file     = fileInput.files[0];
-      const b64      = await fileToBase64(file);
-      const uploaded = await callAPI('simpanFilePendukung', { base64: b64, nama: file.name });
-      fileUrl = uploaded?.url || '';
+    const _suratFile = window._suratSakitFile;  // dari onFotoSuratDipilih
+    if (jenis === 'sakit' && !_suratFile) throw new Error('Foto surat sakit wajib dilampirkan');
+    if (_suratFile) {
+      showToast('Mengunggah foto surat...', 'info', 5000);
+      try {
+        const compressed = await compressImage(_suratFile, 1200, 0.75);
+        const b64        = await blobToBase64(compressed);
+        const ext        = _suratFile.name.split('.').pop() || 'jpg';
+        const uploaded   = await callAPI('simpanFilePendukung', {
+          base64: b64,
+          nama: 'surat_sakit_' + Date.now() + '.' + ext,
+          mime: _suratFile.type || 'image/jpeg'
+        });
+        fileUrl = uploaded?.url || '';
+        if (!fileUrl) throw new Error('Gagal mendapatkan URL foto');
+      } catch(e) {
+        throw new Error('Gagal upload foto: ' + e.message);
+      }
     }
 
     const payload = {
@@ -314,4 +361,44 @@ function tolakPengajuanAdmin(idPengajuan) {
         await loadPengajuanAdmin();
       } catch(e) { showToast(e.message, 'error'); }
     }, 'Tolak ❌');
+}
+
+// ─── FOTO SURAT SAKIT ─────────────────────────────────────────
+function ambilFotoSurat(mode) {
+  const el = document.getElementById(mode === 'camera' ? 'pjn-file-camera' : 'pjn-file-gallery');
+  if (el) el.click();
+}
+
+function onFotoSuratDipilih(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  window._suratSakitFile = file;
+
+  // Tampilkan preview
+  const reader = new FileReader();
+  reader.onload = e => {
+    const prev = document.getElementById('preview-surat-sakit');
+    const img  = document.getElementById('img-preview-surat');
+    const nama = document.getElementById('nama-file-surat');
+    if (img)  img.src = e.target.result;
+    if (prev) prev.style.display = 'block';
+    if (nama) {
+      const kb = (file.size / 1024).toFixed(0);
+      nama.textContent = '✅ ' + file.name + ' (' + kb + ' KB)';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function hapusFotoSurat() {
+  window._suratSakitFile = null;
+  const prev = document.getElementById('preview-surat-sakit');
+  const img  = document.getElementById('img-preview-surat');
+  if (prev) prev.style.display = 'none';
+  if (img)  img.src = '';
+  // Reset input file
+  const c1 = document.getElementById('pjn-file-camera');
+  const c2 = document.getElementById('pjn-file-gallery');
+  if (c1) c1.value = '';
+  if (c2) c2.value = '';
 }
