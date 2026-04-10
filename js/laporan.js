@@ -197,14 +197,14 @@ async function cetakAbsensiHarianPDF(tanggal) {
 
         const rowData = [
           String(idx + 1),
-          row.nama_karyawan || '-',
-          nik,
-          jabatan,
-          row.jam_masuk  || '-',
-          row.jam_keluar || '-',
-          sl,
+          String(row.nama_karyawan || '-'),
+          String(nik),
+          String(jabatan),
+          String(row.jam_masuk  || '-'),
+          String(row.jam_keluar || '-'),
+          String(sl),
           row.jarak_meter_masuk ? String(row.jarak_meter_masuk) : '-',
-          row.keterangan || '-',
+          String(row.keterangan || '-'),
         ];
 
         // Hitung tinggi baris dinamis berdasarkan keterangan
