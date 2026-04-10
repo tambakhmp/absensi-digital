@@ -167,6 +167,17 @@ function renderTabelKaryawan(data) {
 }
 
 // ─── Form Tambah / Edit Karyawan ─────────────────────────────
+
+// Konversi dd/MM/yyyy → yyyy-MM-dd (untuk input type=date)
+function toInputDate(str) {
+  if (!str) return '';
+  str = String(str).trim();
+  if (str.includes('-') && str.length === 10) return str; // sudah format yyyy-MM-dd
+  const p = str.split('/');
+  if (p.length === 3) return p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0');
+  return '';
+}
+
 function tampilFormTambahKaryawan() {
   _tampilFormKaryawan(null);
 }
