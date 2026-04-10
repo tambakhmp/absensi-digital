@@ -95,20 +95,25 @@ async function cetakAbsensiHarianPDF(tanggal) {
     y += 8;
 
     // ── TABEL ──────────────────────────────────────────────
+    // Total lebar tabel: 267mm (landscape 297 - margin 15x2)
+    // No=8 | Nama=60 | NIK=38 | Jabatan=38 | Jam Masuk=22 | Jam Keluar=22 | Status=26 | Jarak=15 | Ket=38 = 267
     const cols = [
-      { header: 'No',           w: 10,  align: 'center' },
-      { header: 'Nama Karyawan', w: 52,  align: 'left'   },
-      { header: 'NIK',           w: 28,  align: 'center' },
-      { header: 'Jabatan',       w: 36,  align: 'left'   },
-      { header: 'Jam Masuk',     w: 22,  align: 'center' },
-      { header: 'Jam Keluar',    w: 22,  align: 'center' },
-      { header: 'Status',        w: 24,  align: 'center' },
-      { header: 'Jarak (m)',     w: 20,  align: 'center' },
-      { header: 'Keterangan',    w: 53,  align: 'left'   },
+      { header: 'No',           w: 8,   align: 'center' },
+      { header: 'Nama Karyawan',w: 60,  align: 'left'   },
+      { header: 'NIK',          w: 38,  align: 'center' },
+      { header: 'Jabatan',      w: 38,  align: 'left'   },
+      { header: 'Jam Masuk',    w: 22,  align: 'center' },
+      { header: 'Jam Keluar',   w: 22,  align: 'center' },
+      { header: 'Status',       w: 26,  align: 'center' },
+      { header: 'Jarak (m)',    w: 15,  align: 'center' },
+      { header: 'Keterangan',   w: 38,  align: 'left'   },
     ];
-    const rowH  = 8;
+    const rowH  = 7;
     const hdrH  = 8;
     const xStart = mL;
+
+    // Catat posisi awal tabel untuk border
+    const tabelStartY = y;
 
     // Header tabel
     doc.setFillColor(45, 108, 223);
@@ -161,7 +166,7 @@ async function cetakAbsensiHarianPDF(tanggal) {
             xh += col.w;
           });
           y += hdrH;
-          doc.setTextColor(0, 0, 0);
+          doc.setTextColor(30, 41, 59);
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(8);
         }
@@ -210,6 +215,12 @@ async function cetakAbsensiHarianPDF(tanggal) {
       });
     }
 
+    // Garis border kiri dan kanan tabel
+    doc.setDrawColor(45, 108, 223);
+    doc.setLineWidth(0.4);
+    const tableBottom = y;
+    doc.rect(xStart, tabelStartY, W - mL - mR, tableBottom - tabelStartY);
+
     // ── RINGKASAN ──────────────────────────────────────────
     y += 4;
     const ring = { hadir:0, terlambat:0, alfa:0, izin:0, sakit:0, cuti:0, dinas_luar:0 };
@@ -234,9 +245,9 @@ async function cetakAbsensiHarianPDF(tanggal) {
     if (y < 175) {
       const ttdY = 185;
       const ttdPos = [
-        { x: mL,        label: 'Mengetahui,' },
-        { x: W/2 - 30,  label: 'Diperiksa,' },
-        { x: W - mR - 50, label: 'Dibuat oleh,' },
+        { x: mL,              label: 'Dibuat oleh,'  },
+        { x: W/2 - 25,        label: 'Diperiksa,'    },
+        { x: W - mR - 52,     label: 'Mengetahui,'   },
       ];
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
@@ -353,6 +364,12 @@ async function cetakRekapPDF(idKaryawan, bulan, tahun, tanggalDari, tanggalKe) {
     doc.setLineWidth(0.3);
     doc.line(mL, y, W-mR, y);
     y += 5;
+
+    // Garis border kiri dan kanan tabel
+    doc.setDrawColor(45, 108, 223);
+    doc.setLineWidth(0.4);
+    const tableBottom = y;
+    doc.rect(xStart, tabelStartY, W - mL - mR, tableBottom - tabelStartY);
 
     // ── RINGKASAN ──────────────────────────────────────────
     doc.setFont('helvetica','bold');
