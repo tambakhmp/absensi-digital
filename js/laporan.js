@@ -150,8 +150,9 @@ async function cetakAbsensiHarianPDF(tanggal) {
       y += 20;
     } else {
       data.forEach((row, idx) => {
-        // Cek page break
-        if (y + rowH > 195) {
+        // Cek page break (pakai estimasi tinggi baris)
+        const estH = Math.max(rowH, Math.ceil(((row.keterangan||'').length / 18)) * 4.5 + 3);
+        if (y + estH > 193) {
           doc.addPage();
           y = 15;
           // Ulangi header
@@ -192,10 +193,20 @@ async function cetakAbsensiHarianPDF(tanggal) {
           (row.keterangan   || '-').substring(0, 40),
         ];
 
+        // Hitung tinggi baris dinamis berdasarkan keterangan
+        const ketText  = rowData[8] || '-';
+        const ketLines = doc.splitTextToSize(ketText, cols[8].w - 3);
+        const dynRowH  = Math.max(rowH, ketLines.length * 4.5 + 3);
+
+        // Gambar background baris selang-seling dengan tinggi dinamis
+        if (idx % 2 === 0) {
+          doc.setFillColor(248, 250, 252);
+          doc.rect(xStart, y, W - mL - mR, dynRowH, 'F');
+        }
+
         let xd = xStart;
         rowData.forEach((val, ci) => {
           const col = cols[ci];
-          // Warnai kolom status
           if (ci === 6) {
             doc.setTextColor(sc[0], sc[1], sc[2]);
             doc.setFont('helvetica', 'bold');
@@ -203,15 +214,29 @@ async function cetakAbsensiHarianPDF(tanggal) {
             doc.setTextColor(30, 41, 59);
             doc.setFont('helvetica', 'normal');
           }
-          const tx = col.align === 'center' ? xd + col.w / 2 : xd + 1.5;
-          doc.text(val, tx, y + 5.5, { align: col.align, maxWidth: col.w - 2 });
+          const yCenter = y + dynRowH / 2;
+
+          if (ci === 8) {
+            // Keterangan: wrap teks
+            doc.setFontSize(7.5);
+            const wrappedLines = doc.splitTextToSize(val, col.w - 3);
+            const lineH = 4;
+            const startY = y + (dynRowH - wrappedLines.length * lineH) / 2 + 3;
+            wrappedLines.forEach((line, li) => {
+              doc.text(line, xd + 1.5, startY + li * lineH);
+            });
+            doc.setFontSize(8);
+          } else {
+            const tx = col.align === 'center' ? xd + col.w / 2 : xd + 1.5;
+            doc.text(val, tx, yCenter + 1.5, { align: col.align, maxWidth: col.w - 2 });
+          }
           xd += col.w;
         });
 
         // Garis bawah baris
         doc.setDrawColor(226, 232, 240);
-        doc.line(xStart, y + rowH, xStart + (W - mL - mR), y + rowH);
-        y += rowH;
+        doc.line(xStart, y + dynRowH, xStart + (W - mL - mR), y + dynRowH);
+        y += dynRowH;
       });
     }
 
