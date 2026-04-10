@@ -45,6 +45,229 @@ async function _ensureXLSX() {
   return false;
 }
 
+
+// ─────────────────────────────────────────────────────────────
+// CETAK ABSENSI HARIAN — PDF
+// Kolom: No · Nama · Jam Masuk · Jam Keluar · Status · Jarak · Keterangan
+// ─────────────────────────────────────────────────────────────
+async function cetakAbsensiHarianPDF(tanggal) {
+  showToast('Menyiapkan PDF...', 'info', 2000);
+
+  const ok = await _ensureJsPDF();
+  if (!ok || !window.jspdf?.jsPDF) {
+    showToast('Library PDF tidak tersedia. Muat ulang halaman.', 'error', 5000);
+    return;
+  }
+
+  try {
+    // Ambil data
+    const data     = await callAPI('getAbsensiSemua', { tanggal });
+    const instansi = await callAPI('getMultipleSetting', {
+      keys: 'nama_instansi,alamat_instansi,telepon_instansi,email_instansi,logo_url,website_instansi'
+    });
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const W   = 297; // landscape
+    const mL  = 15, mR = 15;
+    let y     = 15;
+
+    // ── KOP SURAT ──────────────────────────────────────────
+    y = await _kopSurat(doc, instansi, W, mL, y);
+
+    // ── JUDUL ──────────────────────────────────────────────
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DAFTAR HADIR KARYAWAN', W / 2, y, { align: 'center' });
+    y += 6;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+
+    // Format tanggal untuk judul
+    const p = tanggal.split('/');
+    const HARI = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+    let tglLabel = tanggal;
+    if (p.length === 3) {
+      const dt = new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0]));
+      tglLabel  = HARI[dt.getDay()] + ', ' + p[0] + ' ' + _bulanNamaPDF(p[1]) + ' ' + p[2];
+    }
+    doc.text('Tanggal: ' + tglLabel, W / 2, y, { align: 'center' });
+    y += 8;
+
+    // ── TABEL ──────────────────────────────────────────────
+    const cols = [
+      { header: 'No',           w: 10,  align: 'center' },
+      { header: 'Nama Karyawan', w: 52,  align: 'left'   },
+      { header: 'NIK',           w: 28,  align: 'center' },
+      { header: 'Jabatan',       w: 36,  align: 'left'   },
+      { header: 'Jam Masuk',     w: 22,  align: 'center' },
+      { header: 'Jam Keluar',    w: 22,  align: 'center' },
+      { header: 'Status',        w: 24,  align: 'center' },
+      { header: 'Jarak (m)',     w: 20,  align: 'center' },
+      { header: 'Keterangan',    w: 53,  align: 'left'   },
+    ];
+    const rowH  = 8;
+    const hdrH  = 8;
+    const xStart = mL;
+
+    // Header tabel
+    doc.setFillColor(45, 108, 223);
+    doc.rect(xStart, y, W - mL - mR, hdrH, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    let xc = xStart;
+    cols.forEach(col => {
+      doc.text(col.header, xc + col.w / 2, y + 5.5, { align: 'center', maxWidth: col.w - 1 });
+      xc += col.w;
+    });
+    y += hdrH;
+
+    // Baris data
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+
+    const STATUS_LABEL = {
+      hadir:'Hadir', terlambat:'Terlambat', alfa:'Alfa', izin:'Izin',
+      sakit:'Sakit', cuti:'Cuti', dinas_luar:'Dinas Luar', libur:'Libur'
+    };
+    const STATUS_COLOR = {
+      hadir:[0,158,116], terlambat:[217,119,6], alfa:[229,62,62],
+      izin:[45,108,223], sakit:[107,114,128], cuti:[108,99,255],
+      dinas_luar:[234,88,12], libur:[148,163,184]
+    };
+
+    if (!data || data.length === 0) {
+      doc.setFontSize(10);
+      doc.setTextColor(148, 163, 184);
+      doc.text('Tidak ada data absensi untuk tanggal ini.', W / 2, y + 10, { align: 'center' });
+      y += 20;
+    } else {
+      data.forEach((row, idx) => {
+        // Cek page break
+        if (y + rowH > 195) {
+          doc.addPage();
+          y = 15;
+          // Ulangi header
+          doc.setFillColor(45, 108, 223);
+          doc.rect(xStart, y, W - mL - mR, hdrH, 'F');
+          doc.setTextColor(255, 255, 255);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(8.5);
+          let xh = xStart;
+          cols.forEach(col => {
+            doc.text(col.header, xh + col.w / 2, y + 5.5, { align: 'center', maxWidth: col.w - 1 });
+            xh += col.w;
+          });
+          y += hdrH;
+          doc.setTextColor(0, 0, 0);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+        }
+
+        // Warna baris selang-seling
+        if (idx % 2 === 0) {
+          doc.setFillColor(248, 250, 252);
+          doc.rect(xStart, y, W - mL - mR, rowH, 'F');
+        }
+
+        const sc = STATUS_COLOR[row.status] || [100,116,139];
+        const sl = STATUS_LABEL[row.status]  || (row.status || '-');
+
+        const rowData = [
+          String(idx + 1),
+          row.nama_karyawan || '-',
+          row.id_karyawan   || '-',
+          row.jabatan       || '-',
+          row.jam_masuk     || '-',
+          row.jam_keluar    || '-',
+          sl,
+          row.jarak_meter_masuk ? String(row.jarak_meter_masuk) : '-',
+          (row.keterangan   || '-').substring(0, 40),
+        ];
+
+        let xd = xStart;
+        rowData.forEach((val, ci) => {
+          const col = cols[ci];
+          // Warnai kolom status
+          if (ci === 6) {
+            doc.setTextColor(sc[0], sc[1], sc[2]);
+            doc.setFont('helvetica', 'bold');
+          } else {
+            doc.setTextColor(30, 41, 59);
+            doc.setFont('helvetica', 'normal');
+          }
+          const tx = col.align === 'center' ? xd + col.w / 2 : xd + 1.5;
+          doc.text(val, tx, y + 5.5, { align: col.align, maxWidth: col.w - 2 });
+          xd += col.w;
+        });
+
+        // Garis bawah baris
+        doc.setDrawColor(226, 232, 240);
+        doc.line(xStart, y + rowH, xStart + (W - mL - mR), y + rowH);
+        y += rowH;
+      });
+    }
+
+    // ── RINGKASAN ──────────────────────────────────────────
+    y += 4;
+    const ring = { hadir:0, terlambat:0, alfa:0, izin:0, sakit:0, cuti:0, dinas_luar:0 };
+    (data||[]).forEach(r => { if(ring[r.status]!==undefined) ring[r.status]++; });
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    const ringText = [
+      'Hadir: '+(ring.hadir+ring.terlambat+ring.dinas_luar),
+      'Terlambat: '+ring.terlambat,
+      'Alfa: '+ring.alfa,
+      'Izin: '+ring.izin,
+      'Sakit: '+ring.sakit,
+      'Cuti: '+ring.cuti,
+      'Dinas Luar: '+ring.dinas_luar,
+      'Total: '+(data||[]).length
+    ].join('   |   ');
+    doc.text(ringText, W / 2, y, { align: 'center' });
+
+    // ── KOLOM TTD ──────────────────────────────────────────
+    y += 10;
+    if (y < 175) {
+      const ttdY = 185;
+      const ttdPos = [
+        { x: mL,        label: 'Mengetahui,' },
+        { x: W/2 - 30,  label: 'Diperiksa,' },
+        { x: W - mR - 50, label: 'Dibuat oleh,' },
+      ];
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(30, 41, 59);
+      ttdPos.forEach(t => {
+        doc.text(t.label,           t.x + 25, ttdY,      { align: 'center' });
+        doc.text(_nowTanggal(),     t.x + 25, ttdY + 5,  { align: 'center' });
+        doc.line(t.x + 5, ttdY + 22, t.x + 45, ttdY + 22);
+        doc.text('(_______________)', t.x + 25, ttdY + 28, { align: 'center' });
+      });
+    }
+
+    // ── FOOTER ─────────────────────────────────────────────
+    doc.setFontSize(7.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Dicetak: ' + _nowStr(), W / 2, 200, { align: 'center' });
+
+    doc.save('Absensi_' + tanggal.replace(/\//g, '-') + '.pdf');
+    showToast('PDF berhasil diunduh! 📄', 'success');
+
+  } catch(e) {
+    showToast('Gagal cetak PDF: ' + e.message, 'error', 6000);
+    console.error(e);
+  }
+}
+
+function _bulanNamaPDF(b) {
+  return ['Januari','Februari','Maret','April','Mei','Juni',
+    'Juli','Agustus','September','Oktober','November','Desember'][parseInt(b)-1]||'';
+}
+
 // ─────────────────────────────────────────────────────────────
 // REKAP ABSENSI KARYAWAN — PDF
 // ─────────────────────────────────────────────────────────────
