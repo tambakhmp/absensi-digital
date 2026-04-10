@@ -779,10 +779,10 @@ async function cetakKwitansiLembur(idLembur) {
     // TTD 4 pihak
     if (y > 220) { doc.addPage(); y = 20; }
     y = await _kolomTTD(doc, [
-      { label:'Karyawan',  nama: k.nama_lengkap,                ttd: k.tanda_tangan_url },
-      { label:'Keuangan',  nama: data.hrd?.nama_lengkap||'-',    ttd: data.hrd?.tanda_tangan_url },
-      { label:'HRD',       nama: data.hrd?.nama_lengkap||'-',    ttd: data.hrd?.tanda_tangan_url },
-      { label:'Pimpinan',  nama: data.pimpinan?.nama_lengkap||'-', ttd: data.pimpinan?.tanda_tangan_url }
+      { label:'Karyawan',  nama: k.nama_lengkap,  ttd: k.tanda_tangan_url },
+      { label:'Keuangan',  nama: '..............', ttd: '' },
+      { label:'HRD',       nama: '..............', ttd: '' },
+      { label:'Pimpinan',  nama: '..............', ttd: '' }
     ], mL, W-mR, y, doc);
 
     doc.setFontSize(8);
