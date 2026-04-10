@@ -478,6 +478,14 @@ async function loadLemburAdmin(status='pending') {
             <div style="font-size:13px;color:#64748B">
               📅 ${formatTanggal(l.tanggal)} · 🕐 ${l.jam_mulai}–${l.jam_selesai} · <strong>${l.total_jam} jam</strong>
             </div>
+            ${l.foto_spl_url?`<div style="margin-top:8px">
+              <div style="font-size:11px;color:#64748B;font-weight:600;margin-bottom:4px">📎 Foto SPL:</div>
+              <img src="${normalizeDriveUrlFrontend(l.foto_spl_url)}"
+                style="max-width:100%;max-height:150px;border-radius:8px;border:1px solid #E2E8F0;
+                object-fit:contain;cursor:pointer"
+                onclick="window.open('${normalizeDriveUrlFrontend(l.foto_spl_url)}','_blank')"
+                onerror="this.style.display='none'">
+            </div>`:``}
             <div style="font-size:14px;color:#1A9E74;font-weight:700;margin-top:4px">
               ${formatRupiah(l.total_bayar)}
               <span style="font-size:11px;color:#94A3B8;font-weight:400">(${formatRupiah(l.harga_per_jam)}/jam)</span>
