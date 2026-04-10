@@ -90,7 +90,7 @@ async function renderAbsensiAdminFull(container) {
       <h2 style="font-size:17px;font-weight:700;margin:0">📋 Absensi Karyawan</h2>
       <div style="display:flex;gap:8px">
         <button class="btn btn--ghost" style="font-size:13px" onclick="debugGPSAdmin()">📡 Debug GPS</button>
-        <button class="btn btn--ghost" style="font-size:13px" onclick="tampilExportAbsensi()">📊 Export</button>
+        <button class="btn btn--ghost" style="font-size:13px" onclick="tampilCetakAbsensiPDF()">🖨️ Cetak PDF</button>
         <button class="btn btn--primary" style="font-size:13px" onclick="tampilFormAbsensiManualAdmin()">+ Manual</button>
       </div>
     </div>
@@ -253,92 +253,43 @@ function editAbsensiAdmin(idK,status,tanggal) {
     },'💾 Simpan');
 }
 
-async function tampilExportAbsensi() {
-  const now = new Date();
-  const modal = document.createElement('div');
-  modal.id = 'modal-exp-abs';
+// ─── CETAK PDF ABSENSI HARIAN ────────────────────────────────
+async function tampilCetakAbsensiPDF() {
+  const now    = new Date();
+  const tanggal = document.getElementById('filter-tgl-abs')?.value || now.toISOString().split('T')[0];
+  const modal  = document.createElement('div');
+  modal.id     = 'modal-cetak-abs';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px)';
-  modal.innerHTML = `<div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:480px;animation:fadeInScale .2s ease">
+  modal.innerHTML = `<div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:440px;animation:fadeInScale .2s ease">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <h3 style="margin:0;font-size:17px">📊 Export Rekap Excel</h3>
-      <button onclick="document.getElementById('modal-exp-abs').remove()"
+      <h3 style="margin:0;font-size:17px">🖨️ Cetak Absensi PDF</h3>
+      <button onclick="document.getElementById('modal-cetak-abs').remove()"
         style="background:#F1F5F9;border:none;border-radius:50%;width:30px;height:30px;cursor:pointer">✕</button>
     </div>
-    <!-- Mode Pilihan -->
-    <div style="display:flex;gap:8px;margin-bottom:14px">
-      <button id="exp-tab-bln" class="btn btn--primary" style="font-size:12px;flex:1"
-        onclick="expAbsSetMode('bulan')">📅 Per Bulan</button>
-      <button id="exp-tab-rng" class="btn btn--ghost" style="font-size:12px;flex:1"
-        onclick="expAbsSetMode('range')">📆 Rentang Tanggal</button>
-    </div>
-    <!-- Per Bulan -->
-    <div id="exp-mode-bln" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">Bulan</label>
-        <select class="form-control" id="exp-bln">
-          ${Array.from({length:12},(_,i)=>`<option value="${i+1}" ${i===now.getMonth()?'selected':''}>${bulanNama(i+1)}</option>`).join('')}
-        </select>
-      </div>
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">Tahun</label>
-        <input type="number" class="form-control" id="exp-thn" value="${now.getFullYear()}">
-      </div>
-    </div>
-    <!-- Rentang Tanggal -->
-    <div id="exp-mode-rng" style="display:none;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">📅 Dari Tanggal</label>
-        <input type="date" class="form-control" id="exp-dari"
-          value="${new Date(now.getFullYear(),now.getMonth(),1).toISOString().split('T')[0]}">
-      </div>
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">📅 Sampai Tanggal</label>
-        <input type="date" class="form-control" id="exp-ke"
-          value="${now.toISOString().split('T')[0]}">
-      </div>
+    <div class="form-group">
+      <label class="form-label">Tanggal *</label>
+      <input type="date" class="form-control" id="pdf-abs-tgl" value="${tanggal}">
     </div>
     <div style="background:#EFF6FF;border-radius:8px;padding:10px;font-size:12px;color:#2D6CDF;margin-bottom:14px">
-      📋 Hasil Excel berisi: <strong>Kop Surat + Tabel Rekap Harian</strong><br>
-      Kode: H=Hadir · T=Terlambat · A=Alfa · I=Izin · S=Sakit · C=Cuti · DL=Dinas Luar · L=Libur
+      📄 PDF berisi: <strong>Kop Surat + Tabel Absensi</strong><br>
+      Kolom: No · Nama · Jam Masuk · Jam Keluar · Status · Jarak · Keterangan
     </div>
-    <button class="btn btn--primary btn--full btn--lg" onclick="doExportAbsensiExcel()">
-      <div class="spinner-btn"></div><span class="btn-text">📊 Download Excel</span>
+    <button class="btn btn--primary btn--full btn--lg" onclick="doCetakAbsensiPDF()">
+      <div class="spinner-btn"></div><span class="btn-text">📄 Cetak PDF</span>
     </button>
   </div>`;
   document.body.appendChild(modal);
 }
 
-function expAbsSetMode(mode) {
-  const bln = document.getElementById('exp-mode-bln');
-  const rng = document.getElementById('exp-mode-rng');
-  const tB  = document.getElementById('exp-tab-bln');
-  const tR  = document.getElementById('exp-tab-rng');
-  if (mode === 'bulan') {
-    if(bln) bln.style.display='grid'; if(rng) rng.style.display='none';
-    if(tB) tB.className='btn btn--primary'; if(tR) tR.className='btn btn--ghost';
-  } else {
-    if(bln) bln.style.display='none'; if(rng) rng.style.display='grid';
-    if(tR) tR.className='btn btn--primary'; if(tB) tB.className='btn btn--ghost';
-  }
-}
-
-async function doExportAbsensiExcel() {
-  const btn = document.querySelector('#modal-exp-abs .btn--primary');
+async function doCetakAbsensiPDF() {
+  const btn = document.querySelector('#modal-cetak-abs .btn--primary');
   if(btn){btn.disabled=true;btn.classList.add('loading');}
   try {
-    const modeRng = document.getElementById('exp-mode-rng')?.style.display==='grid';
-    if (modeRng) {
-      const dari = document.getElementById('exp-dari')?.value;
-      const ke   = document.getElementById('exp-ke')?.value;
-      if (!dari||!ke) { showToast('Isi rentang tanggal','warning'); return; }
-      await exportRekapExcel(null, null, fromInputDate(dari), fromInputDate(ke));
-    } else {
-      await exportRekapExcel(
-        document.getElementById('exp-bln')?.value,
-        document.getElementById('exp-thn')?.value
-      );
-    }
-    document.getElementById('modal-exp-abs')?.remove();
+    const tglInput = document.getElementById('pdf-abs-tgl')?.value;
+    if (!tglInput) { showToast('Pilih tanggal','warning'); return; }
+    const tgl = fromInputDate(tglInput);
+    await cetakAbsensiHarianPDF(tgl);
+    document.getElementById('modal-cetak-abs')?.remove();
   } catch(e) {
     showToast(e.message,'error');
   } finally {
