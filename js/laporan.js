@@ -284,8 +284,16 @@ async function exportRekapExcel(bulan, tahun, tanggalDari, tanggalKe) {
 
     const BULAN  = ['Januari','Februari','Maret','April','Mei','Juni',
                     'Juli','Agustus','September','Oktober','November','Desember'];
-    const label  = BULAN[parseInt(bulan)-1] + ' ' + tahun;
+    const label  = (tanggalDari && tanggalKe)
+      ? tanggalDari.replace(/\//g,'-') + ' sd ' + tanggalKe.replace(/\//g,'-')
+      : (BULAN[parseInt(bulan)-1] + ' ' + tahun);
     const wb     = XLSX.utils.book_new();
+
+    // Ambil data absensi harian untuk sheet rekap perhari
+    let absensiHarian = [];
+    try {
+      absensiHarian = await callAPI('getAbsensiSemua', rekapPayload) || [];
+    } catch(e) { absensiHarian = []; }
 
     // ── Sheet 1: Rekap Semua ────────────────────────────────
     const headerRow = [
@@ -293,7 +301,8 @@ async function exportRekapExcel(bulan, tahun, tanggalDari, tanggalKe) {
       'Hadir','Terlambat','Alfa','Izin','Sakit','Cuti','Dinas Luar','Total Hadir'
     ];
 
-    const rows = data.data.map(function(r, i) {
+    const dataList = Array.isArray(data) ? data : (data.data || []);
+    const rows = dataList.map(function(r, i) {
       return [
         i+1, r.nama, r.nik, r.jabatan, r.departemen,
         r.hadir, r.terlambat, r.alfa, r.izin, r.sakit, r.cuti, r.dinas_luar, r.hadir_total
@@ -354,7 +363,7 @@ async function exportRekapExcel(bulan, tahun, tanggalDari, tanggalKe) {
 
     // ── Sheet 2 dst: Per Departemen ──────────────────────────
     const deptMap = {};
-    data.data.forEach(function(r) {
+    dataList.forEach(function(r) {
       if (!deptMap[r.departemen]) deptMap[r.departemen] = [];
       deptMap[r.departemen].push(r);
     });
@@ -377,11 +386,12 @@ async function exportRekapExcel(bulan, tahun, tanggalDari, tanggalKe) {
       XLSX.utils.book_append_sheet(wb, dWs, sheetName);
     });
 
-    const namaFile = 'Rekap_Semua_Karyawan_' + label.replace(' ','_') + '.xlsx';
-    // Sheet rekap harian dengan kode per tanggal
+    // Buat sheet rekap harian dengan kode per tanggal
+    const wsHarian = _buatWorksheetHarian(data.data || data, absensiHarian, data.instansi, label);
     if (wsHarian) {
       XLSX.utils.book_append_sheet(wb, wsHarian, 'Rekap Harian');
     }
+    const namaFile = 'Rekap_Semua_Karyawan_' + label.replace(/ /g,'_').replace(/\//g,'-') + '.xlsx';
     XLSX.writeFile(wb, namaFile);
     showToast('Excel berhasil diunduh! 📊', 'success');
 
