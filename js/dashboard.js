@@ -163,12 +163,25 @@ async function loadDashboardAdminV3() {
     const s = await callAPI('getStatsDashboard', {});
     if (!s) return;
 
+    const tglHariIni = tanggalHariIni();
     document.getElementById('admin-stats-container').innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;
+        margin-bottom:10px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:12px;color:#64748B">
+          📅 <strong>Statistik Hari Ini:</strong> ${tglHariIni}
+          <span style="font-size:11px;color:#94A3B8;margin-left:6px">
+            (Alfa = karyawan yang sudah ditandai alfa hari ini)</span>
+        </div>
+        <button onclick="jalankanAutoAlfa()" class="btn btn--ghost"
+          style="font-size:11px;padding:4px 12px;height:30px">
+          ⚡ Hitung Alfa Sekarang
+        </button>
+      </div>
       <div class="stat-grid-admin">
         ${_sc('👥','Karyawan Aktif',  s.karyawan_aktif,  '#2D6CDF')}
         ${_sc('✅','Hadir Hari Ini',  s.hadir_hari_ini,  '#1A9E74')}
         ${_sc('⏰','Terlambat',        s.terlambat,       '#D97706')}
-        ${_sc('❌','Alfa',             s.alfa,            '#E53E3E')}
+        ${_sc('❌','Alfa Hari Ini',    s.alfa,            '#E53E3E')}
         ${_sc('🚗','Dinas Luar',       s.dinas_luar||0,   '#EA580C')}
         ${_sc('🏥','Izin/Sakit',       s.izin_sakit,      '#6C63FF')}
         ${_sc('📋','Pending',          s.pending,         '#0891B2')}
@@ -221,4 +234,23 @@ function renderChart6Bulan(chartData) {
       plugins:{legend:{position:'bottom',labels:{font:{size:11}}}},
       scales:{x:{grid:{display:false}},y:{beginAtZero:true,ticks:{stepSize:1}}}}
   });
+}
+
+// ─── Hitung Alfa Sekarang (manual trigger) ─────────────────────
+async function jalankanAutoAlfa() {
+  const btn = document.querySelector('[onclick="jalankanAutoAlfa()"]');
+  if (btn) { btn.disabled=true; btn.textContent='⏳ Menghitung...'; }
+  try {
+    showToast('Menghitung alfa untuk hari ini...', 'info', 3000);
+    const result = await callAPI('autoAlfaHariIni', {});
+    const msg = result?.pesan || 'Selesai';
+    const jml = result?.jumlah_alfa || 0;
+    showToast(`✅ ${msg} — ${jml} karyawan ditandai alfa`, 'success', 5000);
+    // Reload stats
+    setTimeout(() => loadDashboardAdminV3(), 1500);
+  } catch(e) {
+    showToast('Gagal: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled=false; btn.textContent='⚡ Hitung Alfa Sekarang'; }
+  }
 }
