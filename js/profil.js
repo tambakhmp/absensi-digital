@@ -95,7 +95,7 @@ async function loadHalamanProfil() {
           letter-spacing:.6px;margin-bottom:12px">🪪 ID Card Saya</h3>
         <div style="display:flex;justify-content:center;margin-bottom:12px">
           <div id="idcard-profil-preview"
-            style="width:100%;max-width:340px;height:214px;border-radius:12px;
+            style="width:100%;max-width:340px;aspect-ratio:85.6/54;border-radius:12px;
             box-shadow:0 8px 24px rgba(0,0,0,.2);overflow:hidden">
             <div style="color:#94A3B8;font-size:12px;text-align:center;padding:40px">Memuat...</div>
           </div>
