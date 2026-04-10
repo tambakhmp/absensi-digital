@@ -299,7 +299,7 @@ function tampilFormLembur(){
   const modal=document.createElement('div');
   modal.id='modal-lembur';
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;display:flex;align-items:flex-end;backdrop-filter:blur(4px)';
-  modal.innerHTML=`<div style="background:#fff;border-radius:20px 20px 0 0;padding:20px;width:100%;animation:slideUp .3s ease">
+  modal.innerHTML=`<div style="background:#fff;border-radius:20px 20px 0 0;padding:20px;width:100%;max-height:92vh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom,20px);animation:slideUp .3s ease">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <h3 style="margin:0;font-size:16px">⏰ Ajukan Lembur</h3>
       <button onclick="document.getElementById('modal-lembur').remove()"
