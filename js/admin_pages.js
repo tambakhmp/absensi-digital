@@ -380,8 +380,18 @@ async function loadPengajuanAdminV4() {
             </div>
             <div style="font-size:13px;color:#475569;background:#F8FAFC;
               border-radius:6px;padding:6px 10px;margin-bottom:6px">"${p.keterangan||'-'}"</div>
-            ${p.file_pendukung_url?`<a href="${p.file_pendukung_url}" target="_blank"
-              style="font-size:12px;color:#2D6CDF">📎 Lihat lampiran</a>`:''}
+            ${p.file_pendukung_url ? `
+              <div style="margin-top:8px">
+                <div style="font-size:11px;color:#64748B;margin-bottom:4px;font-weight:600">
+                  📎 Foto Surat Sakit:</div>
+                <img src="${normalizeDriveUrlFrontend(p.file_pendukung_url)}"
+                  style="max-width:100%;max-height:180px;border-radius:8px;
+                  border:1px solid #E2E8F0;object-fit:contain;display:block;cursor:pointer"
+                  onclick="window.open('${normalizeDriveUrlFrontend(p.file_pendukung_url)}','_blank')"
+                  onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+                <a href="${normalizeDriveUrlFrontend(p.file_pendukung_url)}" target="_blank"
+                  style="display:none;font-size:12px;color:#2D6CDF">📎 Buka foto surat</a>
+              </div>` : ''}
             ${p.catatan_admin?`<div style="font-size:12px;color:#D97706;margin-top:4px">
               💬 ${p.catatan_admin}</div>`:''}
           </div>
