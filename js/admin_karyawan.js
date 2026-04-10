@@ -283,385 +283,92 @@ async function cetakIDCard(idKaryawan) {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [85.6, 54] });
     const W = 85.6, H = 54;
 
-    // ── Background ───────────────────────────────────────────
-    doc.setFillColor(15, 23, 42);
-    doc.rect(0, 0, W, H, 'F');
-    // Aksen segitiga kanan atas
-    doc.setFillColor(30, 58, 138);
-    doc.triangle(W - 15, 0, W, 0, W, 15, 'F');
+    // ── Koordinat diturunkan dari HTML em preview ─────────────
+    // Header 22% = 12mm | Body 65% = 35mm | Footer 13% = 7mm
 
-    // ── HEADER (h=12mm, y=0–12) ──────────────────────────────
-    doc.setFillColor(0, 0, 0, 80);
-    doc.rect(0, 0, W, 12, 'F');
-    doc.setDrawColor(255, 255, 255, 25);
-    doc.setLineWidth(0.3);
-    doc.line(0, 12, W, 12);
+    // Background
+    doc.setFillColor(15, 23, 42); doc.rect(0, 0, W, H, 'F');
+    doc.setFillColor(30, 58, 138); doc.triangle(W - 15, 0, W, 0, W, 15, 'F');
 
-    // Logo — tinggi 8mm, vertikal center di header 12mm → y=2
-    let xTeks = 4;
+    // ── Header (0–12mm) ───────────────────────────────────────
+    doc.setFillColor(0, 0, 0, 80); doc.rect(0, 0, W, 12, 'F');
+    doc.setDrawColor(255, 255, 255, 25); doc.setLineWidth(0.3); doc.line(0, 12, W, 12);
+
+    let xHdr = 4;
     const rawLogo = inst?.logo_url ? normalizeDriveUrlFrontend(inst.logo_url || '') : '';
     if (rawLogo && rawLogo.startsWith('http')) {
       try {
         const ld = await _urlToBase64(rawLogo);
-        doc.addImage(ld, 'PNG', 3, 2, 8, 8); // x=3,y=2,w=8,h=8
-        xTeks = 14;
-      } catch(e) { /* skip */ }
+        // Logo: y=2, h=8 → center di header 12mm
+        doc.addImage(ld, 'PNG', 3, 2, 8, 8);
+        xHdr = 14;
+      } catch(e) {}
     }
-
-    // Nama instansi — center vertikal di header
-    // Logo center: y=6. Nama baris 1: y=5.5, baris 2: y=9
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(6.5);
+    // Nama instansi
+    doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
     const namaInst = (inst?.nama_instansi || 'INSTANSI').toUpperCase();
-    const namaLines = doc.splitTextToSize(namaInst, W - xTeks - 4);
-    if (namaLines.length === 1) {
-      doc.text(namaLines[0], xTeks, 6.5); // center satu baris
-    } else {
-      doc.text(namaLines[0], xTeks, 5);
-      doc.text(namaLines[1], xTeks, 9);
-    }
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(5);
-    doc.setTextColor(160, 175, 200);
-    // "ID CARD KARYAWAN" di bawah nama
-    const yIDCard = namaLines.length === 1 ? 10 : 12.5;
-    // Jika nama 2 baris, teks ini ada di luar header — skip
-    if (namaLines.length === 1) {
-      doc.text('ID CARD KARYAWAN', xTeks, yIDCard);
+    const namaL = doc.splitTextToSize(namaInst, W - xHdr - 3);
+    doc.text(namaL[0], xHdr, namaL.length > 1 ? 5.5 : 6.5);
+    if (namaL[1]) doc.text(namaL[1], xHdr, 9.5);
+    // "ID CARD KARYAWAN" hanya jika nama 1 baris
+    if (namaL.length === 1) {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(5.2); doc.setTextColor(160, 175, 200);
+      doc.text('ID CARD KARYAWAN', xHdr, 10.5);
     }
 
-    // ── FOTO (x=5, y=18, w=22, h=22 → center di body y=12–47) ─
-    // Body: 35mm. Photo: 22mm. Offset: (35-22)/2=6.5 → y=12+6.5=18.5
-    const fY = 18, fW = 22, fH = 22, fX = 5;
-    // Border
-    doc.setFillColor(30, 58, 138);
-    doc.roundedRect(fX - 1, fY - 1, fW + 2, fH + 2, 2, 2, 'F');
-
+    // ── Foto: x=2.6,y=15.8,w=27.4,h=27.4 (34% width, center di body) ─
+    const fX = 3, fY = 15.5, fW = 26, fH = 26;
+    doc.setFillColor(30, 58, 138); doc.roundedRect(fX - 1, fY - 1, fW + 2, fH + 2, 2, 2, 'F');
     const rawFoto = k.foto_profil_url ? normalizeDriveUrlFrontend(k.foto_profil_url) : '';
-    let fotoOk = false;
+    let fOk = false;
     if (rawFoto && rawFoto.startsWith('http')) {
-      try {
-        const fd = await _urlToBase64(rawFoto);
-        doc.addImage(fd, 'JPEG', fX, fY, fW, fH);
-        fotoOk = true;
-      } catch(e) { /* gagal load foto */ }
+      try { const fd = await _urlToBase64(rawFoto); doc.addImage(fd, 'JPEG', fX, fY, fW, fH); fOk = true; }
+      catch(e) {}
     }
-    if (!fotoOk) {
-      doc.setFillColor(45, 108, 223);
-      doc.roundedRect(fX, fY, fW, fH, 1.5, 1.5, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.text((k.nama_lengkap || 'K')[0].toUpperCase(), fX + fW / 2, fY + fH / 2 + 2, { align: 'center' });
+    if (!fOk) {
+      doc.setFillColor(45, 108, 223); doc.roundedRect(fX, fY, fW, fH, 1.5, 1.5, 'F');
+      doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(18);
+      doc.text((k.nama_lengkap || 'K')[0].toUpperCase(), fX + fW / 2, fY + fH / 2 + 3, { align: 'center' });
     }
 
-    // ── INFO KARYAWAN (x=31) ──────────────────────────────────
-    const xi = 31;
-    const maxW = W - xi - 4;
+    // ── Info: x=33.4, mulai dari y=18 ─────────────────────────
+    const xi = 33;
+    const maxW = W - xi - 3;
 
-    // Nama (baseline y=23, sejajar atas foto)
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9.5);
+    // Nama — font 10pt bold
+    doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
     const namaArr = doc.splitTextToSize(k.nama_lengkap || '-', maxW);
-    doc.text(namaArr[0], xi, 23);
+    doc.text(namaArr[0], xi, 22);
 
-    // Jabatan
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    doc.setTextColor(147, 197, 253);
-    doc.text(k.jabatan || '-', xi, 29, { maxWidth: maxW });
+    // Jabatan — 7.8pt, biru muda
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.8); doc.setTextColor(147, 197, 253);
+    doc.text(k.jabatan || '-', xi, 27.5, { maxWidth: maxW });
 
-    // Departemen
-    doc.setFontSize(6.5);
-    doc.setTextColor(71, 85, 105);
-    doc.text(k.departemen || '-', xi, 33.5, { maxWidth: maxW });
+    // Dept — 7pt, abu
+    doc.setFontSize(7); doc.setTextColor(71, 85, 105);
+    doc.text(k.departemen || '-', xi, 31.5, { maxWidth: maxW });
 
-    // NIK box — y=37, h=8.5, bottom=45.5 < footer(47) ✓
-    const nikW = maxW;
-    doc.setFillColor(30, 58, 138);
-    doc.roundedRect(xi, 37, nikW, 8.5, 1.5, 1.5, 'F');
-    doc.setFontSize(4.8);
-    doc.setTextColor(71, 85, 105);
-    doc.text('NIK', xi + 2.5, 41);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
-    doc.setTextColor(255, 255, 255);
-    doc.text(String(k.nik || '-'), xi + 2.5, 44.5, { maxWidth: nikW - 5 });
+    // NIK box — y=35,h=8,bottom=43 → 4mm sebelum footer(47)
+    const nW = maxW;
+    doc.setFillColor(30, 58, 138); doc.roundedRect(xi, 35, nW, 8, 1.5, 1.5, 'F');
+    doc.setFontSize(5); doc.setTextColor(71, 85, 105);
+    doc.text('NIK', xi + 2.5, 38.8);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
+    doc.text(String(k.nik || '-'), xi + 2.5, 42, { maxWidth: nW - 5 });
 
-    // ── FOOTER (y=47–54) ─────────────────────────────────────
-    doc.setFillColor(45, 108, 223);
-    doc.rect(0, 47, W * 0.88, 7, 'F');
-    doc.setFillColor(26, 158, 116);
-    doc.rect(W * 0.88, 47, W * 0.12, 7, 'F');
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(4.5);
-    doc.setTextColor(255, 255, 255);
+    // ── Footer (y=47–54) ──────────────────────────────────────
+    doc.setFillColor(45, 108, 223); doc.rect(0, 47, W * 0.88, 7, 'F');
+    doc.setFillColor(26, 158, 116); doc.rect(W * 0.88, 47, W * 0.12, 7, 'F');
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(4.5); doc.setTextColor(255, 255, 255);
     const alamat = (inst?.alamat_instansi || '').substring(0, 60);
     if (alamat) doc.text(alamat, W * 0.44, 52, { align: 'center', maxWidth: W * 0.8 });
 
     doc.save('IDCard_' + (k.nama_lengkap || 'karyawan').replace(/\s+/g, '_') + '.pdf');
     showToast('ID Card berhasil didownload! 🪪', 'success');
-
   } catch(e) {
     showToast('Gagal cetak ID Card: ' + e.message, 'error', 5000);
     console.error(e);
   }
-}
-
-
-function tampilFormTambahKaryawan() {
-  _tampilFormKaryawan(null);
-}
-
-async function tampilFormEditKaryawan(idKaryawan) {
-  try {
-    showToast('Memuat data...', 'info', 1500);
-    const k = await callAPI('getKaryawanById', { id_karyawan: idKaryawan });
-    _tampilFormKaryawan(k);
-  } catch(e) { showToast(e.message, 'error'); }
-}
-
-function _tampilFormKaryawan(k) {
-  const isEdit = !!k;
-  const modal  = document.createElement('div');
-  modal.id     = 'modal-karyawan';
-  modal.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;
-    overflow-y:auto;display:flex;align-items:flex-start;justify-content:center;
-    padding:20px;backdrop-filter:blur(3px)`;
-
-  const usernameDefault = k?.username || '';
-  const today = new Date().toISOString().split('T')[0];
-
-  modal.innerHTML = `
-    <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:640px;
-      margin:auto;animation:fadeInScale 0.25s ease">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <h3 style="margin:0;font-size:18px;font-weight:700">
-          ${isEdit ? '✏️ Edit Karyawan' : '➕ Tambah Karyawan Baru'}
-        </h3>
-        <button onclick="document.getElementById('modal-karyawan').remove()"
-          style="background:#F1F5F9;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px">✕</button>
-      </div>
-
-      <div id="karyawan-form-error" style="display:none;background:#FFF5F5;border:1px solid #FC8181;
-        border-radius:8px;padding:12px;color:#C53030;font-size:13px;margin-bottom:16px"></div>
-
-      <!-- INFORMASI DASAR -->
-      <p style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;
-        letter-spacing:.6px;margin-bottom:12px">👤 Informasi Dasar</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        ${frmInput('kf-nama','Nama Lengkap *','text',k?.nama_lengkap||'')}
-        ${frmInput('kf-nik','NIK Karyawan *','text',k?.nik||'')}
-        ${frmInput('kf-jabatan','Jabatan *','text',k?.jabatan||'')}
-        ${frmInput('kf-departemen','Departemen *','text',k?.departemen||'')}
-        ${frmInput('kf-atasan','Nama Atasan','text',k?.nama_atasan||'')}
-        ${frmInput('kf-masuk','Tanggal Bergabung *','date',toInputDate(k?.tanggal_masuk)||today)}
-        ${frmSelect('kf-role','Role *',[
-          {v:'karyawan',l:'Karyawan'},
-          {v:'admin',   l:'Admin'},
-          {v:'superadmin',l:'Super Admin'}
-        ], k?.role||'karyawan')}
-      </div>
-
-      <!-- INFORMASI PRIBADI -->
-      <p style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;
-        letter-spacing:.6px;margin:16px 0 12px">🪪 Informasi Pribadi</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        ${frmInput('kf-lahir','Tanggal Lahir *','date',toInputDate(k?.tanggal_lahir)||'')}
-        ${frmSelect('kf-jk','Jenis Kelamin *',[{v:'L',l:'Laki-laki'},{v:'P',l:'Perempuan'}], k?.jenis_kelamin||'L')}
-        ${frmInput('kf-ktp','No. KTP','text',k?.no_ktp||'')}
-        ${frmInput('kf-hp','No. HP *','tel',k?.no_hp||'')}
-        ${frmInput('kf-email','Email *','email',k?.email||'')}
-        ${frmSelect('kf-pendidikan','Pendidikan Terakhir',[
-          {v:'SD',l:'SD'},{v:'SMP',l:'SMP'},{v:'SMA/SMK',l:'SMA/SMK'},
-          {v:'D3',l:'D3'},{v:'S1',l:'S1'},{v:'S2',l:'S2'},{v:'S3',l:'S3'}
-        ], k?.pendidikan_terakhir||'S1')}
-      </div>
-      <div class="form-group">
-        <label class="form-label">Alamat</label>
-        <textarea class="form-control" id="kf-alamat" rows="2">${k?.alamat||''}</textarea>
-      </div>
-
-      <!-- INFORMASI AKUN -->
-      <p style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;
-        letter-spacing:.6px;margin:16px 0 12px">🔐 Informasi Akun</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        ${frmInput('kf-username','Username *','text', usernameDefault, isEdit ? 'Tidak bisa diubah' : '')}
-        ${!isEdit ? frmInput('kf-password','Password Awal *','text','Absensi@123','Akan di-hash otomatis') : ''}
-      </div>
-
-      <div style="display:flex;gap:10px;margin-top:20px">
-        <button class="btn btn--ghost" style="flex:1"
-          onclick="document.getElementById('modal-karyawan').remove()">Batal</button>
-        <button class="btn btn--primary" style="flex:2"
-          onclick="submitFormKaryawan(${isEdit ? `'${k.id_karyawan}'` : 'null'})">
-          <div class="spinner-btn"></div>
-          <span class="btn-text">${isEdit ? '💾 Simpan Perubahan' : '➕ Tambah Karyawan'}</span>
-        </button>
-      </div>
-    </div>`;
-
-  document.body.appendChild(modal);
-
-  // Auto-generate username dari nama jika tambah baru
-  if (!isEdit) {
-    document.getElementById('kf-nama').addEventListener('input', function() {
-      const uname = this.value.toLowerCase()
-        .replace(/\s+/g,'.')
-        .replace(/[^a-z0-9.]/g,'')
-        .substring(0,30);
-      document.getElementById('kf-username').value = uname;
-    });
-  }
-}
-
-async function submitFormKaryawan(idKaryawan) {
-  const btn  = document.querySelector('#modal-karyawan .btn--primary');
-  const err  = document.getElementById('karyawan-form-error');
-  if (btn) { btn.disabled=true; btn.classList.add('loading'); }
-  if (err) err.style.display = 'none';
-
-  try {
-    const getNilai = id => document.getElementById(id)?.value?.trim() || '';
-    const nama       = getNilai('kf-nama');
-    const nik        = getNilai('kf-nik');
-    const jabatan    = getNilai('kf-jabatan');
-    const departemen = getNilai('kf-departemen');
-    const hp         = getNilai('kf-hp');
-    const email      = getNilai('kf-email');
-    const username   = getNilai('kf-username');
-
-    if (!nama)       throw new Error('Nama lengkap wajib diisi');
-    if (!nik)        throw new Error('NIK wajib diisi');
-    if (!jabatan)    throw new Error('Jabatan wajib diisi');
-    if (!departemen) throw new Error('Departemen wajib diisi');
-    if (!hp)         throw new Error('No. HP wajib diisi');
-    if (!email)      throw new Error('Email wajib diisi');
-    if (!username)   throw new Error('Username wajib diisi');
-
-    const payload = {
-      nama_lengkap        : nama,
-      nik,
-      jabatan,
-      departemen,
-      nama_atasan         : getNilai('kf-atasan'),
-      tanggal_masuk       : fromInputDate(getNilai('kf-masuk')),
-      tanggal_lahir       : fromInputDate(getNilai('kf-lahir')),
-      jenis_kelamin       : getNilai('kf-jk'),
-      no_ktp              : getNilai('kf-ktp'),
-      no_hp               : hp,
-      email,
-      alamat              : document.getElementById('kf-alamat')?.value?.trim()||'',
-      pendidikan_terakhir : getNilai('kf-pendidikan'),
-      username,
-      role                : getNilai('kf-role')
-    };
-
-    let result;
-    if (idKaryawan) {
-      payload.id_karyawan = idKaryawan;
-      result = await callAPI('editKaryawan', payload);
-    } else {
-      // Hash password
-      const pw = getNilai('kf-password') || 'Absensi@123';
-      payload.password_hash = await sha256(pw);
-      result = await callAPI('tambahKaryawan', payload);
-    }
-
-    document.getElementById('modal-karyawan')?.remove();
-    showToast(result.message || 'Berhasil! ✅', 'success');
-    await loadTabelKaryawan();
-  } catch(e) {
-    if (err) { err.style.display='block'; err.textContent='⚠️ '+e.message; }
-    else showToast(e.message, 'error');
-  } finally {
-    if (btn) { btn.disabled=false; btn.classList.remove('loading'); }
-  }
-}
-
-function konfirmasiToggleKaryawan(id, nama, aktifkan) {
-  showModal(
-    aktifkan ? '✅ Aktifkan Karyawan?' : '🚫 Nonaktifkan Karyawan?',
-    `${aktifkan ? 'Aktifkan' : 'Nonaktifkan'} akun <strong>${nama}</strong>?`,
-    async () => {
-      try {
-        const r = await callAPI(aktifkan ? 'aktifKaryawan' : 'nonaktifKaryawan', { id_karyawan: id });
-        showToast(r.message, 'success');
-        await loadTabelKaryawan();
-      } catch(e) { showToast(e.message, 'error'); }
-    },
-    aktifkan ? 'Ya, Aktifkan' : 'Ya, Nonaktifkan'
-  );
-}
-
-function cetakRekapDariAdmin(idKaryawan) {
-  const now = new Date();
-  showModal('📄 Cetak Rekap PDF',
-    `<div class="form-group" style="margin-top:8px">
-      <label class="form-label">Bulan</label>
-      <select class="form-control" id="cetak-bulan">
-        ${Array.from({length:12},(_,i)=>`<option value="${i+1}" ${i===now.getMonth()?'selected':''}>${bulanNama(i+1)}</option>`).join('')}
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Tahun</label>
-      <input type="number" class="form-control" id="cetak-tahun" value="${now.getFullYear()}" min="2020">
-    </div>`,
-    async () => {
-      const b = document.getElementById('cetak-bulan')?.value;
-      const t = document.getElementById('cetak-tahun')?.value;
-      await cetakRekapPDF(idKaryawan, b, t);
-    },
-    '📄 Cetak PDF'
-  );
-}
-
-// Helper form
-function frmInput(id, label, type, value='', hint='') {
-  return `<div class="form-group" style="margin-bottom:0">
-    <label class="form-label">${label}</label>
-    <input type="${type}" class="form-control" id="${id}" value="${value}" ${hint?'readonly':''}>
-    ${hint ? `<p class="form-hint">${hint}</p>` : ''}
-  </div>`;
-}
-
-function frmSelect(id, label, options, selected='') {
-  return `<div class="form-group" style="margin-bottom:0">
-    <label class="form-label">${label}</label>
-    <select class="form-control" id="${id}">
-      ${options.map(o=>`<option value="${o.v}" ${o.v===selected?'selected':''}>${o.l}</option>`).join('')}
-    </select>
-  </div>`;
-}
-
-// Export template Excel untuk import bulk
-function exportTemplateKaryawan() {
-  if (typeof XLSX === 'undefined') { showToast('Library Excel belum dimuat','warning'); return; }
-  const headers = [
-    'nama_lengkap','nik','jabatan','departemen','nama_atasan','tanggal_masuk',
-    'tanggal_lahir','jenis_kelamin','no_ktp','no_hp','email','alamat',
-    'pendidikan_terakhir','username','password_awal','id_shift','role'
-  ];
-  const contoh = [
-    'Budi Santoso','2026-0001','Staff HR','Human Resource','Siti Rahayu',
-    '01/01/2024','15/06/1995','L','1234567890123456','081234567890',
-    'budi@instansi.com','Jl. Contoh No. 1, Kota','S1','budi.santoso',
-    'Absensi@123','SHF001','karyawan'
-  ];
-  const ws = XLSX.utils.aoa_to_sheet([
-    ['TEMPLATE IMPORT KARYAWAN — Sistem Absensi Digital'],
-    ['Petunjuk: Isi data mulai baris ke-4. Jangan ubah urutan kolom.'],
-    [],
-    headers,
-    contoh
-  ]);
-  ws['!cols'] = headers.map(() => ({wch:20}));
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Template Karyawan');
-  XLSX.writeFile(wb, 'Template_Import_Karyawan.xlsx');
-  showToast('Template Excel berhasil diunduh!', 'success');
 }
 
 async function lihatProfilKaryawan(idKaryawan) {
@@ -728,14 +435,17 @@ async function lihatProfilKaryawan(idKaryawan) {
             </div>`).join('')}
           </div>
 
-          <!-- ID Card Preview -->
+          <!-- ID Card Preview — diisi setelah modal masuk DOM -->
           <div style="margin-bottom:16px">
             <p style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;
               letter-spacing:.6px;margin-bottom:10px">🪪 ID Card</p>
-            <div id="idcard-preview-${k.id_karyawan}" style="width:100%;max-width:340px;aspect-ratio:85.6/54;
-              margin:0 auto;border-radius:16px;overflow:hidden;
-              box-shadow:0 8px 32px rgba(0,0,0,.18)">
-              ${_idCardPreviewHTML(k, instansi)}
+            <div id="idcard-preview-admin" style="width:100%;max-width:340px;
+              aspect-ratio:85.6/54;margin:0 auto;border-radius:12px;overflow:hidden;
+              box-shadow:0 8px 24px rgba(0,0,0,.2)">
+              <div style="width:100%;height:100%;background:#1e293b;
+                display:flex;align-items:center;justify-content:center;color:#64748B;font-size:12px">
+                Memuat...
+              </div>
             </div>
           </div>
 
@@ -754,6 +464,15 @@ async function lihatProfilKaryawan(idKaryawan) {
       </div>`;
     document.body.appendChild(modal);
     modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+
+    // Isi ID Card SETELAH modal masuk DOM → em unit punya referensi ukuran benar
+    requestAnimationFrame(() => {
+      const wrap = document.getElementById('idcard-preview-admin');
+      if (wrap && typeof _idCardPreviewHTML === 'function') {
+        wrap.innerHTML = _idCardPreviewHTML(k, instansi);
+      }
+    });
+
   } catch(e) { showToast(e.message, 'error'); }
 }
 
