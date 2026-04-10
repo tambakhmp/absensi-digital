@@ -265,7 +265,7 @@ async function cetakRekapPDF(idKaryawan, bulan, tahun, tanggalDari, tanggalKe) {
 // ─────────────────────────────────────────────────────────────
 // REKAP SEMUA KARYAWAN — EXCEL (SheetJS)
 // ─────────────────────────────────────────────────────────────
-async function exportRekapExcel(bulan, tahun) {
+async function exportRekapExcel(bulan, tahun, tanggalDari, tanggalKe) {
   showToast('Mempersiapkan file Excel...', 'info', 2000);
 
   try {
