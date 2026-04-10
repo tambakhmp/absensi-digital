@@ -727,14 +727,14 @@ async function cetakKwitansiLembur(idLembur) {
     const lb = data.lembur;
     const k  = data.karyawan;
     const kwitRow = [
-      ['Nama Karyawan',  k.nama_lengkap],
-      ['NIK',            k.nik],
-      ['Jabatan',        k.jabatan],
-      ['Departemen',     k.departemen],
-      ['Tanggal Lembur', _fmtTgl(lb.tanggal)],
-      ['Waktu',          lb.jam_mulai + ' – ' + lb.jam_selesai + ' (' + lb.total_jam + ' jam)'],
-      ['Harga per Jam',  _fmtRp(lb.harga_per_jam)],
-      ['Total Bayar',    _fmtRp(lb.total_bayar)]
+      ['Nama Karyawan',  String(k.nama_lengkap||'-')],
+      ['NIK',            String(k.nik||'-')],
+      ['Jabatan',        String(k.jabatan||'-')],
+      ['Departemen',     String(k.departemen||'-')],
+      ['Tanggal Lembur', String(_fmtTgl(lb.tanggal)||'-')],
+      ['Waktu',          String(lb.jam_mulai||'-') + ' – ' + String(lb.jam_selesai||'-') + ' (' + String(lb.total_jam||0) + ' jam)'],
+      ['Harga per Jam',  String(_fmtRp(lb.harga_per_jam)||'-')],
+      ['Total Bayar',    String(_fmtRp(lb.total_bayar)||'-')]
     ];
 
     doc.setFontSize(10);
@@ -789,7 +789,7 @@ async function cetakKwitansiLembur(idLembur) {
     doc.setTextColor(150,150,150);
     doc.text('Dicetak: ' + _nowStr(), W/2, 292, { align:'center' });
 
-    doc.save('Kwitansi_Lembur_' + k.nama_lengkap.replace(/\s/g,'_') + '_' + (lb.tanggal||'').replace(/\//g,'-') + '.pdf');
+    doc.save('Kwitansi_Lembur_' + String(k.nama_lengkap||'karyawan').replace(/\s/g,'_') + '_' + (lb.tanggal||'').replace(/\//g,'-') + '.pdf');
     showToast('Kwitansi berhasil diunduh! 🧾', 'success');
 
   } catch(e) {
