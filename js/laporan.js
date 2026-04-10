@@ -495,6 +495,41 @@ async function exportRekapExcel(bulan, tahun, tanggalDari, tanggalKe) {
 // KWITANSI LEMBUR — PDF
 // ─────────────────────────────────────────────────────────────
 
+
+// ─── TERBILANG (JavaScript frontend) ─────────────────────────
+function _terbilangJS(nominal) {
+  const n = Math.round(Math.abs(nominal));
+  if (n === 0) return 'Nol Rupiah';
+  const satuan = ['','Satu','Dua','Tiga','Empat','Lima','Enam','Tujuh','Delapan','Sembilan',
+    'Sepuluh','Sebelas','Dua Belas','Tiga Belas','Empat Belas','Lima Belas','Enam Belas',
+    'Tujuh Belas','Delapan Belas','Sembilan Belas'];
+  function ratusan(num) {
+    if (num === 0) return '';
+    if (num < 20) return satuan[num];
+    if (num < 100) {
+      const s = satuan[Math.floor(num/10)*10 - 10] || '';
+      const map10=['','','Dua Puluh','Tiga Puluh','Empat Puluh','Lima Puluh',
+        'Enam Puluh','Tujuh Puluh','Delapan Puluh','Sembilan Puluh'];
+      return map10[Math.floor(num/10)] + (num%10 ? ' '+satuan[num%10] : '');
+    }
+    if (num < 200) return 'Seratus' + (num-100 ? ' '+ratusan(num-100) : '');
+    return satuan[Math.floor(num/100)]+' Ratus'+(num%100 ? ' '+ratusan(num%100) : '');
+  }
+  const parts = [];
+  const milyar = Math.floor(n/1000000000);
+  const juta   = Math.floor((n%1000000000)/1000000);
+  const ribu   = Math.floor((n%1000000)/1000);
+  const sisa   = n%1000;
+  if (milyar) parts.push(ratusan(milyar)+' Milyar');
+  if (juta)   parts.push(ratusan(juta)+' Juta');
+  if (ribu) {
+    if (ribu===1) parts.push('Seribu');
+    else parts.push(ratusan(ribu)+' Ribu');
+  }
+  if (sisa) parts.push(ratusan(sisa));
+  return parts.join(' ') + ' Rupiah';
+}
+
 // ─── KWITANSI LEMBUR PER KARYAWAN + RENTANG WAKTU ──────────
 async function cetakKwitansiKaryawan(idKaryawan, tanggalDari, tanggalKe) {
   showToast('Membuat kwitansi...','info',2000);
@@ -537,27 +572,49 @@ async function cetakKwitansiKaryawan(idKaryawan, tanggalDari, tanggalKe) {
       y+=isTot?9:6;
     });y+=4;
     doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text('Rincian Lembur:',mL,y);y+=6;
-    doc.setFillColor(45,108,223);doc.rect(mL,y-5,W-mL-mR,7,'F');
-    doc.setTextColor(255,255,255);doc.setFontSize(9);
-    doc.text('No',mL+2,y);doc.text('Tanggal',mL+10,y);doc.text('Jam Kerja',mL+45,y);
-    doc.text('Durasi',mL+80,y);doc.text('Harga/Jam',mL+100,y);doc.text('Total',mL+135,y);
-    doc.setTextColor(0,0,0);y+=4;doc.setFont('helvetica','normal');
+    // Kolom tabel: No=10|Tanggal=35|Jam=42|Durasi=23|Harga=30|Total=30 = 170mm
+    const tCols = [
+      {label:'No',      w:10, x:mL,        align:'center'},
+      {label:'Tanggal', w:35, x:mL+10,     align:'left'},
+      {label:'Jam Kerja',w:42, x:mL+45,    align:'left'},
+      {label:'Durasi',  w:23, x:mL+87,     align:'center'},
+      {label:'Harga/Jam',w:30,x:mL+110,    align:'right'},
+      {label:'Total',   w:30, x:mL+140,    align:'right'},
+    ];
+    // Header tabel
+    doc.setFillColor(45,108,223); doc.rect(mL,y-5,W-mL-mR,8,'F');
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    tCols.forEach(col=>{
+      const tx = col.align==='center'?col.x+col.w/2 : col.align==='right'?col.x+col.w-1:col.x+2;
+      doc.text(col.label, tx, y, {align:col.align==='right'?'right':'center'===col.align?'center':'left', maxWidth:col.w-2});
+    });
+    doc.setTextColor(0,0,0); y+=5;
+
+    doc.setFont('helvetica','normal');
     items.forEach((l,i)=>{
-      if(i%2===0){doc.setFillColor(248,250,252);doc.rect(mL,y-4,W-mL-mR,7,'F');}
-      doc.text(String(i+1),mL+4,y,{align:'center'});
-      doc.text(String(_fmtTgl(l.tanggal)||'-'),mL+10,y);
-      doc.text(String(l.jam_mulai||'-')+' – '+String(l.jam_selesai||'-'),mL+45,y);
-      doc.text(String(l.total_jam||0)+' jam',mL+80,y);
-      doc.text(String(_fmtRp(l.harga_per_jam)||'-'),mL+100,y);
-      doc.text(String(_fmtRp(l.total_bayar)||'-'),mL+135,y);
-      y+=6;if(y>250){doc.addPage();y=20;}
+      if(i%2===0){doc.setFillColor(248,250,252);doc.rect(mL,y-4,W-mL-mR,8,'F');}
+      else{doc.setFillColor(255,255,255);doc.rect(mL,y-4,W-mL-mR,8,'F');}
+      doc.setDrawColor(230,230,230); doc.line(mL,y+4,W-mR,y+4);
+      const row = [
+        String(i+1),
+        String(_fmtTgl(l.tanggal)||'-'),
+        String(l.jam_mulai||'-')+' – '+String(l.jam_selesai||'-'),
+        String(l.total_jam||0)+' jam',
+        String(_fmtRp(l.harga_per_jam)||'-'),
+        String(_fmtRp(l.total_bayar)||'-'),
+      ];
+      tCols.forEach((col,ci)=>{
+        const tx = col.align==='center'?col.x+col.w/2 : col.align==='right'?col.x+col.w-1:col.x+2;
+        doc.text(row[ci], tx, y, {align:col.align==='right'?'right':col.align==='center'?'center':'left', maxWidth:col.w-2});
+      });
+      y+=8; if(y>250){doc.addPage();y=20;}
     });
     doc.setLineWidth(0.3);doc.line(mL,y,W-mR,y);y+=4;
     doc.setFillColor(255,248,220);doc.rect(mL,y-3,W-mL-mR,14,'F');
     doc.setLineWidth(0.3);doc.rect(mL,y-3,W-mL-mR,14);
     doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text('Terbilang:',mL+3,y+2);
     doc.setFont('helvetica','italic');
-    const terb=typeof _terbilangRupiah==='function'?_terbilangRupiah(totByr):formatRupiah(totByr);
+    const terb = _terbilangJS(totByr);
     doc.text(terb,mL+3,y+8,{maxWidth:W-mL-mR-6});y+=18;
     doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(100,100,100);
     doc.text('* Kwitansi ini merupakan bukti pembayaran sah yang diterbitkan oleh '+String(inst?.nama_instansi||'instansi'),mL,y);y+=8;
@@ -1033,7 +1090,8 @@ async function _kolomTTD(doc, signers, xStart, xEnd, y, docRef) {
   }));
   y += 22;
 
-  // Garis TTD
+  // Garis TTD — warna hitam, tebal
+  doc.setDrawColor(0,0,0); doc.setLineWidth(0.4);
   signers.forEach(function(s, i) {
     const lineX = xStart + i * colW;
     doc.line(lineX + 5, y, lineX + colW - 5, y);
