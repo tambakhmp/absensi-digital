@@ -60,10 +60,19 @@ async function cetakAbsensiHarianPDF(tanggal) {
   }
 
   try {
-    // Ambil data
-    const data     = await callAPI('getAbsensiSemua', { tanggal });
-    const instansi = await callAPI('getMultipleSetting', {
-      keys: 'nama_instansi,alamat_instansi,telepon_instansi,email_instansi,logo_url,website_instansi'
+    // Ambil data absensi + karyawan + instansi bersamaan
+    const [data, karyawanList, instansi] = await Promise.all([
+      callAPI('getAbsensiSemua', { tanggal }),
+      callAPI('getKaryawanAktif', {}),
+      callAPI('getMultipleSetting', {
+        keys: 'nama_instansi,alamat_instansi,telepon_instansi,email_instansi,logo_url,website_instansi'
+      })
+    ]);
+
+    // Buat lookup jabatan dari karyawanList
+    const karyawanMap = {};
+    (karyawanList || []).forEach(k => {
+      karyawanMap[k.id_karyawan] = { jabatan: k.jabatan || '-', nik: k.nik || '-' };
     });
 
     const { jsPDF } = window.jspdf;
@@ -181,16 +190,21 @@ async function cetakAbsensiHarianPDF(tanggal) {
         const sc = STATUS_COLOR[row.status] || [100,116,139];
         const sl = STATUS_LABEL[row.status]  || (row.status || '-');
 
+        // Ambil jabatan & NIK dari lookup karyawanMap
+        const kMap = karyawanMap[row.id_karyawan] || {};
+        const jabatan = row.jabatan || kMap.jabatan || '-';
+        const nik     = row.nik     || kMap.nik     || row.id_karyawan || '-';
+
         const rowData = [
           String(idx + 1),
           row.nama_karyawan || '-',
-          row.id_karyawan   || '-',
-          row.jabatan       || '-',
-          row.jam_masuk     || '-',
-          row.jam_keluar    || '-',
+          nik,
+          jabatan,
+          row.jam_masuk  || '-',
+          row.jam_keluar || '-',
           sl,
           row.jarak_meter_masuk ? String(row.jarak_meter_masuk) : '-',
-          (row.keterangan   || '-').substring(0, 40),
+          row.keterangan || '-',
         ];
 
         // Hitung tinggi baris dinamis berdasarkan keterangan
@@ -240,11 +254,8 @@ async function cetakAbsensiHarianPDF(tanggal) {
       });
     }
 
-    // Garis border kiri dan kanan tabel
-    doc.setDrawColor(45, 108, 223);
-    doc.setLineWidth(0.4);
-    const tableBottom = y;
-    doc.rect(xStart, tabelStartY, W - mL - mR, tableBottom - tabelStartY);
+    // Tidak pakai rect border tabel tunggal (tidak support multi-halaman)
+    // Border sudah ada dari garis bawah setiap baris
 
     // ── RINGKASAN ──────────────────────────────────────────
     y += 4;
@@ -265,30 +276,43 @@ async function cetakAbsensiHarianPDF(tanggal) {
     ].join('   |   ');
     doc.text(ringText, W / 2, y, { align: 'center' });
 
-    // ── KOLOM TTD ──────────────────────────────────────────
-    y += 10;
-    if (y < 175) {
-      const ttdY = 185;
-      const ttdPos = [
-        { x: mL,              label: 'Dibuat oleh,'  },
-        { x: W/2 - 25,        label: 'Diperiksa,'    },
-        { x: W - mR - 52,     label: 'Mengetahui,'   },
-      ];
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(30, 41, 59);
-      ttdPos.forEach(t => {
-        doc.text(t.label,           t.x + 25, ttdY,      { align: 'center' });
-        doc.text(_nowTanggal(),     t.x + 25, ttdY + 5,  { align: 'center' });
-        doc.line(t.x + 5, ttdY + 22, t.x + 45, ttdY + 22);
-        doc.text('(_______________)', t.x + 25, ttdY + 28, { align: 'center' });
-      });
+    // ── KOLOM TTD — selalu di halaman terakhir ─────────────
+    // Jika tidak cukup ruang di halaman ini, tambah halaman baru
+    y += 8;
+    const spaceNeeded = 45; // tinggi area TTD
+    if (y + spaceNeeded > 195) {
+      doc.addPage();
+      y = 20;
     }
 
-    // ── FOOTER ─────────────────────────────────────────────
-    doc.setFontSize(7.5);
-    doc.setTextColor(148, 163, 184);
-    doc.text('Dicetak: ' + _nowStr(), W / 2, 200, { align: 'center' });
+    // TTD selalu di posisi y saat ini (bukan hardcode)
+    const ttdY = y;
+    const ttdPos = [
+      { x: mL,          label: 'Dibuat oleh,'  },
+      { x: W/2 - 25,    label: 'Diperiksa,'    },
+      { x: W - mR - 52, label: 'Mengetahui,'   },
+    ];
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(30, 41, 59);
+    ttdPos.forEach(t => {
+      doc.text(t.label,            t.x + 25, ttdY,       { align: 'center' });
+      doc.text(_nowTanggal(),      t.x + 25, ttdY + 5,   { align: 'center' });
+      doc.line(t.x + 5, ttdY + 20, t.x + 45, ttdY + 20);
+      doc.text('(_______________)', t.x + 25, ttdY + 26,  { align: 'center' });
+    });
+
+    // ── NOMOR HALAMAN di setiap halaman ─────────────────────
+    const totalPages = doc.getNumberOfPages();
+    for (let pg = 1; pg <= totalPages; pg++) {
+      doc.setPage(pg);
+      doc.setFontSize(7.5);
+      doc.setTextColor(148, 163, 184);
+      doc.text(
+        'Dicetak: ' + _nowStr() + '   |   Hal ' + pg + ' dari ' + totalPages,
+        W / 2, 207, { align: 'center' }
+      );
+    }
 
     doc.save('Absensi_' + tanggal.replace(/\//g, '-') + '.pdf');
     showToast('PDF berhasil diunduh! 📄', 'success');
@@ -390,11 +414,8 @@ async function cetakRekapPDF(idKaryawan, bulan, tahun, tanggalDari, tanggalKe) {
     doc.line(mL, y, W-mR, y);
     y += 5;
 
-    // Garis border kiri dan kanan tabel
-    doc.setDrawColor(45, 108, 223);
-    doc.setLineWidth(0.4);
-    const tableBottom = y;
-    doc.rect(xStart, tabelStartY, W - mL - mR, tableBottom - tabelStartY);
+    // Tidak pakai rect border tabel tunggal (tidak support multi-halaman)
+    // Border sudah ada dari garis bawah setiap baris
 
     // ── RINGKASAN ──────────────────────────────────────────
     doc.setFont('helvetica','bold');
