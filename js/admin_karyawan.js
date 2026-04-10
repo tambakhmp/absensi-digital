@@ -153,7 +153,7 @@ function renderTabelKaryawan(data) {
             <button class="btn btn--ghost" style="padding:5px 10px;font-size:12px"
               onclick="lihatProfilKaryawan('${k.id_karyawan}')">👁 Profil</button>
             <button class="btn btn--ghost" style="padding:5px 10px;font-size:12px;color:#2D6CDF"
-              onclick="cetakRekapDariAdmin('${k.id_karyawan}')">📄 Rekap</button>
+
             ${String(k.status_aktif).toLowerCase()==='true'
               ? `<button class="btn" style="padding:5px 10px;font-size:12px;background:#FFF5F5;color:#E53E3E;border:1px solid #FC8181"
                   onclick="konfirmasiToggleKaryawan('${k.id_karyawan}','${k.nama_lengkap}',false)">🚫 Nonaktif</button>`
@@ -472,8 +472,7 @@ async function lihatProfilKaryawan(idKaryawan) {
           </div>` : ''}
         <div style="display:flex;gap:8px;margin-top:16px">
           <button class="btn btn--primary" style="flex:1;font-size:13px"
-            onclick="cetakRekapDariAdmin('${k.id_karyawan}');document.getElementById('modal-profil-k').remove()">
-            📄 Rekap PDF
+
           </button>
           <button class="btn btn--ghost" style="flex:1;font-size:13px"
             onclick="document.getElementById('modal-profil-k').remove();tampilFormEditKaryawan('${k.id_karyawan}')">
