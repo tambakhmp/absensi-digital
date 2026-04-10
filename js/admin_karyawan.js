@@ -585,13 +585,14 @@ function _idCardHTML(k, instansi) {
 
 // ─── CETAK ID CARD — PDF ──────────────────────────────────────
 async function cetakIDCard(idKaryawan) {
-  showToast('Menyiapkan ID Card...','info',2000);
+  showToast('Menyiapkan ID Card...','info',3000);
   try {
     const ok = await _ensureJsPDF();
     if (!ok || !window.jspdf?.jsPDF) {
       showToast('Library PDF tidak tersedia. Muat ulang halaman.','error',5000);
       return;
     }
+
     const [k, instansi] = await Promise.all([
       callAPI('getKaryawanById', { id_karyawan: idKaryawan }),
       callAPI('getMultipleSetting', { keys:'nama_instansi,singkatan_instansi,alamat_instansi,logo_url' })
@@ -599,93 +600,139 @@ async function cetakIDCard(idKaryawan) {
     if (!k) throw new Error('Data karyawan tidak ditemukan');
 
     const { jsPDF } = window.jspdf;
-    // Ukuran ID Card standar: 85.6mm x 54mm (CR80)
-    const doc = new jsPDF({ orientation:'landscape', unit:'mm',
-      format:[85.6, 54] });
+    // CR80 landscape: 85.6 x 54 mm
+    const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:[85.6,54] });
     const W=85.6, H=54;
 
-    // Background gradient simulasi
-    doc.setFillColor(26, 26, 46);
+    // ── BACKGROUND ──────────────────────────────────────────
+    // Latar gelap biru tua
+    doc.setFillColor(15, 23, 42);
     doc.rect(0,0,W,H,'F');
 
-    // Header strip instansi
-    doc.setFillColor(255,255,255,20);
-    doc.rect(0,0,W,14,'F');
+    // Aksen diagonal kanan atas (dekoratif)
+    doc.setFillColor(30, 58, 138);
+    doc.triangle(W-28,0, W,0, W,28, 'F');
 
-    // Nama instansi di header
-    doc.setTextColor(255,255,255);
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(7);
-    doc.text((instansi?.nama_instansi||'INSTANSI').toUpperCase(), 10, 7);
-    doc.setFont('helvetica','normal');
-    doc.setFontSize(5.5);
-    doc.setTextColor(200,200,220);
-    doc.text('ID CARD KARYAWAN', 10, 11);
+    // Garis aksen kiri
+    doc.setFillColor(45,108,223);
+    doc.rect(0,0,3,H,'F');
 
-    // Foto karyawan
-    const fotoUrl = k.foto_profil_url ? normalizeDriveUrlFrontend(k.foto_profil_url) : '';
-    if (fotoUrl && fotoUrl.startsWith('http')) {
+    // ── HEADER ──────────────────────────────────────────────
+    const namaInst = (instansi?.nama_instansi||'INSTANSI').toUpperCase();
+    const logoUrl  = instansi?.logo_url ? normalizeDriveUrlFrontend(instansi.logo_url) : '';
+
+    let xHeaderText = 8;
+
+    // Logo instansi (jika ada)
+    if (logoUrl && logoUrl.startsWith('http')) {
       try {
-        const imgData = await _urlToBase64(fotoUrl);
-        doc.addImage(imgData,'JPEG', 5, 17, 20, 20);
-      } catch(e) {
-        // Jika foto gagal, gambar placeholder
-        doc.setFillColor(60,80,120);
-        doc.roundedRect(5, 17, 20, 20, 2, 2, 'F');
-        doc.setTextColor(255,255,255);
-        doc.setFontSize(10);
-        doc.text((k.nama_lengkap||'K')[0].toUpperCase(), 15, 30, {align:'center'});
-      }
-    } else {
-      doc.setFillColor(60,80,120);
-      doc.roundedRect(5, 17, 20, 20, 2, 2, 'F');
-      doc.setTextColor(255,255,255);
-      doc.setFontSize(10);
-      doc.text((k.nama_lengkap||'K')[0].toUpperCase(), 15, 30, {align:'center'});
+        const logoData = await _urlToBase64(logoUrl);
+        doc.addImage(logoData, 'PNG', 5, 3, 8, 8);
+        xHeaderText = 16;
+      } catch(e) { /* skip logo jika gagal */ }
     }
 
-    // Info karyawan
-    const xInfo = 30;
     doc.setTextColor(255,255,255);
     doc.setFont('helvetica','bold');
-    doc.setFontSize(9);
-    const namaLines = doc.splitTextToSize(k.nama_lengkap||'-', 52);
-    doc.text(namaLines[0], xInfo, 22);
-    if (namaLines[1]) doc.text(namaLines[1], xInfo, 26.5);
-
-    doc.setFont('helvetica','normal');
-    doc.setFontSize(7);
-    doc.setTextColor(180,200,240);
-    doc.text(k.jabatan||'-', xInfo, 31);
-
     doc.setFontSize(6.5);
-    doc.setTextColor(140,160,200);
-    doc.text(k.departemen||'-', xInfo, 35.5);
+    const namaLines2 = doc.splitTextToSize(namaInst, W - xHeaderText - 5);
+    doc.text(namaLines2[0], xHeaderText, 6.5);
+    if (namaLines2[1]) doc.text(namaLines2[1], xHeaderText, 10);
 
-    // NIK box
-    doc.setFillColor(255,255,255,25);
-    doc.roundedRect(xInfo, 39, 52, 8, 1.5, 1.5, 'F');
-    doc.setTextColor(140,160,200);
-    doc.setFontSize(5);
-    doc.text('NIK', xInfo+3, 43.5);
-    doc.setTextColor(255,255,255);
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(7.5);
-    doc.text(String(k.nik||'-'), xInfo+3, 46.5);
-
-    // Footer gradient strip
-    doc.setFillColor(45,108,223);
-    doc.rect(0, H-4, W/2, 4, 'F');
-    doc.setFillColor(26,158,116);
-    doc.rect(W/2, H-4, W/2, 4, 'F');
-
-    // Footer text
-    doc.setTextColor(255,255,255);
     doc.setFont('helvetica','normal');
     doc.setFontSize(5);
-    doc.text(instansi?.alamat_instansi||'', W/2, H-1, {align:'center', maxWidth:W-10});
+    doc.setTextColor(148,163,184);
+    doc.text('ID CARD KARYAWAN', xHeaderText, namaLines2[1] ? 13.5 : 10.5);
 
-    doc.save('IDCard_'+k.nama_lengkap.replace(/\s+/g,'_')+'.pdf');
+    // Garis bawah header
+    doc.setDrawColor(30,58,138);
+    doc.setLineWidth(0.3);
+    doc.line(3,15,W,15);
+
+    // ── FOTO KARYAWAN ────────────────────────────────────────
+    const fotoX=6, fotoY=18, fotoW=22, fotoH=22;
+    // Border foto
+    doc.setFillColor(30,58,138);
+    doc.roundedRect(fotoX-0.8, fotoY-0.8, fotoW+1.6, fotoH+1.6, 3, 3, 'F');
+
+    const fotoUrl = k.foto_profil_url ? normalizeDriveUrlFrontend(k.foto_profil_url) : '';
+    let fotoOk = false;
+    if (fotoUrl && fotoUrl.startsWith('http')) {
+      try {
+        const fotoData = await _urlToBase64(fotoUrl);
+        // Clip foto berbentuk rounded (simulasi dengan rect biasa)
+        doc.addImage(fotoData,'JPEG', fotoX, fotoY, fotoW, fotoH);
+        fotoOk = true;
+      } catch(e) {}
+    }
+    if (!fotoOk) {
+      // Avatar inisial
+      doc.setFillColor(45,108,223);
+      doc.rect(fotoX, fotoY, fotoW, fotoH, 'F');
+      doc.setTextColor(255,255,255);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(16);
+      doc.text((k.nama_lengkap||'K')[0].toUpperCase(), fotoX+fotoW/2, fotoY+fotoH/2+2, {align:'center'});
+    }
+
+    // ── INFO KARYAWAN ────────────────────────────────────────
+    const xI = 32;
+
+    // Nama
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(10);
+    const namaArr = doc.splitTextToSize(k.nama_lengkap||'-', W-xI-4);
+    doc.text(namaArr[0], xI, 21);
+    if (namaArr[1]) { doc.text(namaArr[1], xI, 25.5); }
+
+    const yAfterNama = namaArr[1] ? 30 : 26.5;
+
+    // Jabatan
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(147,197,253);
+    doc.text(k.jabatan||'-', xI, yAfterNama);
+
+    // Departemen
+    doc.setFontSize(6.5);
+    doc.setTextColor(100,140,200);
+    doc.text(k.departemen||'-', xI, yAfterNama+4.5);
+
+    // ── NIK BOX ──────────────────────────────────────────────
+    const nikY = yAfterNama + 9;
+    const nikW = W - xI - 4;
+    doc.setFillColor(30,58,138);
+    doc.roundedRect(xI, nikY, nikW, 8.5, 1.5, 1.5, 'F');
+
+    doc.setFontSize(5);
+    doc.setTextColor(100,140,200);
+    doc.text('NIK', xI+3, nikY+3.5);
+
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(8);
+    doc.setTextColor(255,255,255);
+    // NIK dibuat pas dalam box
+    const nikStr = String(k.nik||'-');
+    const nikLines = doc.splitTextToSize(nikStr, nikW-6);
+    doc.text(nikLines[0], xI+3, nikY+7);
+
+    // ── FOOTER ───────────────────────────────────────────────
+    doc.setFillColor(45,108,223);
+    doc.rect(3, H-5, (W-3)*0.55, 5, 'F');
+    doc.setFillColor(26,158,116);
+    doc.rect(3+(W-3)*0.55, H-5, (W-3)*0.45, 5, 'F');
+
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(4.5);
+    doc.setTextColor(255,255,255);
+    const alamat = instansi?.alamat_instansi||'';
+    if (alamat) {
+      const alamatShort = alamat.substring(0,60);
+      doc.text(alamatShort, W/2, H-1.8, {align:'center', maxWidth:W-8});
+    }
+
+    doc.save('IDCard_'+(k.nama_lengkap||'karyawan').replace(/\s+/g,'_')+'.pdf');
     showToast('ID Card berhasil didownload! 🪪','success');
 
   } catch(e) {
