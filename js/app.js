@@ -350,10 +350,20 @@ async function submitLemburKaryawan(){
     const mul=document.getElementById('lb-mul')?.value;
     const sel=document.getElementById('lb-sel')?.value;
     if(!tgl||!mul||!sel) throw new Error('Tanggal dan jam wajib diisi');
+    if(!window._splFile) throw new Error('Foto Surat Perintah Lembur (SPL) wajib dilampirkan');
+    showToast('Mengunggah foto SPL...','info',5000);
+    const compressed=await compressImage(window._splFile,1200,0.75);
+    const b64=await blobToBase64(compressed);
+    const uplSPL=await callAPI('simpanFilePendukung',{
+      base64:b64, nama:'SPL_'+Date.now()+'.jpg', mime:'image/jpeg'
+    });
+    if(!uplSPL?.url) throw new Error('Gagal upload foto SPL');
     const r=await callAPI('submitLembur',{
       tanggal:fromInputDate(tgl),jam_mulai:mul,jam_selesai:sel,
-      keterangan:document.getElementById('lb-ket')?.value
+      keterangan:document.getElementById('lb-ket')?.value,
+      foto_spl_url: uplSPL.url
     });
+    window._splFile=null;
     document.getElementById('modal-lembur')?.remove();
     showToast(r.message,'success',5000);
     loadLemburSaya();
@@ -529,3 +539,32 @@ function confirmLogout(){
 
 // ─── Chart 6 Bulan ───────────────────────────────────────────
 // renderChart6Bulan ada di dashboard.js
+// ─── FOTO SPL LEMBUR ──────────────────────────────────────────
+function ambilFotoSPL(mode) {
+  const el=document.getElementById(mode==='camera'?'lb-spl-camera':'lb-spl-gallery');
+  if(el) el.click();
+}
+function onFotoSPLDipilih(input) {
+  if(!input.files||!input.files[0]) return;
+  window._splFile=input.files[0];
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const prev=document.getElementById('preview-spl');
+    const img=document.getElementById('img-preview-spl');
+    const nama=document.getElementById('nama-spl');
+    if(img) img.src=e.target.result;
+    if(prev) prev.style.display='block';
+    if(nama){ const kb=(window._splFile.size/1024).toFixed(0); nama.textContent='✅ '+window._splFile.name+' ('+kb+' KB)'; }
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+function hapusFotoSPL() {
+  window._splFile=null;
+  const prev=document.getElementById('preview-spl');
+  const img=document.getElementById('img-preview-spl');
+  if(prev) prev.style.display='none';
+  if(img) img.src='';
+  const c1=document.getElementById('lb-spl-camera');
+  const c2=document.getElementById('lb-spl-gallery');
+  if(c1) c1.value=''; if(c2) c2.value='';
+}
