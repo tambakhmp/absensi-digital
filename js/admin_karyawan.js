@@ -178,6 +178,187 @@ function toInputDate(str) {
   return '';
 }
 
+// ═══════════════════════════════════════════════════════════════
+// ID CARD — Preview HTML + Cetak PDF (koordinat sinkron)
+// ═══════════════════════════════════════════════════════════════
+
+function _idCardPreviewHTML(k, instansi) {
+  const nama      = k.nama_lengkap   || '-';
+  const jabatan   = k.jabatan        || '-';
+  const dept      = k.departemen     || '-';
+  const nik       = String(k.nik     || '-');
+  const namaInst  = (instansi?.nama_instansi || 'INSTANSI').toUpperCase();
+  const fotoSrc   = getPhotoSrc(k.foto_profil_url, k.nama_lengkap, 80);
+  const logoSrc   = instansi?.logo_url ? normalizeDriveUrlFrontend(instansi.logo_url) : '';
+
+  return `<div style="
+    width:100%;height:100%;
+    background:linear-gradient(160deg,#0f172a 0%,#1e3a8a 100%);
+    border-radius:12px;overflow:hidden;position:relative;
+    display:flex;flex-direction:column;font-family:sans-serif">
+
+    <!-- Aksen segitiga kanan atas -->
+    <div style="position:absolute;top:0;right:0;width:0;height:0;
+      border-style:solid;border-width:0 90px 90px 0;
+      border-color:transparent #2D6CDF transparent transparent;opacity:.5"></div>
+
+    <!-- Garis kiri -->
+    <div style="position:absolute;left:0;top:0;bottom:0;width:5px;
+      background:linear-gradient(180deg,#2D6CDF,#1A9E74)"></div>
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:8px;padding:9px 14px 9px 12px;
+      background:rgba(0,0,0,.25);border-bottom:1px solid rgba(255,255,255,.1)">
+      ${logoSrc ? `<img src="${logoSrc}" style="width:26px;height:26px;object-fit:contain;border-radius:4px" onerror="this.style.display='none'">` : ''}
+      <div>
+        <div style="color:#fff;font-size:9px;font-weight:700;letter-spacing:.4px;
+          line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+          max-width:240px">${namaInst}</div>
+        <div style="color:rgba(255,255,255,.45);font-size:7.5px">ID CARD KARYAWAN</div>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div style="flex:1;display:flex;align-items:center;gap:10px;padding:10px 12px 8px 12px">
+      <!-- Foto -->
+      <div style="flex-shrink:0;width:68px;height:68px;border-radius:10px;
+        overflow:hidden;border:2px solid rgba(45,108,223,.6);background:#1e3a8a">
+        <img src="${fotoSrc}" style="width:100%;height:100%;object-fit:cover;display:block"
+          onerror="this.src='${avatarInisial(nama,68)}'">
+      </div>
+
+      <!-- Info -->
+      <div style="flex:1;min-width:0">
+        <div style="color:#fff;font-weight:700;font-size:14px;white-space:nowrap;
+          overflow:hidden;text-overflow:ellipsis;margin-bottom:2px">${nama}</div>
+        <div style="color:#93c5fd;font-size:10px;margin-bottom:1px">${jabatan}</div>
+        <div style="color:#64748b;font-size:9px;margin-bottom:7px">${dept}</div>
+
+        <!-- NIK Box -->
+        <div style="background:rgba(30,58,138,.8);border-radius:6px;padding:4px 8px;
+          display:inline-block;min-width:110px">
+          <div style="color:#64748b;font-size:7px;letter-spacing:.5px;margin-bottom:1px">NIK</div>
+          <div style="color:#fff;font-size:11px;font-weight:700;letter-spacing:.5px">
+            ${nik}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="display:flex;height:18px">
+      <div style="flex:1.2;background:#2D6CDF;display:flex;align-items:center;
+        justify-content:center;padding:0 8px">
+        <span style="color:#fff;font-size:6.5px;white-space:nowrap;overflow:hidden;
+          text-overflow:ellipsis;max-width:100%">
+          ${(instansi?.alamat_instansi||'').substring(0,50)}</span>
+      </div>
+      <div style="width:32px;background:#1A9E74"></div>
+    </div>
+  </div>`;
+}
+
+async function cetakIDCard(idKaryawan) {
+  showToast('Menyiapkan ID Card...','info',2000);
+  try {
+    const ok = await _ensureJsPDF();
+    if (!ok || !window.jspdf?.jsPDF) {
+      showToast('Library PDF tidak tersedia. Muat ulang halaman.','error',5000);
+      return;
+    }
+    const [k, inst] = await Promise.all([
+      callAPI('getKaryawanById', { id_karyawan: idKaryawan }),
+      callAPI('getMultipleSetting', { keys:'nama_instansi,singkatan_instansi,alamat_instansi,logo_url' })
+    ]);
+    if (!k) throw new Error('Data karyawan tidak ditemukan');
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:[85.6,54] });
+    const W=85.6, H=54;
+
+    // ── Background ──────────────────────────────────────────
+    doc.setFillColor(15,23,42); doc.rect(0,0,W,H,'F');
+    // Gradient simulasi kanan atas
+    doc.setFillColor(30,58,138); doc.triangle(W-22,0,W,0,W,22,'F');
+    // Garis kiri
+    doc.setFillColor(45,108,223); doc.rect(0,0,2.5,H*0.65,'F');
+    doc.setFillColor(26,158,116); doc.rect(0,H*0.65,2.5,H*0.35,'F');
+
+    // ── Header ──────────────────────────────────────────────
+    doc.setFillColor(0,0,0,60); doc.rect(0,0,W,13,'F');
+    doc.setDrawColor(255,255,255,25); doc.setLineWidth(0.3);
+    doc.line(0,13,W,13);
+
+    let xHdr = 5;
+    // Logo
+    const logoUrl = inst?.logo_url ? normalizeDriveUrlFrontend(inst.logo_url||'') : '';
+    if (logoUrl && logoUrl.startsWith('http')) {
+      try {
+        const ld = await _urlToBase64(logoUrl);
+        doc.addImage(ld,'PNG', 4, 2, 8, 8); xHdr = 14;
+      } catch(e){}
+    }
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold'); doc.setFontSize(6.5);
+    const namaInstLines = doc.splitTextToSize((inst?.nama_instansi||'INSTANSI').toUpperCase(), W-xHdr-4);
+    doc.text(namaInstLines[0], xHdr, 7);
+    doc.setFont('helvetica','normal'); doc.setFontSize(5);
+    doc.setTextColor(180,190,210);
+    doc.text('ID CARD KARYAWAN', xHdr, namaInstLines[1] ? 11 : 10.5);
+
+    // ── Foto ────────────────────────────────────────────────
+    const fX=4, fY=16, fSz=20;
+    doc.setFillColor(30,58,138); doc.roundedRect(fX-1,fY-1,fSz+2,fSz+2,2,2,'F');
+    const fotoUrl = k.foto_profil_url ? normalizeDriveUrlFrontend(k.foto_profil_url) : '';
+    let fOk=false;
+    if (fotoUrl && fotoUrl.startsWith('http')) {
+      try { const fd=await _urlToBase64(fotoUrl); doc.addImage(fd,'JPEG',fX,fY,fSz,fSz); fOk=true; } catch(e){}
+    }
+    if (!fOk) {
+      doc.setFillColor(45,108,223); doc.roundedRect(fX,fY,fSz,fSz,1.5,1.5,'F');
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(14);
+      doc.text((k.nama_lengkap||'K')[0].toUpperCase(), fX+fSz/2, fY+fSz/2+2, {align:'center'});
+    }
+
+    // ── Info ────────────────────────────────────────────────
+    const xI=28;
+    // Nama
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(10);
+    const namaArr = doc.splitTextToSize(k.nama_lengkap||'-', W-xI-4);
+    doc.text(namaArr[0], xI, 21);
+    const yN = namaArr[1] ? (doc.text(namaArr[1],xI,26), 30) : 26;
+
+    // Jabatan
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+    doc.setTextColor(147,197,253);
+    doc.text(k.jabatan||'-', xI, yN, {maxWidth:W-xI-4});
+
+    // Departemen
+    doc.setFontSize(6.5); doc.setTextColor(100,116,139);
+    doc.text(k.departemen||'-', xI, yN+4.5, {maxWidth:W-xI-4});
+
+    // NIK box
+    const nY=yN+9, nW=W-xI-4;
+    doc.setFillColor(30,58,138); doc.roundedRect(xI,nY,nW,9,1.5,1.5,'F');
+    doc.setFontSize(5); doc.setTextColor(100,116,139);
+    doc.text('NIK', xI+3, nY+3.8);
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(255,255,255);
+    doc.text(String(k.nik||'-'), xI+3, nY+7.5, {maxWidth:nW-6});
+
+    // ── Footer ──────────────────────────────────────────────
+    doc.setFillColor(45,108,223); doc.rect(0,H-5,(W*0.75),5,'F');
+    doc.setFillColor(26,158,116); doc.rect(W*0.75,H-5,W*0.25,5,'F');
+    doc.setFont('helvetica','normal'); doc.setFontSize(4.5); doc.setTextColor(255,255,255);
+    doc.text((inst?.alamat_instansi||'').substring(0,55), W/2, H-1.5, {align:'center',maxWidth:W-8});
+
+    doc.save('IDCard_'+(k.nama_lengkap||'karyawan').replace(/\s+/g,'_')+'.pdf');
+    showToast('ID Card berhasil didownload! 🪪','success');
+
+  } catch(e) {
+    showToast('Gagal cetak ID Card: '+e.message,'error',5000);
+    console.error(e);
+  }
+}
+
 function tampilFormTambahKaryawan() {
   _tampilFormKaryawan(null);
 }
@@ -502,7 +683,7 @@ async function lihatProfilKaryawan(idKaryawan) {
             <div id="idcard-preview-${k.id_karyawan}" style="position:relative;width:320px;height:200px;
               margin:0 auto;border-radius:16px;overflow:hidden;
               box-shadow:0 8px 32px rgba(0,0,0,.18)">
-              ${_idCardHTML(k, instansi)}
+              ${_idCardPreviewHTML(k, instansi)}
             </div>
           </div>
 
@@ -521,214 +702,8 @@ async function lihatProfilKaryawan(idKaryawan) {
       </div>`;
     document.body.appendChild(modal);
     modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
-
-    // Render canvas ID Card setelah modal tampil
-    setTimeout(async () => {
-      const canvas = document.getElementById('canvas-idcard');
-      if (canvas) {
-        try {
-          await _renderIDCardCanvas(k, instansi, canvas);
-        } catch(e) {
-          canvas.parentElement.innerHTML = `<div style="color:#94A3B8;font-size:12px;text-align:center;padding:20px">Gagal render preview</div>`;
-        }
-      }
-    }, 50);
-
   } catch(e) { showToast(e.message, 'error'); }
 }
 
-// ─── ID CARD CANVAS PREVIEW ──────────────────────────────────
-// Preview menggunakan canvas yang SAMA PERSIS dengan hasil PDF
-async function _renderIDCardCanvas(k, instansi, canvasEl) {
-  const W = canvasEl.width  = 856;  // 85.6mm × 10px/mm
-  const H = canvasEl.height = 540;  // 54mm × 10px
-  const ctx = canvasEl.getContext('2d');
-  const sc  = W / 85.6; // scale factor: 10
-
-  // ── Background ──────────────────────────────────────────
-  ctx.fillStyle = '#0f172a';
-  ctx.fillRect(0,0,W,H);
-
-  // Segitiga dekoratif kanan atas
-  ctx.fillStyle = '#1e3a8a';
-  ctx.beginPath();
-  ctx.moveTo(W-280,0); ctx.lineTo(W,0); ctx.lineTo(W,280); ctx.closePath();
-  ctx.fill();
-
-  // Garis biru kiri
-  ctx.fillStyle = '#2D6CDF';
-  ctx.fillRect(0,0,30,H);
-
-  // ── Header ──────────────────────────────────────────────
-  ctx.fillStyle = 'rgba(255,255,255,0.06)';
-  ctx.fillRect(30,0,W-30,150);
-
-  // Logo instansi
-  const logoUrl = instansi?.logo_url ? normalizeDriveUrlFrontend(instansi.logo_url) : '';
-  let xHeaderText = 45;
-  if (logoUrl && logoUrl.startsWith('http')) {
-    try {
-      const logoImg = await _loadImage(logoUrl);
-      ctx.drawImage(logoImg, 42, 20, 80, 80);
-      xHeaderText = 140;
-    } catch(e) {}
-  }
-
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `bold ${65}px sans-serif`;
-  const namaInst = (instansi?.nama_instansi || 'INSTANSI').toUpperCase();
-  ctx.fillText(namaInst, xHeaderText, 70, W - xHeaderText - 20);
-
-  ctx.fillStyle = '#94a3b8';
-  ctx.font = `${48}px sans-serif`;
-  ctx.fillText('ID CARD KARYAWAN', xHeaderText, 115);
-
-  // Garis bawah header
-  ctx.strokeStyle = '#1e3a8a';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(30,150); ctx.lineTo(W,150); ctx.stroke();
-
-  // ── Foto karyawan ────────────────────────────────────────
-  const fX=45, fY=175, fSize=220;
-  // Border foto
-  ctx.fillStyle = '#1e3a8a';
-  _roundRect(ctx, fX-8, fY-8, fSize+16, fSize+16, 20);
-  ctx.fill();
-
-  const fotoUrl = k.foto_profil_url ? normalizeDriveUrlFrontend(k.foto_profil_url) : '';
-  let fotoLoaded = false;
-  if (fotoUrl && fotoUrl.startsWith('http')) {
-    try {
-      const fotoImg = await _loadImage(fotoUrl);
-      // Clip foto
-      ctx.save();
-      _roundRect(ctx, fX, fY, fSize, fSize, 14);
-      ctx.clip();
-      ctx.drawImage(fotoImg, fX, fY, fSize, fSize);
-      ctx.restore();
-      fotoLoaded = true;
-    } catch(e) {}
-  }
-  if (!fotoLoaded) {
-    ctx.fillStyle = '#2D6CDF';
-    _roundRect(ctx, fX, fY, fSize, fSize, 14);
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.font = `bold 120px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.fillText((k.nama_lengkap||'K')[0].toUpperCase(), fX+fSize/2, fY+fSize/2+40);
-    ctx.textAlign = 'left';
-  }
-
-  // ── Info karyawan ────────────────────────────────────────
-  const xI = 310;
-
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `bold 85px sans-serif`;
-  const maxNamaW = W - xI - 20;
-  let namaDisp = k.nama_lengkap || '-';
-  while (ctx.measureText(namaDisp).width > maxNamaW && namaDisp.length > 1) {
-    namaDisp = namaDisp.substring(0, namaDisp.length-1);
-  }
-  if (namaDisp !== k.nama_lengkap) namaDisp += '...';
-  ctx.fillText(namaDisp, xI, 220);
-
-  ctx.fillStyle = '#93c5fd';
-  ctx.font = `${68}px sans-serif`;
-  ctx.fillText(k.jabatan||'-', xI, 295, maxNamaW);
-
-  ctx.fillStyle = '#64748b';
-  ctx.font = `${58}px sans-serif`;
-  ctx.fillText(k.departemen||'-', xI, 355, maxNamaW);
-
-  // NIK box
-  const nikY = 385;
-  const nikW  = W - xI - 30;
-  ctx.fillStyle = '#1e3a8a';
-  _roundRect(ctx, xI, nikY, nikW, 90, 12);
-  ctx.fill();
-
-  ctx.fillStyle = '#64748b';
-  ctx.font = `${44}px sans-serif`;
-  ctx.fillText('NIK', xI+28, nikY+40);
-
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `bold ${74}px sans-serif`;
-  ctx.fillText(String(k.nik||'-'), xI+28, nikY+75, nikW-40);
-
-  // ── Footer ────────────────────────────────────────────────
-  ctx.fillStyle = '#2D6CDF';
-  ctx.fillRect(30, H-50, (W-30)*0.55, 50);
-  ctx.fillStyle = '#1A9E74';
-  ctx.fillRect(30+(W-30)*0.55, H-50, (W-30)*0.45, 50);
-
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `${42}px sans-serif`;
-  ctx.textAlign = 'center';
-  const alamat = (instansi?.alamat_instansi||'').substring(0,55);
-  ctx.fillText(alamat, W/2, H-16, W-80);
-  ctx.textAlign = 'left';
-}
-
-function _roundRect(ctx, x,y,w,h,r) {
-  ctx.beginPath();
-  ctx.moveTo(x+r,y);
-  ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);
-  ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
-  ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);
-  ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);
-  ctx.closePath();
-}
-
-function _loadImage(url) {
-  return new Promise((res,rej) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload  = () => res(img);
-    img.onerror = () => rej(new Error('Gagal load: '+url));
-    img.src = url;
-  });
-}
-
-// Placeholder - tidak dipakai lagi tapi dipanggil dari modal lama
-function _idCardHTML(k, instansi) {
-  return `<canvas id="canvas-idcard" style="width:100%;height:100%;border-radius:8px"></canvas>`;
-}
 
 // ─── CETAK ID CARD — PDF ──────────────────────────────────────
-async function cetakIDCard(idKaryawan) {
-  showToast('Menyiapkan ID Card...','info',2000);
-  try {
-    const ok = await _ensureJsPDF();
-    if (!ok || !window.jspdf?.jsPDF) {
-      showToast('Library PDF tidak tersedia. Muat ulang halaman.','error',5000);
-      return;
-    }
-
-    const [k, instansi] = await Promise.all([
-      callAPI('getKaryawanById', { id_karyawan: idKaryawan }),
-      callAPI('getMultipleSetting', { keys:'nama_instansi,singkatan_instansi,alamat_instansi,logo_url' })
-    ]);
-    if (!k) throw new Error('Data karyawan tidak ditemukan');
-
-    // Render ID Card ke canvas offscreen (sama persis dengan preview)
-    const canvas = document.createElement('canvas');
-    await _renderIDCardCanvas(k, instansi || {}, canvas);
-
-    // Canvas → PNG → jsPDF
-    const imgData = canvas.toDataURL('image/png');
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:[85.6,54] });
-    doc.addImage(imgData, 'PNG', 0, 0, 85.6, 54);
-
-    doc.save('IDCard_'+(k.nama_lengkap||'karyawan').replace(/\s+/g,'_')+'.pdf');
-    showToast('ID Card berhasil didownload! 🪪','success');
-
-  } catch(e) {
-    showToast('Gagal cetak ID Card: '+e.message,'error',5000);
-    console.error(e);
-  }
-}
-
