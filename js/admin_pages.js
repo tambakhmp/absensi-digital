@@ -438,7 +438,6 @@ async function renderLemburAdminFull(container) {
       <h2 style="font-size:17px;font-weight:700;margin:0">🕒 Manajemen Lembur</h2>
       <div style="display:flex;gap:8px">
         <button class="btn btn--ghost" style="font-size:13px" onclick="routeAdmin('harga-lembur-admin')">💰 Atur Harga</button>
-        <button class="btn btn--ghost" style="font-size:13px" onclick="tampilExportLembur()">📊 Export</button>
         <button class="btn btn--ghost" style="font-size:13px" onclick="tampilKwitansiRentang()">🧾 Kwitansi</button>
       </div>
     </div>
