@@ -439,6 +439,7 @@ async function renderLemburAdminFull(container) {
       <div style="display:flex;gap:8px">
         <button class="btn btn--ghost" style="font-size:13px" onclick="routeAdmin('harga-lembur-admin')">💰 Atur Harga</button>
         <button class="btn btn--ghost" style="font-size:13px" onclick="tampilExportLembur()">📊 Export</button>
+        <button class="btn btn--ghost" style="font-size:13px" onclick="tampilKwitansiRentang()">🧾 Kwitansi</button>
       </div>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
@@ -499,9 +500,6 @@ async function loadLemburAdmin(status='pending') {
                   onclick="approveLemburAdmin('${l.id_lembur}')">✅</button>
                 <button class="btn btn--danger" style="padding:7px 12px;font-size:12px"
                   onclick="tolakLemburAdmin('${l.id_lembur}')">❌</button>`:''}
-              ${l.status_bayar==='disetujui'?`
-                <button class="btn btn--outline" style="padding:7px 12px;font-size:12px"
-                  onclick="cetakKwitansiLembur('${l.id_lembur}')">🧾 Kwitansi</button>`:''}
             </div>
           </div>
         </div>
@@ -514,6 +512,81 @@ function approveLemburAdmin(id){showModal('✅ Setujui Lembur?','',async()=>{
 function tolakLemburAdmin(id){showModal('❌ Tolak Lembur?','',async()=>{
   const r=await callAPI('tolakLembur',{id_lembur:id});showToast(r.message,'success');loadLemburAdmin('pending');
 },'❌ Tolak');}
+async function tampilKwitansiRentang() {
+  const now = new Date();
+  const y1  = now.getFullYear()+'-'+(now.getMonth()+1).toString().padStart(2,'0')+'-01';
+  const y2  = now.toISOString().split('T')[0];
+
+  // Ambil daftar karyawan yang pernah lembur (disetujui)
+  showToast('Memuat data lembur...','info',2000);
+  const semua = await callAPI('getLemburSemua', {});
+  const pernah = {};
+  (semua||[]).filter(l=>l.status_bayar==='disetujui').forEach(l=>{
+    if (!pernah[l.id_karyawan]) pernah[l.id_karyawan] = l.nama_karyawan;
+  });
+  const daftarKaryawan = Object.entries(pernah)
+    .sort((a,b)=>a[1].localeCompare(b[1]));
+
+  if (!daftarKaryawan.length) {
+    showToast('Belum ada lembur yang disetujui','warning'); return;
+  }
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-kwt-rentang';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px)';
+  modal.innerHTML = `<div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:460px;animation:fadeInScale .2s ease">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h3 style="margin:0;font-size:17px">🧾 Cetak Kwitansi Lembur</h3>
+      <button onclick="document.getElementById('modal-kwt-rentang').remove()"
+        style="background:#F1F5F9;border:none;border-radius:50%;width:30px;height:30px;cursor:pointer">✕</button>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">👤 Pilih Karyawan</label>
+      <select class="form-control" id="kwt-karyawan">
+        <option value="">-- Pilih Karyawan --</option>
+        ${daftarKaryawan.map(([id,nama])=>`<option value="${id}">${nama}</option>`).join('')}
+      </select>
+      <p style="font-size:11px;color:#94A3B8;margin-top:4px">
+        Hanya menampilkan karyawan yang pernah mengajukan lembur</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">📅 Dari Tanggal</label>
+        <input type="date" class="form-control" id="kwt-dari" value="${y1}">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">📅 Sampai Tanggal</label>
+        <input type="date" class="form-control" id="kwt-ke" value="${y2}">
+      </div>
+    </div>
+
+    <button class="btn btn--primary btn--full btn--lg" onclick="doCetakKwitansiRentang()">
+      <div class="spinner-btn"></div><span class="btn-text">🧾 Cetak Kwitansi</span>
+    </button>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+async function doCetakKwitansiRentang() {
+  const btn = document.querySelector('#modal-kwt-rentang .btn--primary');
+  if(btn){btn.disabled=true;btn.classList.add('loading');}
+  try {
+    const idK  = document.getElementById('kwt-karyawan')?.value;
+    const dari = document.getElementById('kwt-dari')?.value;
+    const ke   = document.getElementById('kwt-ke')?.value;
+    if (!idK)   { showToast('Pilih karyawan dulu','warning'); return; }
+    if (!dari||!ke) { showToast('Isi rentang tanggal','warning'); return; }
+    await cetakKwitansiKaryawan(idK, fromInputDate(dari), fromInputDate(ke));
+    document.getElementById('modal-kwt-rentang')?.remove();
+  } catch(e) {
+    showToast(e.message,'error');
+  } finally {
+    if(btn){btn.disabled=false;btn.classList.remove('loading');}
+  }
+}
+
 function tampilExportLembur(){
   const now=new Date();
   showModal('📊 Export Lembur',
