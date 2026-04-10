@@ -723,7 +723,24 @@ async function loadSPAdmin(filter='aktif'){
   if(!el) return; el.innerHTML=skeletonCard(3);
   try{
     let data=await callAPI('getSPSemua',{});
-    if(filter==='aktif') data=(data||[]).filter(s=>String(s.status_aktif).toLowerCase()==='true');
+    if(filter==='aktif') {
+      const today = new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'/');
+      const todayParts = new Date();
+      data=(data||[]).filter(s=>{
+        // Aktif jika status_aktif=true DAN belum kadaluarsa
+        const isAktif = String(s.status_aktif).toLowerCase()==='true';
+        // Cek tanggal kadaluarsa
+        const tKad = s.tanggal_kadaluarsa;
+        if (tKad) {
+          const p = String(tKad).split('/');
+          if (p.length===3) {
+            const kadDate = new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
+            return kadDate >= todayParts; // belum kadaluarsa
+          }
+        }
+        return isAktif;
+      });
+    }
     if(!data||data.length===0){showEmpty('sp-admin-list','Tidak ada SP '+filter);return;}
     el.innerHTML=data.map(s=>`
       <div class="card" style="border-left:4px solid ${s.jenis_sp==='SP3'?'#E53E3E':s.jenis_sp==='SP2'?'#D97706':'#6C63FF'}">
