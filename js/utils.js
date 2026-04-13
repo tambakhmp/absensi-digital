@@ -1,3 +1,11 @@
+// ─── Safety stubs: fungsi lama → callAPI ─────────────────────
+// Mencegah error "X is not defined" dari cache browser lama
+async function getLemburSemua(d)    { return callAPI('getLemburSemua', d||{}); }
+async function getLemburSaya(d)     { return callAPI('getLemburSaya',  d||{}); }
+async function getAbsensiSemua(d)   { return callAPI('getAbsensiSemua',d||{}); }
+async function getSPSemua(d)        { return callAPI('getSPSemua',     d||{}); }
+// ─────────────────────────────────────────────────────────────
+
 // utils.js — Semua helper functions (dimuat ke-3)
 
 // ─── FORMAT ──────────────────────────────────────────────────
