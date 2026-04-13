@@ -610,6 +610,13 @@ async function loadJadwalMingguSaya() {
     const list  = document.getElementById('jadwal-minggu-list');
     if (!card || !list) return;
 
+    // Hanya tampilkan jika karyawan punya jadwal shift terdaftar
+    // Karyawan non-shift tidak punya jadwal sama sekali → kartu disembunyikan
+    if (!data || data.length === 0) {
+      card.style.display = 'none';
+      return;
+    }
+
     // Buat jadwal 7 hari (Senin-Minggu)
     const now   = new Date();
     const day   = now.getDay();
