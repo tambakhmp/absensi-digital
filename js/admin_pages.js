@@ -1293,8 +1293,8 @@ async function loadJadwalAdmin(){
       el.innerHTML=`<div style="text-align:center;padding:24px;color:#94A3B8;font-size:13px">
         Belum ada jadwal. Generate di atas.</div>`;return;
     }
-    const KC={'P':'#1A9E74','S':'#D97706','M':'#6C63FF','PA':'#0891B2','PB':'#7C3AED','L':'#94A3B8'};
-    const KN={'P':'Pagi 07-15','S':'Sore 15-23','M':'Malam 23-07','PA':'Penuh 07-19','PB':'Penuh 19-07','L':'Libur'};
+    const KC={'P':'#1A9E74','S':'#D97706','M':'#6C63FF','PA':'#0891B2','PB':'#7C3AED','L':'#94A3B8','?':'#94A3B8'};
+    const KN={'P':'Pagi 07-15','S':'Sore 15-23','M':'Malam 23-07','PA':'Penuh 07-19','PB':'Penuh 19-07','L':'🏖️ Libur','?':'-'};
     el.innerHTML=`<div class="card" style="padding:0;overflow-x:auto">
       <table class="simple-table" style="min-width:500px">
         <thead><tr><th>Karyawan</th><th>Tanggal</th><th>Shift</th><th>Jam</th></tr></thead>
@@ -1304,9 +1304,9 @@ async function loadJadwalAdmin(){
             <td style="font-size:12px">${formatTanggal(j.tanggal)}</td>
             <td><span style="background:${(KC[j.kode]||'#94A3B8')+'22'};color:${KC[j.kode]||'#94A3B8'};
               font-weight:600;padding:2px 10px;border-radius:6px;font-size:12px">
-              ${j.kode} — ${KN[j.kode]||j.nama_shift}</span></td>
-            <td style="font-size:12px;font-family:monospace;font-weight:600">
-              ${j.jam_masuk&&j.jam_keluar?j.jam_masuk+' – '+j.jam_keluar:'-'}</td>
+              ${j.kode==='L'?'🏖️ Libur':(j.kode+' — '+(KN[j.kode]||j.nama_shift))}</span></td>
+            <td style="font-size:12px;font-family:monospace;font-weight:600;color:#64748B">
+              ${j.kode==='L'?'—':j.jam_masuk&&j.jam_keluar?j.jam_masuk+' – '+j.jam_keluar:'-'}</td>
           </tr>`).join('')}
         </tbody>
       </table></div>`;
