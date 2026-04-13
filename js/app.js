@@ -605,78 +605,48 @@ function hapusFotoSPL() {
 // ─── JADWAL SHIFT MINGGU INI (Karyawan) ──────────────────────
 async function loadJadwalMingguSaya() {
   try {
-    const data = await callAPI('getJadwalMingguan', {});
-    const card  = document.getElementById('jadwal-minggu-card');
-    const list  = document.getElementById('jadwal-minggu-list');
+    const data = await callAPI('getJadwalSaya', {});
+    const card = document.getElementById('jadwal-minggu-card');
+    const list = document.getElementById('jadwal-minggu-list');
     if (!card || !list) return;
 
-    // Hanya tampilkan jika karyawan punya jadwal shift terdaftar
-    // Karyawan non-shift tidak punya jadwal sama sekali → kartu disembunyikan
-    if (!data || data.length === 0) {
-      card.style.display = 'none';
-      return;
-    }
+    // Hanya tampil untuk karyawan shift
+    if (!data || data.length === 0) { card.style.display='none'; return; }
 
-    // Buat jadwal 7 hari (Senin-Minggu)
     const now   = new Date();
-    const day   = now.getDay();
-    const diff  = day === 0 ? -6 : 1 - day;
-    const senin = new Date(now); senin.setDate(now.getDate() + diff);
-
     const HARI  = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
     const BULAN = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-    const KC    = {'P':'#1A9E74','S':'#D97706','M':'#6C63FF','PA':'#0891B2','PB':'#7C3AED'};
-    const KN    = {'P':'Pagi','S':'Sore','M':'Malam','PA':'Penuh Pagi','PB':'Penuh Malam'};
+    const KC    = {'P':'#1A9E74','S':'#D97706','M':'#6C63FF','PA':'#0891B2','PB':'#7C3AED','L':'#94A3B8'};
+    const KN    = {'P':'Pagi','S':'Sore','M':'Malam','PA':'Penuh Pagi','PB':'Penuh Malam','L':'Libur'};
 
-    // Buat map jadwal berdasarkan tanggal
-    const jadwalMap = {};
-    (data||[]).forEach(j => { jadwalMap[j.tanggal] = j; });
-
-    // Build 7 hari
-    const rows = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(senin);
-      d.setDate(senin.getDate() + i);
-      const tgl = d.toLocaleDateString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'/');
-      // Format tgl ke dd/MM/yyyy
-      const dd   = String(d.getDate()).padStart(2,'0');
-      const mm   = String(d.getMonth()+1).padStart(2,'0');
-      const yyyy = d.getFullYear();
-      const key  = dd+'/'+mm+'/'+yyyy;
+    const rows = data.map(j => {
+      const p = String(j.tanggal||'').split('/');
+      const d = p.length===3 ? new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0])) : new Date();
+      const dd = String(d.getDate()).padStart(2,'0');
       const isToday = d.toDateString() === now.toDateString();
-      const j    = jadwalMap[key];
-      const hariNama = HARI[d.getDay()];
+      const isLibur = j.kode === 'L';
+      const warna   = KC[j.kode]||'#94A3B8';
+      const jm = j.shift?.jam_masuk||'', jk = j.shift?.jam_keluar||'';
 
-      let shiftHtml;
-      if (!j) {
-        // Tidak ada jadwal = Libur
-        shiftHtml = `<span style="background:#F1F5F9;color:#94A3B8;padding:3px 10px;
-          border-radius:6px;font-size:12px;font-weight:600">🏖️ Libur</span>`;
-      } else {
-        // Tentukan kode dari jam
-        const jm = j.shift?.jam_masuk||'';
-        const jk = j.shift?.jam_keluar||'';
-        const kode = jm==='07:00'&&jk==='15:00'?'P':jm==='15:00'&&jk==='23:00'?'S':
-                     jm==='23:00'&&jk==='07:00'?'M':jm==='07:00'&&jk==='19:00'?'PA':
-                     jm==='19:00'&&jk==='07:00'?'PB':'?';
-        const warna = KC[kode]||'#64748B';
-        shiftHtml = `<span style="background:${warna}22;color:${warna};border:1px solid ${warna}44;
-          padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700">${KN[kode]||kode}</span>
-          <span style="font-size:11px;color:#94A3B8;margin-left:4px">${jm&&jk?jm+' – '+jk:''}</span>`;
-      }
+      const shiftHtml = isLibur
+        ? `<span style="background:#F1F5F9;color:#94A3B8;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:600">🏖️ Libur</span>`
+        : `<div>
+            <span style="background:${warna}22;color:${warna};border:1px solid ${warna}44;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700">${KN[j.kode]||j.kode}</span>
+            ${jm&&jk?`<span style="font-size:11px;color:#94A3B8;margin-left:6px">${jm} – ${jk}</span>`:''}
+           </div>`;
 
-      rows.push(`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;
-        ${i<6?'border-bottom:1px solid #F1F5F9;':''}
-        ${isToday?'background:#EFF6FF;margin:0 -12px;padding:8px 12px;border-radius:8px;':''}">
-        <div style="min-width:52px;text-align:center">
-          <div style="font-size:10px;font-weight:600;color:${isToday?'#2D6CDF':'#94A3B8'};text-transform:uppercase">${hariNama}</div>
-          <div style="font-size:16px;font-weight:700;color:${isToday?'#2D6CDF':'#1E293B'}">${dd}</div>
+      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;
+        border-bottom:1px solid #F1F5F9;
+        ${isToday?'background:#EFF6FF;margin:0 -12px;padding:9px 12px;border-radius:8px;':''}">
+        <div style="min-width:54px;text-align:center;flex-shrink:0">
+          <div style="font-size:10px;font-weight:600;color:${isToday?'#2D6CDF':'#94A3B8'};text-transform:uppercase">${HARI[d.getDay()]}</div>
+          <div style="font-size:17px;font-weight:700;color:${isToday?'#2D6CDF':'#1E293B'}">${dd}</div>
           <div style="font-size:10px;color:#94A3B8">${BULAN[d.getMonth()]}</div>
         </div>
         <div style="flex:1">${shiftHtml}</div>
         ${isToday?'<span style="font-size:10px;background:#2D6CDF;color:#fff;padding:2px 7px;border-radius:10px;font-weight:600">Hari Ini</span>':''}
-      </div>`);
-    }
+      </div>`;
+    });
 
     list.innerHTML = rows.join('');
     card.style.display = 'block';
@@ -684,3 +654,5 @@ async function loadJadwalMingguSaya() {
     console.error('loadJadwalMingguSaya:', e);
   }
 }
+
+
