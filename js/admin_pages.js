@@ -1,3 +1,10 @@
+// ── Safety stub: redirect fungsi lama ke callAPI ─────────────
+// Mencegah error "getLemburSemua is not defined" dari cache lama
+async function getLemburSemua(d) {
+  return callAPI('getLemburSemua', d||{});
+}
+// ─────────────────────────────────────────────────────────────
+
 // ============================================================
 // admin_pages.js v5 — SEMUA halaman admin dalam 1 file
 // Dashboard, Absensi, Karyawan, Pengajuan, Lembur, SP,
