@@ -1156,10 +1156,10 @@ async function renderShiftJadwalAdmin(container) {
     <div class="card" style="background:#F0FFF4;border-left:4px solid #1A9E74;margin-bottom:16px">
       <h4 style="font-size:13px;font-weight:700;margin-bottom:8px;color:#1A9E74">📋 Pola Rotasi Otomatis</h4>
       <div style="font-size:12px;color:#475569;line-height:1.8">
-        <strong>Jam:</strong> Pagi 07:00–15:00 | Sore 15:00–23:00 | Malam 23:00–07:00<br>
-        <strong>Pola:</strong> P→S→M→L (Libur)→P→... (karyawan berikutnya offset 1 hari)<br>
-        <strong>Aturan:</strong> Setelah Malam wajib Libur, tidak langsung Pagi<br>
-        <strong>Libur:</strong> Saat 1 orang libur, 2 lainnya tetap jaga
+        <strong>Jam Normal (3 jaga):</strong> Pagi 07:00–15:00 | Sore 15:00–23:00 | Malam 23:00–07:00<br>
+        <strong>Jam Penuh (2 jaga):</strong> Penuh Pagi 07:00–19:00 | Penuh Malam 19:00–07:00<br>
+        <strong>Rotasi:</strong> M→S→P per 2 hari (setelah Malam → Sore → Pagi → Malam)<br>
+        <strong>Libur:</strong> 1 hari per 14 hari per karyawan — saat 1 libur, 2 lainnya jaga 12 jam
       </div>
     </div>
     <div class="card">
@@ -1187,8 +1187,12 @@ async function renderShiftJadwalAdmin(container) {
         <div class="form-group"><label class="form-label">Sampai Tanggal *</label>
           <input type="date" class="form-control" id="jdw-sel" value="${fmt(minggu)}"></div>
       </div>
-      <button class="btn btn--primary btn--full btn--lg" onclick="generateJadwalAdmin()">
-        <div class="spinner-btn"></div><span class="btn-text">⚡ Generate Jadwal</span></button>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end">
+        <button class="btn btn--primary btn--full btn--lg" onclick="generateJadwalAdmin()">
+          <div class="spinner-btn"></div><span class="btn-text">⚡ Generate Jadwal</span></button>
+        <button class="btn btn--danger" style="padding:13px 18px;font-size:13px;white-space:nowrap"
+          onclick="resetJadwalAdmin()">🗑️ Reset</button>
+      </div>
     </div>
     <div id="jadwal-preview" style="display:none" class="card">
       <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">📅 Hasil Generate</h3>
@@ -1233,7 +1237,7 @@ function _renderPreviewJadwal(el,jadwal,peserta){
   const byTgl={};
   jadwal.forEach(j=>{if(!byTgl[j.tanggal])byTgl[j.tanggal]=[];byTgl[j.tanggal].push(j);});
   const tanggals=Object.keys(byTgl).sort();
-  const KC={'P':'#1A9E74','S':'#D97706','M':'#6C63FF','L':'#94A3B8'};
+  const KC={'P':'#1A9E74','S':'#D97706','M':'#6C63FF','PA':'#0891B2','PB':'#7C3AED','L':'#94A3B8'};
   el.innerHTML=`<div style="overflow-x:auto"><table class="simple-table" style="min-width:400px;font-size:12px">
     <thead><tr><th>Karyawan</th>
       ${tanggals.slice(0,14).map(t=>{
@@ -1253,10 +1257,10 @@ function _renderPreviewJadwal(el,jadwal,peserta){
       }).join('')}
     </tr>`).join('')}
     </tbody></table></div>
-    <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;font-size:12px">
-      ${Object.entries(KC).map(([k,c])=>`<span style="background:${c}22;color:${c};
-        border:1px solid ${c}44;padding:3px 10px;border-radius:6px;font-weight:600">
-        ${k} = ${k==='P'?'Pagi':k==='S'?'Sore':k==='M'?'Malam':'Libur'}</span>`).join('')}
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;font-size:11px">
+      ${Object.entries({'P':'Pagi 07-15','S':'Sore 15-23','M':'Malam 23-07','PA':'Penuh 07-19','PB':'Penuh 19-07','L':'Libur'}).map(([k,v])=>`
+        <span style="background:${KC[k]}22;color:${KC[k]};border:1px solid ${KC[k]}44;
+          padding:2px 8px;border-radius:6px;font-weight:600">${k}=${v}</span>`).join('')}
     </div>`;
 }
 
@@ -1289,7 +1293,8 @@ async function loadJadwalAdmin(){
       el.innerHTML=`<div style="text-align:center;padding:24px;color:#94A3B8;font-size:13px">
         Belum ada jadwal. Generate di atas.</div>`;return;
     }
-    const KC={'P':'#1A9E74','S':'#D97706','M':'#6C63FF','L':'#94A3B8'};
+    const KC={'P':'#1A9E74','S':'#D97706','M':'#6C63FF','PA':'#0891B2','PB':'#7C3AED','L':'#94A3B8'};
+    const KN={'P':'Pagi 07-15','S':'Sore 15-23','M':'Malam 23-07','PA':'Penuh 07-19','PB':'Penuh 19-07','L':'Libur'};
     el.innerHTML=`<div class="card" style="padding:0;overflow-x:auto">
       <table class="simple-table" style="min-width:500px">
         <thead><tr><th>Karyawan</th><th>Tanggal</th><th>Shift</th><th>Jam</th></tr></thead>
@@ -1299,9 +1304,9 @@ async function loadJadwalAdmin(){
             <td style="font-size:12px">${formatTanggal(j.tanggal)}</td>
             <td><span style="background:${(KC[j.kode]||'#94A3B8')+'22'};color:${KC[j.kode]||'#94A3B8'};
               font-weight:600;padding:2px 10px;border-radius:6px;font-size:12px">
-              ${j.kode} — ${j.nama_shift}</span></td>
-            <td style="font-size:12px;font-family:monospace">
-              ${j.jam_masuk&&j.jam_keluar?j.jam_masuk+'–'+j.jam_keluar:'-'}</td>
+              ${j.kode} — ${KN[j.kode]||j.nama_shift}</span></td>
+            <td style="font-size:12px;font-family:monospace;font-weight:600">
+              ${j.jam_masuk&&j.jam_keluar?j.jam_masuk+' – '+j.jam_keluar:'-'}</td>
           </tr>`).join('')}
         </tbody>
       </table></div>`;
