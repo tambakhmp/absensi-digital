@@ -186,8 +186,30 @@ async function loadDashboardAdminV3() {
         ${_sc('🏥','Izin/Sakit',       s.izin_sakit,      '#6C63FF')}
         ${_sc('📋','Pending',          s.pending,         '#0891B2')}
         ${_sc('⚠️','SP Aktif',         s.sp_aktif,        '#C53030')}
-      </div>`;
+      </div>
+      <div id="admin-rekap-bulan" style="margin-top:14px;background:#fff;border-radius:12px;
+        padding:14px;border:1px solid #E2E8F0"></div>`;
 
+    // Rekap bulan ini
+    try {
+      const rb = s.rekap_bulan || {};
+      const bln = s.nama_bulan || '';
+      const rekapEl = document.getElementById('admin-rekap-bulan');
+      if (rekapEl) {
+        rekapEl.innerHTML = `
+          <div style="margin-bottom:8px;font-size:13px;font-weight:700;color:#1E293B">
+            📊 Rekap Bulan ${bln}</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px">
+            ${_scKecil('✅','Hadir',    (rb.hadir||0)+(rb.terlambat||0), '#1A9E74')}
+            ${_scKecil('⏰','Terlambat', rb.terlambat||0,               '#D97706')}
+            ${_scKecil('❌','Alfa',      rb.alfa||0,                    '#E53E3E')}
+            ${_scKecil('🚗','Dinas Luar',rb.dinas||0,                   '#EA580C')}
+            ${_scKecil('📝','Izin',      rb.izin||0,                    '#2D6CDF')}
+            ${_scKecil('🏥','Sakit',     rb.sakit||0,                   '#6C63FF')}
+            ${_scKecil('🏖️','Cuti',      rb.cuti||0,                    '#0891B2')}
+          </div>`;
+      }
+    } catch(e) {}
     try { if (s.chart_6_bulan) renderChart6Bulan(s.chart_6_bulan); } catch(e) {}
     try { if (s.ultah_hari_ini?.length > 0) _renderUltahAdmin(s.ultah_hari_ini); } catch(e) {}
     try { await renderRankingSection('admin-ranking-section'); } catch(e) {}
