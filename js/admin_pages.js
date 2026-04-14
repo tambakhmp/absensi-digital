@@ -1400,6 +1400,32 @@ async function loadPengaturanAdminV3(){
           ${_si('toleransi_terlambat_default','Toleransi Terlambat (menit)',map,'number')}
           ${_si('sisa_cuti_default_per_tahun','Default Cuti/Tahun (hari)',map,'number')}
         </div>
+
+        <!-- BATAS WAKTU ABSENSI -->
+        <div style="margin-top:16px;border-top:1px solid #F1F5F9;padding-top:14px">
+          <h4 style="font-size:13px;font-weight:700;color:#64748B;margin-bottom:12px">
+            ⏰ Batas Waktu Absen Masuk</h4>
+          <div style="background:#EFF6FF;border-radius:8px;padding:10px 12px;
+            font-size:12px;color:#2D6CDF;margin-bottom:12px;line-height:1.7">
+            📌 <strong>Karyawan Shift:</strong> Tidak bisa absen masuk jika kurang dari X menit sebelum shift berakhir<br>
+            📌 <strong>Karyawan Non-Shift:</strong> Tidak bisa absen masuk setelah jam yang ditentukan<br>
+            📌 <strong>Dinas Luar:</strong> Berlaku aturan yang sama (hanya bebas radius GPS)
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Batas Shift (menit sebelum keluar)</label>
+              <input type="number" class="form-control" id="set-batas_absen_shift_menit"
+                value="${map['batas_absen_shift_menit']||'60'}" min="15" max="300" step="15">
+              <p class="form-hint">Default: 60 menit. Contoh: shift 07-15, batas absen masuk = jam 14:00</p>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Batas Non-Shift (jam berapa)</label>
+              <input type="number" class="form-control" id="set-batas_absen_nonshift_jam"
+                value="${map['batas_absen_nonshift_jam']||'13'}" min="8" max="20" step="1">
+              <p class="form-hint">Default: 13 (pukul 13:00). Karyawan tanpa jadwal shift.</p>
+            </div>
+          </div>
+        </div>
         <div class="form-group" style="margin-top:12px">
           <label class="form-label">Template Ucapan Ulang Tahun</label>
           <textarea class="form-control" id="set-ucapan_ulang_tahun_template" rows="3">
@@ -1504,7 +1530,8 @@ async function simpanPengaturanAdmin(){
       'bg_dashboard_karyawan_url','bg_dashboard_admin_url','bg_dashboard_superadmin_url',
       'max_radius_meter','toleransi_terlambat_default','sisa_cuti_default_per_tahun',
       'ucapan_ulang_tahun_template','aktif_one_device_login',
-      'favicon_url','icon_512_url','bg_login_url','login_subtitle'];
+      'favicon_url','icon_512_url','bg_login_url','login_subtitle',
+      'batas_absen_shift_menit','batas_absen_nonshift_jam'];
     const settings={};
     keys.forEach(k=>{const el=document.getElementById('set-'+k);if(el)settings[k]=el.value?.trim()||'';});
     await callAPI('setMultipleSetting',{settings});
