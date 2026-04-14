@@ -198,12 +198,10 @@ function renderPageDashboard(c) {
         <span class="absen-btn__info">GPS + Foto</span>
       </button>
     </div>
-    <!-- Jadwal Shift Minggu Ini -->
-    <div class="card" id="jadwal-minggu-card" style="display:none">
-      <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;color:#64748B" id="jadwal-card-title">📅 Jadwal Shift Saya</h3>
-      <div id="jadwal-minggu-list"></div>
-    </div>
-    <!-- Statistik -->
+    <!-- ⚠️ PERINGATAN SP — merah mencolok, tepat setelah tombol absen -->
+    <div id="sp-saya-section" style="display:none"></div>
+
+    <!-- Statistik bulan ini -->
     <div class="card">
       <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;color:#64748B">📊 Bulan Ini</h3>
       <div class="stat-grid">
@@ -212,6 +210,10 @@ function renderPageDashboard(c) {
         ${_ms('🏥','Sakit','stat-sakit','#6B7280')}${_ms('🏖️','Cuti','stat-cuti','#6C63FF')}
       </div>
     </div>
+
+    <!-- Ranking terbaik & terburuk -->
+    <div id="ranking-section">${skeletonCard(3)}</div>
+
     <!-- Pengumuman -->
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -219,10 +221,13 @@ function renderPageDashboard(c) {
       </div>
       <div id="pengumuman-list">${skeletonCard(2)}</div>
     </div>
-    <!-- Ranking -->
-    <div id="ranking-section">${skeletonCard(3)}</div>
-    <!-- SP -->
-    <div id="sp-saya-section" style="display:none"></div>
+
+    <!-- Jadwal Shift (hanya untuk karyawan shift) -->
+    <div class="card" id="jadwal-minggu-card" style="display:none">
+      <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;color:#64748B">📅 Jadwal Shift Saya</h3>
+      <div id="jadwal-minggu-list"></div>
+    </div>
+
     <div style="height:8px"></div>
   </div>`;
   loadDashboardKaryawan();
