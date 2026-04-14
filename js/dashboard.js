@@ -17,7 +17,8 @@ async function loadDashboardKaryawan() {
     loadStatsKaryawan(),
     _loadPengumuman(),
     renderRankingSection('ranking-section'),
-    _loadSPSaya()
+    _loadSPSaya(),
+    loadJadwalMingguSaya()
   ]);
 }
 
