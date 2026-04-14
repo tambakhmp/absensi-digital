@@ -177,7 +177,6 @@ function renderPageDashboard(c) {
         <div class="profile-header__sub" id="dash-nik">NIK: -</div>
         <div class="profile-header__sub" id="dash-jabatan"></div>
         <div style="font-size:12px;opacity:.75;margin-top:2px" id="dash-tanggal">${tanggalHariIni()}</div>
-        <div style="font-size:12px;opacity:.75" id="info-shift"></div>
       </div>
     </div>
     <!-- Peringatan lokasi -->
