@@ -613,11 +613,15 @@ async function loadJadwalMingguSaya() {
     // Hanya tampil untuk karyawan shift
     if (!data || data.length === 0) { card.style.display='none'; return; }
 
-    const now   = new Date();
+    const now   = new Date(); now.setHours(0,0,0,0);
     const HARI  = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
     const BULAN = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-    const KC    = {'P':'#1A9E74','S':'#D97706','M':'#6C63FF','PA':'#0891B2','PB':'#7C3AED','L':'#94A3B8'};
-    const KN    = {'P':'Pagi','S':'Sore','M':'Malam','PA':'Penuh Pagi','PB':'Penuh Malam','L':'Libur'};
+    const KC    = {'P':'#1A9E74','S':'#D97706','M':'#6C63FF','L':'#94A3B8'};
+    const KN    = {'P':'Pagi','S':'Sore','M':'Malam','L':'Libur'};
+
+    // Update header card dengan total jadwal
+    const cardTitle = card.querySelector('h3');
+    if (cardTitle) cardTitle.textContent = '📅 Jadwal Shift (' + data.length + ' hari)';
 
     const rows = data.map(j => {
       const p = String(j.tanggal||'').split('/');
@@ -635,16 +639,19 @@ async function loadJadwalMingguSaya() {
             ${jm&&jk?`<span style="font-size:11px;color:#94A3B8;margin-left:6px">${jm} – ${jk}</span>`:''}
            </div>`;
 
+      const isPast   = d < now && !isToday;
       return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;
         border-bottom:1px solid #F1F5F9;
-        ${isToday?'background:#EFF6FF;margin:0 -12px;padding:9px 12px;border-radius:8px;':''}">
+        opacity:${isPast?'0.45':'1'};
+        ${isToday?'background:#EFF6FF;margin:0 -12px;padding:9px 12px;border-radius:8px;border-left:3px solid #2D6CDF;':''}">
         <div style="min-width:54px;text-align:center;flex-shrink:0">
           <div style="font-size:10px;font-weight:600;color:${isToday?'#2D6CDF':'#94A3B8'};text-transform:uppercase">${HARI[d.getDay()]}</div>
           <div style="font-size:17px;font-weight:700;color:${isToday?'#2D6CDF':'#1E293B'}">${dd}</div>
           <div style="font-size:10px;color:#94A3B8">${BULAN[d.getMonth()]}</div>
         </div>
         <div style="flex:1">${shiftHtml}</div>
-        ${isToday?'<span style="font-size:10px;background:#2D6CDF;color:#fff;padding:2px 7px;border-radius:10px;font-weight:600">Hari Ini</span>':''}
+        ${isToday?'<span style="font-size:10px;background:#2D6CDF;color:#fff;padding:2px 7px;border-radius:10px;font-weight:600">Hari Ini</span>':
+          isPast?'<span style="font-size:10px;color:#94A3B8">Selesai</span>':''}
       </div>`;
     });
 
