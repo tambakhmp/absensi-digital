@@ -72,8 +72,7 @@ async function loadStatusAbsenHariIni() {
       </div>`;
     }
 
-    const elShift = document.getElementById('info-shift');
-    if (elShift && data.shift) elShift.textContent = data.shift.nama_shift+' · '+data.shift.jam_masuk+' – '+data.shift.jam_keluar;
+
 
     const elDinas = document.getElementById('info-dinas-luar');
     if (elDinas) {
