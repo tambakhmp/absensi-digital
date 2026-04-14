@@ -156,12 +156,31 @@ async function _loadSPSaya() {
     });
     if (!aktif.length) { el.style.display='none'; return; }
     el.style.display = 'block';
-    el.innerHTML = aktif.map(s=>`<div style="background:#FFF5F5;border:1px solid #FC8181;
-      border-radius:10px;padding:12px 14px;margin-bottom:8px">
-      <div style="font-weight:700;color:#C53030">⚠️ ${s.jenis_sp} Aktif</div>
-      <div style="font-size:12px;color:#64748B">Berlaku: ${formatTanggal(s.tanggal_berlaku)} – ${formatTanggal(s.tanggal_kadaluarsa)}</div>
-      <div style="font-size:12px;color:#64748B">${s.alasan||''}</div>
-    </div>`).join('');
+    el.innerHTML = `
+      <div style="background:linear-gradient(135deg,#C53030,#E53E3E);border-radius:14px;
+        padding:16px;margin-bottom:4px;box-shadow:0 4px 16px rgba(229,62,62,.35)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <span style="font-size:28px">🚨</span>
+          <div>
+            <div style="font-size:16px;font-weight:800;color:#fff;letter-spacing:.3px">
+              SURAT PERINGATAN AKTIF</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.8);margin-top:1px">
+              Perhatikan dan perbaiki kedisiplinan Anda</div>
+          </div>
+        </div>
+        ${aktif.map(s=>`
+          <div style="background:rgba(255,255,255,.15);border-radius:10px;padding:10px 12px;margin-top:8px">
+            <div style="font-size:15px;font-weight:800;color:#fff">
+              ⚠️ ${s.jenis_sp} — ${s.jenis_sp==='SP1'?'Peringatan Pertama':s.jenis_sp==='SP2'?'Peringatan Kedua':'Peringatan Ketiga'}
+            </div>
+            <div style="font-size:12px;color:rgba(255,255,255,.85);margin-top:5px">
+              📅 Berlaku: ${formatTanggal(s.tanggal_berlaku)} s/d ${formatTanggal(s.tanggal_kadaluarsa)}
+            </div>
+            <div style="font-size:12px;color:rgba(255,255,255,.85);margin-top:3px">
+              📌 ${s.alasan||'Pelanggaran disiplin'}
+            </div>
+          </div>`).join('')}
+      </div>`;
   } catch(e) { el.style.display = 'none'; }
 }
 
