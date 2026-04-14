@@ -227,6 +227,7 @@ function renderPageDashboard(c) {
     <div style="height:8px"></div>
   </div>`;
   loadDashboardKaryawan();
+  loadJadwalMingguSaya();
 }
 function _ms(icon,label,id,color){return `<div class="stat-card">
   <div style="font-size:20px">${icon}</div>
