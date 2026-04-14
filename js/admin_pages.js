@@ -1194,10 +1194,7 @@ async function renderShiftJadwalAdmin(container) {
           onclick="resetJadwalAdmin()">🗑️ Reset</button>
       </div>
     </div>
-    <div id="jadwal-preview" style="display:none" class="card">
-      <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">📅 Hasil Generate</h3>
-      <div id="jadwal-preview-content"></div>
-    </div>
+
     <div class="card">
       <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">📋 Jadwal Berjalan</h3>
       <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
@@ -1221,12 +1218,6 @@ async function generateJadwalAdmin(){
     if(!mul||!sel) throw new Error('Tanggal mulai dan selesai wajib diisi');
     const r=await callAPI('generateJadwal',{karyawan_ids:ids,tanggal_mulai:mul,tanggal_selesai:sel});
     showToast(r.message,'success',5000);
-    const pv=document.getElementById('jadwal-preview');
-    const pc=document.getElementById('jadwal-preview-content');
-    if(pv&&pc){
-      pv.style.display='block';
-      _renderPreviewJadwal(pc,r.jadwal,r.peserta);
-    }
     loadJadwalAdmin();
   }catch(e){showToast(e.message,'error');}
   finally{if(btn){btn.disabled=false;btn.classList.remove('loading');}}
@@ -1237,7 +1228,7 @@ function _renderPreviewJadwal(el,jadwal,peserta){
   const byTgl={};
   jadwal.forEach(j=>{if(!byTgl[j.tanggal])byTgl[j.tanggal]=[];byTgl[j.tanggal].push(j);});
   const tanggals=Object.keys(byTgl).sort();
-  const KC={'P':'#1A9E74','S':'#D97706','M':'#6C63FF','PA':'#0891B2','PB':'#7C3AED','L':'#94A3B8'};
+  const KC={'P':'#1A9E74','S':'#D97706','M':'#6C63FF','L':'#94A3B8'};
   el.innerHTML=`<div style="overflow-x:auto"><table class="simple-table" style="min-width:400px;font-size:12px">
     <thead><tr><th>Karyawan</th>
       ${tanggals.slice(0,14).map(t=>{
@@ -1258,8 +1249,8 @@ function _renderPreviewJadwal(el,jadwal,peserta){
     </tr>`).join('')}
     </tbody></table></div>
     <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;font-size:11px">
-      ${Object.entries({'P':'Pagi 07-15','S':'Sore 15-23','M':'Malam 23-07','PA':'Penuh 07-19','PB':'Penuh 19-07','L':'Libur'}).map(([k,v])=>`
-        <span style="background:${KC[k]}22;color:${KC[k]};border:1px solid ${KC[k]}44;
+      ${Object.entries({'P':'Pagi 07-15','S':'Sore 15-23','M':'Malam 23-07','L':'Libur'}).map(([k,v])=>`
+        <span style="background:${KC[k]||'#94A3B8'}22;color:${KC[k]||'#94A3B8'};border:1px solid ${KC[k]||'#94A3B8'}44;
           padding:2px 8px;border-radius:6px;font-weight:600">${k}=${v}</span>`).join('')}
     </div>`;
 }
@@ -1293,8 +1284,8 @@ async function loadJadwalAdmin(){
       el.innerHTML=`<div style="text-align:center;padding:24px;color:#94A3B8;font-size:13px">
         Belum ada jadwal. Generate di atas.</div>`;return;
     }
-    const KC={'P':'#1A9E74','S':'#D97706','M':'#6C63FF','PA':'#0891B2','PB':'#7C3AED','L':'#94A3B8','?':'#94A3B8'};
-    const KN={'P':'Pagi 07-15','S':'Sore 15-23','M':'Malam 23-07','PA':'Penuh 07-19','PB':'Penuh 19-07','L':'🏖️ Libur','?':'-'};
+    const KC={'P':'#1A9E74','S':'#D97706','M':'#6C63FF','L':'#94A3B8'};
+    const KN={'P':'Pagi 07-15','S':'Sore 15-23','M':'Malam 23-07','L':'🏖️ Libur'};
     el.innerHTML=`<div class="card" style="padding:0;overflow-x:auto">
       <table class="simple-table" style="min-width:500px">
         <thead><tr><th>Karyawan</th><th>Tanggal</th><th>Shift</th><th>Jam</th></tr></thead>
