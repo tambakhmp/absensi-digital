@@ -1413,16 +1413,20 @@ async function loadPengaturanAdminV3(){
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">Batas Shift (menit sebelum keluar)</label>
+              <label class="form-label">Batas Shift — menit sebelum shift berakhir</label>
               <input type="number" class="form-control" id="set-batas_absen_shift_menit"
                 value="${map['batas_absen_shift_menit']||'60'}" min="15" max="300" step="15">
-              <p class="form-hint">Default: 60 menit. Contoh: shift 07-15, batas absen masuk = jam 14:00</p>
+              <p class="form-hint">
+                Isi dalam <strong>menit</strong>. Contoh: isi 60 → shift 07:00–15:00, batas absen masuk = pukul 14:00
+              </p>
             </div>
             <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">Batas Non-Shift (jam berapa)</label>
+              <label class="form-label">Batas Non-Shift — pukul berapa (0–23)</label>
               <input type="number" class="form-control" id="set-batas_absen_nonshift_jam"
-                value="${map['batas_absen_nonshift_jam']||'13'}" min="8" max="20" step="1">
-              <p class="form-hint">Default: 13 (pukul 13:00). Karyawan tanpa jadwal shift.</p>
+                value="${map['batas_absen_nonshift_jam']||'13'}" min="8" max="23" step="1">
+              <p class="form-hint">
+                Isi dalam <strong>jam</strong> (format 24 jam). Contoh: isi 13 = batas pukul 13:00, isi 12 = batas pukul 12:00
+              </p>
             </div>
           </div>
         </div>
