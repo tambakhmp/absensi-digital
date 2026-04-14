@@ -1,9 +1,18 @@
 // dashboard.js — Dashboard karyawan & admin
 
 // ─── DASHBOARD KARYAWAN ──────────────────────────────────────
+// Auto refresh statistik setiap 5 menit
+let _statsRefreshTimer = null;
+
 async function loadDashboardKaryawan() {
   const user = getSession();
   if (!user) return;
+
+  // Auto refresh setiap 5 menit
+  if (_statsRefreshTimer) clearInterval(_statsRefreshTimer);
+  _statsRefreshTimer = setInterval(async () => {
+    try { await loadStatsKaryawan(); } catch(e) {}
+  }, 5 * 60 * 1000);
 
   _setEl('dash-greeting', greetingWaktu());
   _setEl('dash-nama',     user.nama||'-');
