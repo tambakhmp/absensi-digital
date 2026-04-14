@@ -201,7 +201,7 @@ function renderPageDashboard(c) {
     </div>
     <!-- Jadwal Shift Minggu Ini -->
     <div class="card" id="jadwal-minggu-card" style="display:none">
-      <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;color:#64748B">📅 Jadwal Shift Minggu Ini</h3>
+      <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;color:#64748B" id="jadwal-card-title">📅 Jadwal Shift Saya</h3>
       <div id="jadwal-minggu-list"></div>
     </div>
     <!-- Statistik -->
