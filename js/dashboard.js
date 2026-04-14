@@ -143,7 +143,17 @@ async function _loadSPSaya() {
   if (!el) return;
   try {
     const data  = await callAPI('getSPSaya', {});
-    const aktif = (data||[]).filter(s=>String(s.status_aktif).toLowerCase()==='true');
+    const aktif = (data||[]).filter(s=>{
+      const tK = s.tanggal_kadaluarsa;
+      if (tK) {
+        const p = String(tK).split('/');
+        if (p.length===3) {
+          const d = new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
+          return d >= new Date();
+        }
+      }
+      return String(s.status_aktif).toLowerCase()==='true';
+    });
     if (!aktif.length) { el.style.display='none'; return; }
     el.style.display = 'block';
     el.innerHTML = aktif.map(s=>`<div style="background:#FFF5F5;border:1px solid #FC8181;
