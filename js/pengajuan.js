@@ -247,12 +247,15 @@ async function submitPengajuanKaryawan() {
     if (mulai > selesai) throw new Error('Tanggal selesai tidak boleh sebelum tanggal mulai');
     if (!keterangan) throw new Error('Keterangan / alasan wajib diisi');
 
-    // Validasi cuti khusus: cek sisa
+    // Cuti khusus: tidak ada limit hari, hanya cek karyawan terdaftar
     if (jenis === 'cuti_khusus') {
-      const info = await callAPI('getSisaCutiKhusus', {});
-      if (!info || !info.dapat) throw new Error('Anda tidak terdaftar dalam sistem cuti 6 bulanan');
-      const totalHari = Math.round((new Date(selesai) - new Date(mulai)) / 86400000) + 1;
-      if (totalHari > info.sisa) throw new Error('Sisa cuti 6 bulanan tidak cukup. Sisa: ' + info.sisa + ' hari');
+      try {
+        const info = await callAPI('getSisaCutiKhusus', {});
+        if (!info || !info.dapat) throw new Error('Anda tidak terdaftar dalam sistem cuti 6 bulanan. Hubungi admin.');
+      } catch(e) {
+        if (e.message.includes('tidak terdaftar')) throw e;
+        // Error lain (sheet belum ada dll) - lanjutkan saja
+      }
     }
 
     if (jenis === 'sakit' && (!fileInput || !fileInput.files[0])) {
