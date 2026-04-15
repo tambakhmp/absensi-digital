@@ -239,29 +239,37 @@ async function cetakRekapPDF(idKaryawan, bulan, tahun, tanggalDari, tanggalKe) {
 
     const r   = data.ringkasan;
     const sts = [
-      ['✓ Hadir',     r.hadir,      '#1A9E74'],
-      ['⏰ Terlambat', r.terlambat, '#D97706'],
-      ['✗ Alfa',      r.alfa,       '#E53E3E'],
-      ['📝 Izin',     r.izin,       '#2D6CDF'],
-      ['🏥 Sakit',    r.sakit,      '#6B7280'],
-      ['🏖️ Cuti',     r.cuti,       '#6C63FF'],
-      ['🚗 Dinas Luar',r.dinas_luar,'#EA580C']
+      ['Hadir',      r.hadir,       '#1A9E74'],
+      ['Terlambat',  r.terlambat,   '#D97706'],
+      ['Alfa',       r.alfa,        '#E53E3E'],
+      ['Izin',       r.izin,        '#2D6CDF'],
+      ['Sakit',      r.sakit,       '#6B7280'],
+      ['Cuti',       r.cuti,        '#6C63FF'],
+      ['Dinas Luar', r.dinas_luar,  '#EA580C']
     ];
 
-    const colW = (W - mL - mR) / 4;
+    const ringColW = (W - mL - mR) / 4;
+    const ringH    = 15;
     sts.forEach(function(s, i) {
-      const cx = mL + (i % 4) * colW;
-      const cy = y + Math.floor(i / 4) * 12;
-      doc.setFillColor(248, 250, 252);
-      doc.roundedRect(cx, cy-4, colW-3, 10, 2, 2, 'F');
+      const cx  = mL + (i % 4) * ringColW;
+      const cy  = y + Math.floor(i / 4) * (ringH + 2);
+      const hex = s[2];
+      const rv  = parseInt(hex.slice(1,3),16);
+      const gv  = parseInt(hex.slice(3,5),16);
+      const bv  = parseInt(hex.slice(5,7),16);
+      doc.setFillColor(rv,gv,bv);
+      doc.setDrawColor(rv,gv,bv);
+      doc.rect(cx, cy-3, ringColW-2, ringH, 'F');
+      doc.setTextColor(255,255,255);
       doc.setFont('helvetica','bold');
-      doc.setFontSize(9);
-      doc.text(s[0], cx+2, cy+1);
-      doc.setFontSize(14);
-      doc.text(String(s[1]), cx+2, cy+7);
+      doc.setFontSize(8);
+      doc.text(s[0], cx+3, cy+3);
+      doc.setFontSize(16);
+      doc.text(String(s[1]), cx+3, cy+12);
     });
-
-    y += Math.ceil(sts.length / 4) * 12 + 5;
+    doc.setTextColor(0,0,0);
+    doc.setDrawColor(0,0,0);
+    y += Math.ceil(sts.length / 4) * (ringH + 2) + 4;
     doc.setLineWidth(0.3);
     doc.line(mL, y, W-mR, y);
     y += 5;
@@ -495,41 +503,6 @@ async function exportRekapExcel(bulan, tahun, tanggalDari, tanggalKe) {
 // KWITANSI LEMBUR — PDF
 // ─────────────────────────────────────────────────────────────
 
-
-// ─── TERBILANG (JavaScript frontend) ─────────────────────────
-function _terbilangJS(nominal) {
-  const n = Math.round(Math.abs(nominal));
-  if (n === 0) return 'Nol Rupiah';
-  const satuan = ['','Satu','Dua','Tiga','Empat','Lima','Enam','Tujuh','Delapan','Sembilan',
-    'Sepuluh','Sebelas','Dua Belas','Tiga Belas','Empat Belas','Lima Belas','Enam Belas',
-    'Tujuh Belas','Delapan Belas','Sembilan Belas'];
-  function ratusan(num) {
-    if (num === 0) return '';
-    if (num < 20) return satuan[num];
-    if (num < 100) {
-      const s = satuan[Math.floor(num/10)*10 - 10] || '';
-      const map10=['','','Dua Puluh','Tiga Puluh','Empat Puluh','Lima Puluh',
-        'Enam Puluh','Tujuh Puluh','Delapan Puluh','Sembilan Puluh'];
-      return map10[Math.floor(num/10)] + (num%10 ? ' '+satuan[num%10] : '');
-    }
-    if (num < 200) return 'Seratus' + (num-100 ? ' '+ratusan(num-100) : '');
-    return satuan[Math.floor(num/100)]+' Ratus'+(num%100 ? ' '+ratusan(num%100) : '');
-  }
-  const parts = [];
-  const milyar = Math.floor(n/1000000000);
-  const juta   = Math.floor((n%1000000000)/1000000);
-  const ribu   = Math.floor((n%1000000)/1000);
-  const sisa   = n%1000;
-  if (milyar) parts.push(ratusan(milyar)+' Milyar');
-  if (juta)   parts.push(ratusan(juta)+' Juta');
-  if (ribu) {
-    if (ribu===1) parts.push('Seribu');
-    else parts.push(ratusan(ribu)+' Ribu');
-  }
-  if (sisa) parts.push(ratusan(sisa));
-  return parts.join(' ') + ' Rupiah';
-}
-
 // ─── KWITANSI LEMBUR PER KARYAWAN + RENTANG WAKTU ──────────
 async function cetakKwitansiKaryawan(idKaryawan, tanggalDari, tanggalKe) {
   showToast('Membuat kwitansi...','info',2000);
@@ -566,71 +539,33 @@ async function cetakKwitansiKaryawan(idKaryawan, tanggalDari, tanggalKe) {
      ['Total Bayar',_fmtRp(totByr)]
     ].forEach((row,ri)=>{
       const isTot=ri===3;
-      if(isTot){
-        doc.setFont('helvetica','bold');
-        doc.setFontSize(12);
-      } else {
-        doc.setFont('helvetica','normal');
-        doc.setFontSize(10);
-      }
-      doc.text(row[0],mL+3,y);
-      doc.text(':',mL+47,y);
-      doc.text(row[1],mL+51,y);
-      y+=isTot?8:6;
+      if(isTot){doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setFillColor(235,248,238);doc.rect(mL,y-4,W-mL-mR,9,'F');}
+      else{doc.setFont('helvetica','normal');doc.setFontSize(10);}
+      doc.text(row[0],mL+3,y);doc.text(':',mL+47,y);doc.text(row[1],mL+51,y);
+      y+=isTot?9:6;
     });y+=4;
     doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text('Rincian Lembur:',mL,y);y+=6;
-    // Kolom tabel: No=10|Tanggal=35|Jam=42|Durasi=23|Harga=30|Total=30 = 170mm
-    const tCols = [
-      {label:'No',      w:10, x:mL,        align:'center'},
-      {label:'Tanggal', w:35, x:mL+10,     align:'left'},
-      {label:'Jam Kerja',w:42, x:mL+45,    align:'left'},
-      {label:'Durasi',  w:23, x:mL+87,     align:'center'},
-      {label:'Harga/Jam',w:30,x:mL+110,    align:'right'},
-      {label:'Total',   w:30, x:mL+140,    align:'right'},
-    ];
-    // Header tabel biru — tinggi 9mm, text di tengah
-    const hdrH2 = 9;
-    doc.setFillColor(45,108,223); doc.rect(mL, y, W-mL-mR, hdrH2, 'F');
-    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9);
-    tCols.forEach(col=>{
-      const ty = y + hdrH2/2 + 1.5; // vertikal tengah
-      const tx = col.align==='center' ? col.x+col.w/2
-               : col.align==='right'  ? col.x+col.w-2
-               : col.x+2;
-      const align = col.align==='right'?'right':col.align==='center'?'center':'left';
-      doc.text(col.label, tx, ty, {align, maxWidth:col.w-3});
-    });
-    doc.setTextColor(0,0,0); y += hdrH2;
-
-    const dataRowH = 8;
-    doc.setFont('helvetica','normal');
+    doc.setFillColor(45,108,223);doc.rect(mL,y-5,W-mL-mR,7,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(9);
+    doc.text('No',mL+2,y);doc.text('Tanggal',mL+10,y);doc.text('Jam Kerja',mL+45,y);
+    doc.text('Durasi',mL+80,y);doc.text('Harga/Jam',mL+100,y);doc.text('Total',mL+135,y);
+    doc.setTextColor(0,0,0);y+=4;doc.setFont('helvetica','normal');
     items.forEach((l,i)=>{
-      const bg = i%2===0 ? [248,250,252] : [255,255,255];
-      doc.setFillColor(...bg); doc.rect(mL,y,W-mL-mR,dataRowH,'F');
-      doc.setDrawColor(220,220,220); doc.setLineWidth(0.2);
-      doc.line(mL,y+dataRowH,W-mR,y+dataRowH);
-      const row = [
-        String(i+1),
-        String(_fmtTgl(l.tanggal)||'-'),
-        String(l.jam_mulai||'-')+' – '+String(l.jam_selesai||'-'),
-        String(l.total_jam||0)+' jam',
-        String(_fmtRp(l.harga_per_jam)||'-'),
-        String(_fmtRp(l.total_bayar)||'-'),
-      ];
-      const ty = y + dataRowH/2 + 1.5; // vertikal tengah
-      tCols.forEach((col,ci)=>{
-        const tx = col.align==='center'?col.x+col.w/2:col.align==='right'?col.x+col.w-2:col.x+2;
-        const align = col.align==='right'?'right':col.align==='center'?'center':'left';
-        doc.text(row[ci], tx, ty, {align, maxWidth:col.w-3});
-      });
-      y+=dataRowH; if(y>250){doc.addPage();y=20;}
+      if(i%2===0){doc.setFillColor(248,250,252);doc.rect(mL,y-4,W-mL-mR,7,'F');}
+      doc.text(String(i+1),mL+4,y,{align:'center'});
+      doc.text(String(_fmtTgl(l.tanggal)||'-'),mL+10,y);
+      doc.text(String(l.jam_mulai||'-')+' – '+String(l.jam_selesai||'-'),mL+45,y);
+      doc.text(String(l.total_jam||0)+' jam',mL+80,y);
+      doc.text(String(_fmtRp(l.harga_per_jam)||'-'),mL+100,y);
+      doc.text(String(_fmtRp(l.total_bayar)||'-'),mL+135,y);
+      y+=6;if(y>250){doc.addPage();y=20;}
     });
     doc.setLineWidth(0.3);doc.line(mL,y,W-mR,y);y+=4;
     doc.setFillColor(255,248,220);doc.rect(mL,y-3,W-mL-mR,14,'F');
     doc.setLineWidth(0.3);doc.rect(mL,y-3,W-mL-mR,14);
     doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text('Terbilang:',mL+3,y+2);
     doc.setFont('helvetica','italic');
-    const terb = _terbilangJS(totByr);
+    const terb=typeof _terbilangRupiah==='function'?_terbilangRupiah(totByr):formatRupiah(totByr);
     doc.text(terb,mL+3,y+8,{maxWidth:W-mL-mR-6});y+=18;
     doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(100,100,100);
     doc.text('* Kwitansi ini merupakan bukti pembayaran sah yang diterbitkan oleh '+String(inst?.nama_instansi||'instansi'),mL,y);y+=8;
@@ -761,160 +696,129 @@ async function cetakKwitansiLembur(idLembur) {
 // SURAT PERINGATAN — PDF (Format Resmi A4)
 // ─────────────────────────────────────────────────────────────
 async function cetakSuratSP(idSP) {
-  showToast('Membuat surat peringatan...','info',2000);
+  showToast('Membuat surat peringatan...', 'info', 2000);
   const ok2 = await _ensureJsPDF();
-  if (!ok2||!window.jspdf?.jsPDF){showToast('Library PDF tidak tersedia.','error',6000);return;}
+  if (!ok2 || !window.jspdf?.jsPDF) { showToast('Library PDF tidak tersedia. Muat ulang halaman.','error',6000); return; }
+
   try {
-    const data = await callAPI('getDataSuratSP',{id_sp:idSP});
+    const data = await callAPI('getDataSuratSP', { id_sp: idSP });
     if (!data) throw new Error('Data SP tidak tersedia');
 
-    const {jsPDF} = window.jspdf;
-    const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    const W=210, mL=25, mR=25;
-    let y=15;
-
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const W   = 210;
+    const mL  = 25, mR = 25;
+    let y     = 15;
     const instansi = data.instansi;
     const sp       = data.sp;
     const k        = data.karyawan;
-    doc.setFontSize(9); // default font size lebih kecil
 
-    // Semua nilai harus String agar tidak error
-    const kNama  = String(k.nama_lengkap  ||'-');
-    const kNik   = String(k.nik           ||'-');
-    const kJab   = String(k.jabatan       ||'-');
-    const kDept  = String(k.departemen    ||'-');
-    const spJenis = String(sp.jenis_sp    ||'SP1');
-    const spNamaMap = {SP1:'PERTAMA',SP2:'KEDUA',SP3:'KETIGA'};
-    const spNama = spNamaMap[spJenis] || spJenis;
-    const noSurat= String(data.no_surat   ||'-');
-    const alasan = String(sp.alasan       ||'-');
-    const alfaHari = String(sp.total_hari_alfa_pemicu||'0');
-    const namaInst = String(instansi?.nama_instansi||'Instansi');
-
-    // ── KOP SURAT ──────────────────────────────────────────────
+    // Kop surat resmi
     y = await _kopSurat(doc, instansi, W, mL, y);
-    doc.setLineWidth(1.5); doc.setDrawColor(0,0,0);
-    doc.line(mL,y,W-mR,y);
+
+    // Garis tebal bawah kop
+    doc.setLineWidth(1);
+    doc.line(mL, y, W-mR, y);
+    doc.setLineWidth(0.3);
+    doc.line(mL, y+1.2, W-mR, y+1.2);
     y += 8;
 
-    // ── IDENTITAS SURAT ────────────────────────────────────────
-    doc.setFontSize(10); doc.setFont('helvetica','normal');
-    const tblW = 35; // lebar kolom kiri
-    const rows1 = [
-      ['Nomor',   noSurat],
-      ['Lampiran','-'],
-      ['Perihal', 'Surat Peringatan '+spJenis],
-    ];
-    rows1.forEach(r => {
-      doc.setFont('helvetica','normal');
-      doc.text(r[0],     mL,       y);
-      doc.text(':',      mL+tblW,  y);
-      doc.setFont(r[0]==='Perihal'?'helvetica':'helvetica', r[0]==='Perihal'?'bold':'normal');
-      doc.text(r[1],     mL+tblW+4, y);
-      y+=5.5;
-    });
-    y+=3;
-
-    // ── KEPADA ─────────────────────────────────────────────────
+    // Nomor surat
+    doc.setFontSize(10);
     doc.setFont('helvetica','normal');
-    doc.text('Kepada Yth.',         mL, y); y+=4.5;
+    doc.text('Nomor    : ' + data.no_surat, mL, y); y += 6;
+    doc.text('Lampiran : -',                mL, y); y += 6;
+    doc.text('Hal      : Surat Peringatan ' + sp.jenis_sp + ' (SP-' + sp.jenis_sp.replace('SP','') + ')', mL, y);
+    y += 10;
+
+    // Kepada
+    doc.text('Kepada Yth.',     mL, y); y += 5;
     doc.setFont('helvetica','bold');
-    doc.text('Sdr/i. '+kNama,       mL, y); y+=4.5;
+    doc.text('Sdr. ' + k.nama_lengkap, mL, y); y += 5;
     doc.setFont('helvetica','normal');
-    doc.text(kJab+' — '+kDept,      mL, y); y+=4.5;
-    doc.text('Di Tempat',           mL, y); y+=8;
+    doc.text(k.jabatan + ' — ' + k.departemen, mL, y); y += 5;
+    doc.text('Di Tempat',       mL, y); y += 10;
 
-    // ── PEMBUKA ────────────────────────────────────────────────
-    doc.text('Dengan hormat,', mL, y); y+=5.5;
-    const par1 = 'Sehubungan dengan evaluasi disiplin dan kehadiran kerja di lingkungan ' +
-      namaInst+', bersama ini kami sampaikan bahwa karyawan tersebut di bawah ini:';
-    const p1L = doc.splitTextToSize(par1, W-mL-mR);
-    doc.text(p1L, mL, y); y += p1L.length*5+3;
+    // Pembuka
+    doc.setFont('helvetica','normal');
+    const pembuka = 'Dengan hormat,';
+    doc.text(pembuka, mL, y); y += 6;
 
-    // ── TABEL IDENTITAS ────────────────────────────────────────
-    const idRows = [
-      ['Nama Lengkap',kNama],['NIK',kNik],['Jabatan',kJab],['Departemen',kDept]
+    const par1 = 'Sehubungan dengan evaluasi kehadiran dan kedisiplinan kerja di lingkungan ' +
+      (instansi?.nama_instansi||'instansi') + ', bersama ini kami sampaikan bahwa Saudara/i:';
+    const par1Lines = doc.splitTextToSize(par1, W-mL-mR);
+    doc.text(par1Lines, mL, y); y += par1Lines.length * 5.5 + 3;
+
+    // Identitas karyawan (tabel)
+    doc.setFillColor(248,250,252);
+    doc.rect(mL, y-3, W-mL-mR, 30, 'F');
+    doc.setLineWidth(0.3);
+    doc.rect(mL, y-3, W-mL-mR, 30);
+    doc.setFontSize(10);
+    const identitas = [
+      ['Nama Lengkap', k.nama_lengkap],
+      ['NIK',          k.nik],
+      ['Jabatan',      k.jabatan],
+      ['Departemen',   k.departemen]
     ];
-    // Simpan posisi awal lalu gambar rect setelah tahu total tinggi
-    const idStartY = y;
-    const idRowH   = 7;   // tinggi per baris cukup agar tidak sesak
-    const idPadT   = 4;   // padding atas
-    const idPadB   = 5;   // padding bawah
-    const idH      = idRows.length * idRowH + idPadT + idPadB;
-
-    // Background + border
-    doc.setFillColor(245,247,250);
-    doc.rect(mL, idStartY, W-mL-mR, idH, 'F');
-    doc.setDrawColor(180,180,180); doc.setLineWidth(0.3);
-    doc.rect(mL, idStartY, W-mL-mR, idH);
-
-    // Teks dimulai setelah padding atas
-    y = idStartY + idPadT + 3;
-    idRows.forEach(row => {
-      doc.setFont('helvetica','bold');
-      doc.text(row[0], mL+5, y);
-      doc.text(':', mL+37, y);
-      doc.setFont('helvetica','normal');
-      doc.text(String(row[1]), mL+41, y);
-      y += idRowH;
+    identitas.forEach(function(row) {
+      doc.setFont('helvetica','bold');   doc.text(row[0], mL+4, y);
+      doc.text(':',                      mL+38, y);
+      doc.setFont('helvetica','normal'); doc.text(row[1], mL+42, y);
+      y += 7;
     });
-    // Posisi y setelah box = startY + total tinggi + gap
-    y = idStartY + idH + 5;
+    y += 2;
 
-    // ── ISI SURAT ──────────────────────────────────────────────
-    const par2 = 'Telah melakukan pelanggaran disiplin kerja, yaitu: '+alasan+
-      '. Dengan total ketidakhadiran tanpa keterangan (alfa) sebanyak '+alfaHari+' hari.';
-    const p2L = doc.splitTextToSize(par2, W-mL-mR);
+    // Alasan
+    const par2 = 'Telah melakukan pelanggaran disiplin berupa: ' + sp.alasan +
+      '. Total ketidakhadiran tanpa keterangan (alfa): ' + sp.total_hari_alfa_pemicu + ' hari.';
+    const par2Lines = doc.splitTextToSize(par2, W-mL-mR);
     doc.setFont('helvetica','normal');
-    doc.text(p2L, mL, y); y+=p2L.length*5+4;
+    doc.text(par2Lines, mL, y); y += par2Lines.length * 5.5 + 5;
 
-    // Kotak peringatan - proporsional dan kompak
-    doc.setFillColor(255,248,230); doc.rect(mL,y,W-mL-mR,18,'F');
-    doc.setDrawColor(217,119,6); doc.setLineWidth(0.5); doc.rect(mL,y,W-mL-mR,18);
-    doc.setFont('helvetica','bold'); doc.setFontSize(10.5);
-    doc.text('SURAT PERINGATAN '+spNama+' ('+spJenis+')', W/2, y+7, {align:'center'});
-    doc.setFont('helvetica','normal'); doc.setFontSize(9);
-    const isiSP = 'Berlaku: '+_fmtTgl(sp.tanggal_berlaku)+' s/d '+_fmtTgl(sp.tanggal_kadaluarsa);
-    doc.text(isiSP, W/2, y+14, {align:'center'});
-    y+=22;
+    // Isi SP formal
+    doc.setFont('helvetica','bold');
+    doc.text('OLEH KARENA ITU', W/2, y, {align:'center'}); y += 5;
+    doc.setFont('helvetica','normal');
+
+    const spNama = { SP1:'PERTAMA', SP2:'KEDUA', SP3:'KETIGA' };
+    const isiSP  = 'Kami memberikan SURAT PERINGATAN ' + (spNama[sp.jenis_sp]||'') +
+      ' kepada yang bersangkutan. Surat ini berlaku mulai tanggal ' + _fmtTgl(sp.tanggal_berlaku) +
+      ' sampai dengan ' + _fmtTgl(sp.tanggal_kadaluarsa) + '.';
+    const isiLines = doc.splitTextToSize(isiSP, W-mL-mR);
+    doc.text(isiLines, mL, y); y += isiLines.length*5.5 + 5;
 
     // Konsekuensi
-    if (data.konsekuensi) {
-      const konL = doc.splitTextToSize(String(data.konsekuensi), W-mL-mR);
-      doc.setFont('helvetica','normal');
-      doc.text(konL, mL, y); y+=konL.length*4.8+3;
-    }
+    const konsLines = doc.splitTextToSize(data.konsekuensi, W-mL-mR);
+    doc.text(konsLines, mL, y); y += konsLines.length*5.5 + 5;
 
-    // Penutup - ringkas
-    const penutup = 'Demikian surat peringatan ini dibuat untuk diketahui dan dipatuhi. '+
-      'Diharapkan yang bersangkutan dapat memperbaiki kedisiplinan dan kinerjanya. '+
-      'Atas perhatian dan kerja samanya, kami ucapkan terima kasih.';
-    const ptL = doc.splitTextToSize(penutup, W-mL-mR);
-    doc.text(ptL, mL, y); y+=ptL.length*4.8+7;
+    // Penutup
+    const penutup = 'Demikian surat peringatan ini dibuat agar yang bersangkutan dapat memahami, menerima, dan memperbaiki perilaku kerjanya. Atas perhatian dan kerja samanya, kami ucapkan terima kasih.';
+    const penutupLines = doc.splitTextToSize(penutup, W-mL-mR);
+    doc.text(penutupLines, mL, y); y += penutupLines.length*5.5 + 8;
 
-    // ── KOTA DAN TANGGAL ───────────────────────────────────────
-    const kota = (String(instansi?.alamat_instansi||'').split(',')[0]||'').trim();
-    doc.text((kota?kota+', ':'')+_nowTanggal(), W-mR, y, {align:'right'});
-    y+=6;
+    // Tanggal terbit
+    const kotaTanggal = ((instansi?.alamat_instansi||'').split(',')[0]||'') + ', ' + _nowTanggal();
+    doc.text(kotaTanggal, W-mR, y, {align:'right'}); y += 10;
 
-    // ── TTD 4 PIHAK ────────────────────────────────────────────
-    if (y > 230) {doc.addPage(); y=20;}
+    // TTD
+    if (y > 220) { doc.addPage(); y = 20; }
     y = await _kolomTTD(doc, [
-      {label:'Yang Bersangkutan', nama:kNama, ttd:k.tanda_tangan_url},
-      {label:'Atasan Langsung',   nama:'',    ttd:''},
-      {label:'HRD / Manager SDM', nama:'',    ttd:''},
-      {label:'Pimpinan',          nama:'',    ttd:''},
+      { label:'Karyawan Yang Diperingatkan', nama: k.nama_lengkap,                ttd: k.tanda_tangan_url },
+      { label:'Atasan Langsung',             nama: data.atasan?.nama_lengkap||'-', ttd: data.atasan?.tanda_tangan_url },
+      { label:'HRD / Manager SDM',           nama: data.hrd?.nama_lengkap||'-',    ttd: data.hrd?.tanda_tangan_url },
+      { label:'Pimpinan',                    nama: data.pimpinan?.nama_lengkap||'-', ttd: data.pimpinan?.tanda_tangan_url }
     ], mL, W-mR, y, doc);
 
-    doc.setFontSize(7.5); doc.setTextColor(150,150,150);
-    doc.text('Dicetak: '+_nowStr(), W/2, 292, {align:'center'});
-    doc.setTextColor(0,0,0);
+    doc.setFontSize(8);
+    doc.setTextColor(150,150,150);
+    doc.text('Dokumen ini dicetak secara digital melalui Sistem Absensi Digital | ' + _nowStr(), W/2, 292, { align:'center' });
 
-    doc.save('SuratSP_'+spJenis+'_'+kNama.replace(/\s+/g,'_')+'.pdf');
-    showToast('Surat SP berhasil diunduh! ⚠️','success');
+    doc.save('Surat_SP_' + sp.jenis_sp + '_' + k.nama_lengkap.replace(/\s/g,'_') + '.pdf');
+    showToast('Surat SP berhasil diunduh! ⚠️', 'success');
 
   } catch(e) {
-    showToast('Gagal cetak SP: '+e.message,'error');
+    showToast('Gagal cetak SP: ' + e.message, 'error');
     console.error(e);
   }
 }
@@ -1113,50 +1017,60 @@ async function _kolomTTD(doc, signers, xStart, xEnd, y, docRef) {
   const colW   = totalW / signers.length;
   const tglStr = _nowTanggal();
 
-  doc.setFontSize(9);
   doc.setFont('helvetica','normal');
+  doc.setFontSize(9);
 
-  // Label & tanggal
+  // Tanggal hanya di kolom paling kanan (format profesional)
+  const lastCx = xStart + (signers.length - 1) * colW + colW / 2;
+  doc.text(tglStr, lastCx, y, { align: 'center' });
+  y += 6;
+
+  // Label jabatan tiap kolom
   signers.forEach(function(s, i) {
-    const cx = xStart + i * colW + colW/2;
-    doc.text(s.label, cx, y, {align:'center'});
-    doc.text(tglStr,  cx, y+5, {align:'center'});
+    const cx = xStart + i * colW + colW / 2;
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    doc.text(s.label, cx, y, { align: 'center' });
   });
-  y += 10;
+  y += 5;
 
-  // TTD images
+  // Gambar TTD jika ada
   const ttdY = y;
   await Promise.all(signers.map(async function(s, i) {
     const cx = xStart + i * colW;
     if (s.ttd && s.ttd.startsWith('http')) {
       try {
         const imgData = await _urlToBase64(s.ttd);
-        docRef.addImage(imgData, 'PNG', cx + colW/2 - 20, ttdY, 40, 18);
+        docRef.addImage(imgData, 'PNG', cx + colW/2 - 15, ttdY, 30, 16);
       } catch(e) {}
     }
   }));
-  y += 22;
+  y += 20;
 
-  // Garis TTD — warna hitam, tebal
-  doc.setDrawColor(0,0,0); doc.setLineWidth(0.4);
+  // Garis tanda tangan
   signers.forEach(function(s, i) {
-    const lineX = xStart + i * colW;
-    doc.line(lineX + 5, y, lineX + colW - 5, y);
+    const lx = xStart + i * colW;
+    doc.setLineWidth(0.4);
+    doc.line(lx + 4, y, lx + colW - 4, y);
   });
-  y += 5;
+  y += 4;
 
-  // Nama: hanya tampil jika ada
+  // Nama dalam kurung
   signers.forEach(function(s, i) {
-    const cx = xStart + i * colW + colW/2;
-    const nm = (s.nama||'').trim();
-    if (nm && nm !== '-' && nm !== '..............') {
-      doc.setFont('helvetica','normal');
-      doc.setFontSize(9);
-      doc.text('(' + nm + ')', cx, y, {align:'center', maxWidth: colW-4});
+    const cx = xStart + i * colW + colW / 2;
+    const nm = (s.nama || '').trim();
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(8.5);
+    if (nm && nm !== '-') {
+      doc.text('(' + nm + ')', cx, y, { align: 'center', maxWidth: colW - 6 });
+    } else {
+      doc.text('(......................)', cx, y, { align: 'center' });
     }
   });
+
   doc.setFont('helvetica','normal');
-  y += 8;
+  doc.setLineWidth(0.3);
+  y += 6;
   return y;
 }
 
