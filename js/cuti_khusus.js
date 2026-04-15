@@ -296,90 +296,130 @@ async function _exportRekapTunjangan() {
 }
 
 async function exportRekapTunjanganExcel(data) {
-  if (!window.XLSX) { showToast('Library Excel belum siap','error'); return; }
-
   const now  = new Date();
   const thn  = now.getFullYear();
   const tgl  = now.toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
-  const namaInstansi = document.querySelector('.sidebar__brand-name')?.textContent?.trim()
+  const namaInstansi = (await callAPI('getSetting',{key:'nama_instansi'}).catch(()=>null))
+                    || document.querySelector('.sidebar__brand-name')?.textContent?.trim()
                     || 'Instansi';
+  const alamat = (await callAPI('getSetting',{key:'alamat_instansi'}).catch(()=>null)) || '';
 
-  const aoa = [];
-  aoa.push([namaInstansi]);
-  aoa.push(['REKAP TUNJANGAN CUTI 6 BULANAN']);
-  aoa.push(['Tahun ' + thn]);
-  aoa.push(['Dicetak: ' + tgl]);
-  aoa.push([]);
-  aoa.push(['No','Nama Karyawan','Jabatan','Departemen','Periode',
-            'Tgl Mulai','Tgl Selesai','Total Hari','Nominal Tunjangan (Rp)',
-            'Status Bayar','Tgl Bayar']);
-  data.forEach((t,i) => aoa.push([
-    i+1, t.nama, t.jabatan||'-', t.departemen||'-', t.periode,
-    t.tanggal_mulai, t.tanggal_selesai, parseInt(t.total_hari||0),
-    parseInt(t.nominal_tunjangan||0),
-    t.status_bayar==='sudah'?'Sudah Dibayar':'Belum Dibayar',
-    t.tanggal_bayar||'-'
-  ]));
-  aoa.push([]);
-  aoa.push(['','','','','','','','TOTAL:',
-    data.reduce((s,t)=>s+parseInt(t.nominal_tunjangan||0),0),'','']);
+  const totalNominal = data.reduce((s,t)=>s+parseInt(t.nominal_tunjangan||0),0);
+  const totalSudah   = data.filter(t=>t.status_bayar==='sudah').reduce((s,t)=>s+parseInt(t.nominal_tunjangan||0),0);
+  const totalBelum   = totalNominal - totalSudah;
 
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const fmtRp = n => 'Rp ' + parseInt(n||0).toLocaleString('id-ID');
 
-  ws['!cols'] = [{wch:5},{wch:25},{wch:18},{wch:18},{wch:10},
-                 {wch:14},{wch:14},{wch:12},{wch:24},{wch:18},{wch:14}];
-  ws['!merges'] = [
-    {s:{r:0,c:0},e:{r:0,c:10}},{s:{r:1,c:0},e:{r:1,c:10}},
-    {s:{r:2,c:0},e:{r:2,c:10}},{s:{r:3,c:0},e:{r:3,c:10}}
-  ];
-  ws['!rows'] = [{hpt:32},{hpt:26},{hpt:18},{hpt:16},{hpt:8},{hpt:22}];
+  const rows = data.map((t,i) => `
+    <tr style="background:${i%2===0?'#FFFFFF':'#F8FAFC'}">
+      <td style="text-align:center;font-weight:600">${i+1}</td>
+      <td style="font-weight:600">${t.nama}</td>
+      <td>${t.jabatan||'-'}</td>
+      <td>${t.departemen||'-'}</td>
+      <td style="text-align:center">${t.periode}</td>
+      <td style="text-align:center">${t.tanggal_mulai}</td>
+      <td style="text-align:center">${t.tanggal_selesai}</td>
+      <td style="text-align:center;font-weight:600">${t.total_hari}</td>
+      <td style="text-align:right;font-weight:600;color:#1E3A5F">${fmtRp(t.nominal_tunjangan)}</td>
+      <td style="text-align:center;font-weight:700;color:${t.status_bayar==='sudah'?'#1A9E74':'#D97706'};
+        background:${t.status_bayar==='sudah'?'#EBF8EE':'#FFFAF0'}">
+        ${t.status_bayar==='sudah'?'✓ Sudah Dibayar':'⏳ Belum Dibayar'}
+      </td>
+      <td style="text-align:center">${t.tanggal_bayar||'-'}</td>
+    </tr>`).join('');
 
-  const enc = (r,c) => XLSX.utils.encode_cell({r,c});
-  const bd  = (clr) => ({style:'thin',color:{rgb:clr}});
-  const border = (c) => ({top:bd(c),bottom:bd(c),left:bd(c),right:bd(c)});
+  const html = `
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:x="urn:schemas-microsoft-com:office:excel"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="UTF-8">
+<style>
+  body { font-family: Arial, sans-serif; font-size: 10pt; }
+  table { border-collapse: collapse; width: 100%; }
+  td, th { border: 1px solid #D1D5DB; padding: 6px 10px; vertical-align: middle; }
+  .hd1 { background:#1E3A5F; color:#FFFFFF; font-size:14pt; font-weight:bold; text-align:center; border:none; }
+  .hd2 { background:#2D6CDF; color:#FFFFFF; font-size:11pt; font-weight:bold; text-align:center; border:none; }
+  .hd3 { background:#34495E; color:#CBD5E0; font-size:9pt; text-align:center; border:none; }
+  .col-header { background:#1A9E74; color:#FFFFFF; font-weight:bold; text-align:center; font-size:9pt; }
+  .total-row { background:#EFF6FF; font-weight:bold; }
+  .summary-box { background:#F0F9FF; border:2px solid #2D6CDF; padding:8px; margin-bottom:12px; }
+</style>
+</head>
+<body>
+<table>
+  <!-- KOP SURAT -->
+  <tr><td colspan="11" class="hd1">${namaInstansi}</td></tr>
+  ${alamat ? `<tr><td colspan="11" class="hd3">${alamat}</td></tr>` : ''}
+  <tr><td colspan="11" class="hd2">REKAP TUNJANGAN CUTI 6 BULANAN</td></tr>
+  <tr><td colspan="11" class="hd3">Tahun ${thn} &nbsp;|&nbsp; Dicetak: ${tgl}</td></tr>
+  <tr><td colspan="11" style="border:none;padding:4px"></td></tr>
 
-  // Style helpers
-  const sH1 = {font:{bold:true,sz:14,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1E3A5F'}},alignment:{horizontal:'center',vertical:'center'}};
-  const sH2 = {font:{bold:true,sz:12,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'2D6CDF'}},alignment:{horizontal:'center',vertical:'center'}};
-  const sH3 = {font:{sz:10,color:{rgb:'CBD5E0'}},fill:{fgColor:{rgb:'2C3E50'}},alignment:{horizontal:'center',vertical:'center'}};
-  const sCol= {font:{bold:true,sz:10,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1A9E74'}},alignment:{horizontal:'center',vertical:'center'},border:border('AAAAAA')};
-  const sDat= (alt) => ({font:{sz:10},fill:{fgColor:{rgb:alt?'F8FAFC':'FFFFFF'}},alignment:{vertical:'center'},border:border('E2E8F0')});
-  const sRp = (alt) => ({font:{sz:10},fill:{fgColor:{rgb:alt?'F8FAFC':'FFFFFF'}},numFmt:'#,##0',alignment:{horizontal:'right',vertical:'center'},border:border('E2E8F0')});
-  const sSudah = {font:{bold:true,sz:10,color:{rgb:'1A9E74'}},fill:{fgColor:{rgb:'EBF8EE'}},alignment:{horizontal:'center',vertical:'center'},border:border('C6F6D5')};
-  const sBelum = {font:{bold:true,sz:10,color:{rgb:'D97706'}},fill:{fgColor:{rgb:'FFFAF0'}},alignment:{horizontal:'center',vertical:'center'},border:border('FCD34D')};
-  const sTot  = {font:{bold:true,sz:11,color:{rgb:'1E3A5F'}},fill:{fgColor:{rgb:'EFF6FF'}},numFmt:'#,##0',alignment:{horizontal:'right',vertical:'center'},border:{top:{style:'medium',color:{rgb:'2D6CDF'}},bottom:{style:'medium',color:{rgb:'2D6CDF'}},left:bd('E2E8F0'),right:bd('E2E8F0')}};
+  <!-- RINGKASAN -->
+  <tr>
+    <td colspan="3" style="background:#EFF6FF;font-weight:bold;color:#2D6CDF;font-size:10pt">
+      💰 Total Tunjangan: ${fmtRp(totalNominal)}
+    </td>
+    <td colspan="4" style="background:#EBF8EE;font-weight:bold;color:#1A9E74;font-size:10pt">
+      ✓ Sudah Dibayar: ${fmtRp(totalSudah)}
+    </td>
+    <td colspan="4" style="background:#FFFAF0;font-weight:bold;color:#D97706;font-size:10pt">
+      ⏳ Belum Dibayar: ${fmtRp(totalBelum)}
+    </td>
+  </tr>
+  <tr><td colspan="11" style="border:none;padding:4px"></td></tr>
 
-  // Apply header styles
-  for(let c2=0;c2<=10;c2++){
-    if(ws[enc(0,c2)]) ws[enc(0,c2)].s = sH1;
-    if(ws[enc(1,c2)]) ws[enc(1,c2)].s = sH2;
-    if(ws[enc(2,c2)]) ws[enc(2,c2)].s = sH3;
-    if(ws[enc(3,c2)]) ws[enc(3,c2)].s = sH3;
-    if(ws[enc(5,c2)]) ws[enc(5,c2)].s = sCol;
-  }
+  <!-- HEADER KOLOM -->
+  <tr>
+    <th class="col-header" style="width:40px">No</th>
+    <th class="col-header" style="width:160px">Nama Karyawan</th>
+    <th class="col-header" style="width:120px">Jabatan</th>
+    <th class="col-header" style="width:120px">Departemen</th>
+    <th class="col-header" style="width:80px">Periode</th>
+    <th class="col-header" style="width:100px">Tgl Mulai</th>
+    <th class="col-header" style="width:100px">Tgl Selesai</th>
+    <th class="col-header" style="width:80px">Total Hari</th>
+    <th class="col-header" style="width:160px">Nominal Tunjangan</th>
+    <th class="col-header" style="width:140px">Status Bayar</th>
+    <th class="col-header" style="width:100px">Tgl Bayar</th>
+  </tr>
 
-  // Apply data styles
-  data.forEach((t,i) => {
-    const r = 6+i, alt = i%2===1;
-    for(let c2=0;c2<=10;c2++){
-      if(!ws[enc(r,c2)]) continue;
-      if(c2===8){ws[enc(r,c2)].s=sRp(alt);ws[enc(r,c2)].t='n';}
-      else if(c2===9) ws[enc(r,c2)].s = t.status_bayar==='sudah'?sSudah:sBelum;
-      else ws[enc(r,c2)].s = sDat(alt);
-    }
-  });
+  <!-- DATA -->
+  ${rows}
 
-  // Total row
-  const tr = 6+data.length+1;
-  for(let c2=0;c2<=10;c2++){
-    const cell = ws[enc(tr,c2)];
-    if(!cell) continue;
-    if(c2===8){cell.s=sTot;cell.t='n';}
-    else cell.s={font:{bold:true,sz:10},fill:{fgColor:{rgb:'EFF6FF'}},border:{top:{style:'medium',color:{rgb:'2D6CDF'}},bottom:{style:'medium',color:{rgb:'2D6CDF'}}}};
-  }
+  <!-- TOTAL -->
+  <tr class="total-row">
+    <td colspan="8" style="text-align:right;color:#1E3A5F;border-top:2px solid #2D6CDF">TOTAL KESELURUHAN:</td>
+    <td style="text-align:right;color:#1E3A5F;font-size:11pt;border-top:2px solid #2D6CDF">${fmtRp(totalNominal)}</td>
+    <td colspan="2" style="border-top:2px solid #2D6CDF"></td>
+  </tr>
 
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Rekap Tunjangan');
-  XLSX.writeFile(wb, 'Rekap_Tunjangan_Cuti_'+thn+'.xlsx');
+  <!-- TTD -->
+  <tr><td colspan="11" style="border:none;padding:16px"></td></tr>
+  <tr>
+    <td colspan="4" style="border:none;text-align:center">
+      <div style="margin-bottom:40px">Mengetahui,</div>
+      <div>(_____________________)</div>
+      <div style="margin-top:4px;font-weight:bold">Pimpinan</div>
+    </td>
+    <td colspan="3" style="border:none"></td>
+    <td colspan="4" style="border:none;text-align:center">
+      <div style="margin-bottom:4px">Dibuat di: ............., ${tgl}</div>
+      <div style="margin-bottom:40px">Bagian Keuangan/HRD,</div>
+      <div>(_____________________)</div>
+      <div style="margin-top:4px;font-weight:bold">Admin</div>
+    </td>
+  </tr>
+</table>
+</body></html>`;
+
+  // Download sebagai .xls (Excel bisa buka HTML)
+  const blob = new Blob([html], {type:'application/vnd.ms-excel;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'Rekap_Tunjangan_Cuti_'+thn+'.xls';
+  a.click();
+  URL.revokeObjectURL(url);
   showToast('Export berhasil! 📊','success');
 }
