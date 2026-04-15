@@ -136,7 +136,14 @@ async function cetakAbsensiHarianPDF(tanggal) {
     const ttdY=y;
     const ttdPos=[{x:mL,label:'Dibuat oleh,'},{x:W/2-25,label:'Diperiksa,'},{x:W-mR-52,label:'Mengetahui,'}];
     doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(30,41,59);
-    ttdPos.forEach(t=>{doc.text(t.label,t.x+25,ttdY,{align:'center'});doc.text(_nowTanggal(),t.x+25,ttdY+5,{align:'center'});doc.line(t.x+5,ttdY+20,t.x+45,ttdY+20);});
+    // Tanggal hanya di kolom kanan
+    doc.text(_nowTanggal(), ttdPos[2].x+25, ttdY, {align:'center'});
+    ttdPos.forEach(t=>{
+      doc.text(t.label, t.x+25, ttdY+6, {align:'center'});
+      doc.line(t.x+5, ttdY+24, t.x+45, ttdY+24);
+      doc.text('(......................)', t.x+25, ttdY+28, {align:'center'});
+    });
+    y = ttdY + 32;
     const totalPages=doc.getNumberOfPages();
     for(let pg=1;pg<=totalPages;pg++){doc.setPage(pg);doc.setFontSize(7.5);doc.setTextColor(148,163,184);doc.text('Dicetak: '+_nowStr()+'   |   Hal '+pg+' dari '+totalPages,W/2,207,{align:'center'});}
     doc.save('Absensi_'+tanggal.replace(/\//g,'-')+'.pdf');
