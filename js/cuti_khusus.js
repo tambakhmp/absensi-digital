@@ -297,21 +297,89 @@ async function _exportRekapTunjangan() {
 
 async function exportRekapTunjanganExcel(data) {
   if (!window.XLSX) { showToast('Library Excel belum siap','error'); return; }
-  const rows = data.map(t => ({
-    'Nama Karyawan' : t.nama,
-    'Jabatan'       : t.jabatan||'-',
-    'Departemen'    : t.departemen||'-',
-    'Periode'       : t.periode,
-    'Tgl Mulai'     : t.tanggal_mulai,
-    'Tgl Selesai'   : t.tanggal_selesai,
-    'Total Hari'    : t.total_hari,
-    'Nominal (Rp)'  : t.nominal_tunjangan||0,
-    'Status Bayar'  : t.status_bayar==='sudah'?'Sudah Dibayar':'Belum Dibayar',
-    'Tgl Bayar'     : t.tanggal_bayar||'-',
-  }));
-  const ws  = XLSX.utils.json_to_sheet(rows);
-  const wb  = XLSX.utils.book_new();
+
+  const now  = new Date();
+  const thn  = now.getFullYear();
+  const tgl  = now.toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
+  const namaInstansi = document.querySelector('.sidebar__brand-name')?.textContent?.trim()
+                    || 'Instansi';
+
+  const aoa = [];
+  aoa.push([namaInstansi]);
+  aoa.push(['REKAP TUNJANGAN CUTI 6 BULANAN']);
+  aoa.push(['Tahun ' + thn]);
+  aoa.push(['Dicetak: ' + tgl]);
+  aoa.push([]);
+  aoa.push(['No','Nama Karyawan','Jabatan','Departemen','Periode',
+            'Tgl Mulai','Tgl Selesai','Total Hari','Nominal Tunjangan (Rp)',
+            'Status Bayar','Tgl Bayar']);
+  data.forEach((t,i) => aoa.push([
+    i+1, t.nama, t.jabatan||'-', t.departemen||'-', t.periode,
+    t.tanggal_mulai, t.tanggal_selesai, parseInt(t.total_hari||0),
+    parseInt(t.nominal_tunjangan||0),
+    t.status_bayar==='sudah'?'Sudah Dibayar':'Belum Dibayar',
+    t.tanggal_bayar||'-'
+  ]));
+  aoa.push([]);
+  aoa.push(['','','','','','','','TOTAL:',
+    data.reduce((s,t)=>s+parseInt(t.nominal_tunjangan||0),0),'','']);
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  ws['!cols'] = [{wch:5},{wch:25},{wch:18},{wch:18},{wch:10},
+                 {wch:14},{wch:14},{wch:12},{wch:24},{wch:18},{wch:14}];
+  ws['!merges'] = [
+    {s:{r:0,c:0},e:{r:0,c:10}},{s:{r:1,c:0},e:{r:1,c:10}},
+    {s:{r:2,c:0},e:{r:2,c:10}},{s:{r:3,c:0},e:{r:3,c:10}}
+  ];
+  ws['!rows'] = [{hpt:32},{hpt:26},{hpt:18},{hpt:16},{hpt:8},{hpt:22}];
+
+  const enc = (r,c) => XLSX.utils.encode_cell({r,c});
+  const bd  = (clr) => ({style:'thin',color:{rgb:clr}});
+  const border = (c) => ({top:bd(c),bottom:bd(c),left:bd(c),right:bd(c)});
+
+  // Style helpers
+  const sH1 = {font:{bold:true,sz:14,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1E3A5F'}},alignment:{horizontal:'center',vertical:'center'}};
+  const sH2 = {font:{bold:true,sz:12,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'2D6CDF'}},alignment:{horizontal:'center',vertical:'center'}};
+  const sH3 = {font:{sz:10,color:{rgb:'CBD5E0'}},fill:{fgColor:{rgb:'2C3E50'}},alignment:{horizontal:'center',vertical:'center'}};
+  const sCol= {font:{bold:true,sz:10,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1A9E74'}},alignment:{horizontal:'center',vertical:'center'},border:border('AAAAAA')};
+  const sDat= (alt) => ({font:{sz:10},fill:{fgColor:{rgb:alt?'F8FAFC':'FFFFFF'}},alignment:{vertical:'center'},border:border('E2E8F0')});
+  const sRp = (alt) => ({font:{sz:10},fill:{fgColor:{rgb:alt?'F8FAFC':'FFFFFF'}},numFmt:'#,##0',alignment:{horizontal:'right',vertical:'center'},border:border('E2E8F0')});
+  const sSudah = {font:{bold:true,sz:10,color:{rgb:'1A9E74'}},fill:{fgColor:{rgb:'EBF8EE'}},alignment:{horizontal:'center',vertical:'center'},border:border('C6F6D5')};
+  const sBelum = {font:{bold:true,sz:10,color:{rgb:'D97706'}},fill:{fgColor:{rgb:'FFFAF0'}},alignment:{horizontal:'center',vertical:'center'},border:border('FCD34D')};
+  const sTot  = {font:{bold:true,sz:11,color:{rgb:'1E3A5F'}},fill:{fgColor:{rgb:'EFF6FF'}},numFmt:'#,##0',alignment:{horizontal:'right',vertical:'center'},border:{top:{style:'medium',color:{rgb:'2D6CDF'}},bottom:{style:'medium',color:{rgb:'2D6CDF'}},left:bd('E2E8F0'),right:bd('E2E8F0')}};
+
+  // Apply header styles
+  for(let c2=0;c2<=10;c2++){
+    if(ws[enc(0,c2)]) ws[enc(0,c2)].s = sH1;
+    if(ws[enc(1,c2)]) ws[enc(1,c2)].s = sH2;
+    if(ws[enc(2,c2)]) ws[enc(2,c2)].s = sH3;
+    if(ws[enc(3,c2)]) ws[enc(3,c2)].s = sH3;
+    if(ws[enc(5,c2)]) ws[enc(5,c2)].s = sCol;
+  }
+
+  // Apply data styles
+  data.forEach((t,i) => {
+    const r = 6+i, alt = i%2===1;
+    for(let c2=0;c2<=10;c2++){
+      if(!ws[enc(r,c2)]) continue;
+      if(c2===8){ws[enc(r,c2)].s=sRp(alt);ws[enc(r,c2)].t='n';}
+      else if(c2===9) ws[enc(r,c2)].s = t.status_bayar==='sudah'?sSudah:sBelum;
+      else ws[enc(r,c2)].s = sDat(alt);
+    }
+  });
+
+  // Total row
+  const tr = 6+data.length+1;
+  for(let c2=0;c2<=10;c2++){
+    const cell = ws[enc(tr,c2)];
+    if(!cell) continue;
+    if(c2===8){cell.s=sTot;cell.t='n';}
+    else cell.s={font:{bold:true,sz:10},fill:{fgColor:{rgb:'EFF6FF'}},border:{top:{style:'medium',color:{rgb:'2D6CDF'}},bottom:{style:'medium',color:{rgb:'2D6CDF'}}}};
+  }
+
+  const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Rekap Tunjangan');
-  XLSX.writeFile(wb, 'Rekap_Tunjangan_Cuti_'+new Date().getFullYear()+'.xlsx');
+  XLSX.writeFile(wb, 'Rekap_Tunjangan_Cuti_'+thn+'.xlsx');
   showToast('Export berhasil! 📊','success');
 }
