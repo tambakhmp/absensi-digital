@@ -286,7 +286,7 @@ async function _cekCutiKhususKaryawan() {
           <div>
             <div style="font-size:13px;font-weight:700;color:#fff">🎫 Cuti 6 Bulanan</div>
             <div style="font-size:11px;color:rgba(255,255,255,.8);margin-top:2px">
-              Periode ${info.periode} · Sisa: <strong>${info.sisa}/${info.jatah} hari</strong>
+              Periode ${info.periode} · Tidak ada batas hari
               · Tunjangan: <strong>${formatRupiah(info.nominal_tunjangan)}</strong>
             </div>
           </div>
@@ -296,8 +296,7 @@ async function _cekCutiKhususKaryawan() {
             + Ajukan
           </button>
         </div>
-        ${info.sisa===0 ? `<div style="font-size:11px;color:rgba(255,255,255,.7)">
-          ⚠️ Jatah cuti 6 bulanan periode ini sudah habis</div>` : ''}
+
       </div>`;
   } catch(e) { /* karyawan tidak dapat cuti khusus */ }
 }
