@@ -340,13 +340,22 @@ async function renderPengajuanAdminFull(container) {
           <option value="">Semua</option>
         </select>
         <select class="form-control" id="flt-pgj-jn" style="flex:1;min-width:130px" onchange="loadPengajuanAdminV4()">
-          <option value="">Semua Jenis</option>
-          <option value="izin">📝 Izin</option><option value="sakit">🏥 Sakit</option>
-          <option value="cuti">🏖️ Cuti</option><option value="dinas_luar">🚗 Dinas Luar</option>
+          <option value="" selected>📋 Semua Jenis</option>
+          <option value="izin">📝 Izin</option>
+          <option value="sakit">🏥 Sakit</option>
+          <option value="cuti">🏖️ Cuti</option>
+          <option value="dinas_luar">🚗 Dinas Luar</option>
         </select>
       </div>
     </div>
     <div id="pgj-admin-list">${skeletonCard(4)}</div>`;
+  // Reset filter ke default setiap halaman dibuka
+  setTimeout(function() {
+    var fj = document.getElementById('flt-pgj-jn');
+    var fs = document.getElementById('flt-pgj-st');
+    if (fj) fj.value = '';
+    if (fs) fs.value = 'pending';
+  }, 0);
   await loadPengajuanAdminV4();
 }
 
