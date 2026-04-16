@@ -545,83 +545,177 @@ async function exportRekapExcel(bulan, tahun, tanggalDari, tanggalKe) {
 
 
 async function cetakKwitansiKaryawan(idKaryawan, tanggalDari, tanggalKe) {
-  showToast('Membuat kwitansi...','info',2000);
+  showToast('Membuat kwitansi...', 'info', 2000);
   const ok = await _ensureJsPDF();
   if (!ok || !window.jspdf?.jsPDF) { showToast('Library PDF tidak tersedia.','error',5000); return; }
   try {
     const semua = await callAPI('getLemburSemua', {});
+    // Helper sort tanggal dd/MM/yyyy → yyyy/MM/dd
+    const _tS = t => { const p=String(t||'').split('/'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:''; };
     const items = (semua||[]).filter(l =>
       String(l.id_karyawan)===String(idKaryawan) &&
       l.status_bayar==='disetujui' &&
-      String(l.tanggal||'')>=tanggalDari &&
-      String(l.tanggal||'')<=tanggalKe
+      _tS(l.tanggal) >= _tS(tanggalDari) && _tS(l.tanggal) <= _tS(tanggalKe)
     );
-    if (!items.length) { showToast('Tidak ada lembur disetujui untuk karyawan ini dalam rentang tanggal tersebut','warning',4000); return; }
+    if (!items.length) { showToast('Tidak ada lembur disetujui dalam rentang tanggal ini','warning',4000); return; }
+
     const inst = await callAPI('getMultipleSetting',{keys:'nama_instansi,alamat_instansi,telepon_instansi,email_instansi,logo_url'});
-    const {jsPDF}=window.jspdf;
-    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    const W=210,mL=20,mR=20;
+    const {jsPDF} = window.jspdf;
+    const doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+    const W=210, mL=20, mR=20;
     let y=15;
-    y = await _kopSurat(doc,inst,W,mL,y);
-    doc.setFontSize(13);doc.setFont('helvetica','bold');
-    doc.text('KWITANSI PEMBAYARAN LEMBUR',W/2,y,{align:'center'});y+=6;
-    const noKwt='KWT/'+new Date().getFullYear()+'/'+String(idKaryawan).slice(-6)+'-'+tanggalDari.replace(/\//g,'-');
-    doc.setFontSize(9);doc.setFont('helvetica','normal');
-    doc.text('No: '+noKwt,W/2,y,{align:'center'});y+=5;
-    doc.text('Periode: '+_fmtTgl(tanggalDari)+' s/d '+_fmtTgl(tanggalKe),W/2,y,{align:'center'});y+=3;
-    doc.setLineWidth(0.6);doc.line(mL,y,W-mR,y);y+=8;
-    const totJam=items.reduce((s,l)=>s+parseFloat(l.total_jam||0),0);
-    const totByr=items.reduce((s,l)=>s+parseFloat(l.total_bayar||0),0);
-    const nama=String(items[0].nama_karyawan||'-');
-    doc.setLineWidth(0.4);doc.rect(mL,y-4,W-mL-mR,24);
-    [['Nama Karyawan',nama],['Periode',_fmtTgl(tanggalDari)+' – '+_fmtTgl(tanggalKe)],
-     ['Jumlah Lembur',items.length+' kali ('+totJam.toFixed(1)+' jam)'],
-     ['Total Bayar',_fmtRp(totByr)]
-    ].forEach((row,ri)=>{
-      const isTot=ri===3;
-      if(isTot){doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setFillColor(235,248,238);doc.rect(mL,y-4,W-mL-mR,9,'F');}
-      else{doc.setFont('helvetica','normal');doc.setFontSize(10);}
-      doc.text(row[0],mL+3,y);doc.text(':',mL+47,y);doc.text(row[1],mL+51,y);
-      y+=isTot?9:6;
-    });y+=4;
-    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text('Rincian Lembur:',mL,y);y+=6;
-    doc.setFillColor(45,108,223);doc.rect(mL,y-5,W-mL-mR,7,'F');
-    doc.setTextColor(255,255,255);doc.setFontSize(9);
-    doc.text('No',mL+2,y);doc.text('Tanggal',mL+10,y);doc.text('Jam Kerja',mL+45,y);
-    doc.text('Durasi',mL+80,y);doc.text('Harga/Jam',mL+100,y);doc.text('Total',mL+135,y);
-    doc.setTextColor(0,0,0);y+=4;doc.setFont('helvetica','normal');
-    items.forEach((l,i)=>{
-      if(i%2===0){doc.setFillColor(248,250,252);doc.rect(mL,y-4,W-mL-mR,7,'F');}
-      doc.text(String(i+1),mL+4,y,{align:'center'});
-      doc.text(String(_fmtTgl(l.tanggal)||'-'),mL+10,y);
-      doc.text(String(l.jam_mulai||'-')+' – '+String(l.jam_selesai||'-'),mL+45,y);
-      doc.text(String(l.total_jam||0)+' jam',mL+80,y);
-      doc.text(String(_fmtRp(l.harga_per_jam)||'-'),mL+100,y);
-      doc.text(String(_fmtRp(l.total_bayar)||'-'),mL+135,y);
-      y+=6;if(y>250){doc.addPage();y=20;}
-    });
-    doc.setLineWidth(0.3);doc.line(mL,y,W-mR,y);y+=4;
-    doc.setFillColor(255,248,220);doc.rect(mL,y-3,W-mL-mR,14,'F');
-    doc.setLineWidth(0.3);doc.rect(mL,y-3,W-mL-mR,14);
-    doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text('Terbilang:',mL+3,y+2);
-    doc.setFont('helvetica','italic');
-    const terb=typeof _terbilangRupiah==='function'?_terbilangRupiah(totByr):formatRupiah(totByr);
-    doc.text(terb,mL+3,y+8,{maxWidth:W-mL-mR-6});y+=18;
-    doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(100,100,100);
-    doc.text('* Kwitansi ini merupakan bukti pembayaran sah yang diterbitkan oleh '+String(inst?.nama_instansi||'instansi'),mL,y);y+=8;
+
+    // ── Kop Surat ────────────────────────────────────────────
+    y = await _kopSurat(doc, inst, W, mL, y);
+    // 1 garis tebal saja (kopSurat sudah buat garis)
+    y += 4;
+
+    // ── Judul ────────────────────────────────────────────────
+    doc.setFillColor(30,58,138);
+    doc.rect(mL, y-5, W-mL-mR, 10, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(13);
+    doc.setTextColor(255,255,255);
+    doc.text('KWITANSI PEMBAYARAN LEMBUR', W/2, y+1, {align:'center'});
     doc.setTextColor(0,0,0);
-    if(y>220){doc.addPage();y=20;}
-    y = await _kolomTTD(doc,[
-      {label:'Karyawan',nama:nama,ttd:''},
-      {label:'Keuangan',nama:'',ttd:''},
-      {label:'HRD',nama:'',ttd:''},
-      {label:'Pimpinan',nama:'',ttd:''},
-    ],mL,W-mR,y,doc);
-    doc.setFontSize(7.5);doc.setTextColor(150,150,150);
-    doc.text('Dicetak: '+_nowStr(),W/2,292,{align:'center'});
+    y += 10;
+
+    const noKwt = 'KWT/'+new Date().getFullYear()+'/'+String(idKaryawan).slice(-6)+'-'+tanggalDari.replace(/\//g,'-');
+    doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.text('No: '+noKwt, W/2, y, {align:'center'}); y+=5;
+    doc.text('Periode: '+_fmtTgl(tanggalDari)+' s/d '+_fmtTgl(tanggalKe), W/2, y, {align:'center'}); y+=6;
+
+    // ── Kotak Ringkasan ───────────────────────────────────────
+    const totJam = items.reduce((s,l)=>s+parseFloat(l.total_jam||0),0);
+    const totByr = items.reduce((s,l)=>s+parseFloat(l.total_bayar||0),0);
+    const nama   = String(items[0].nama_karyawan||'-');
+
+    const rows = [
+      ['Nama Karyawan', nama],
+      ['Periode',       _fmtTgl(tanggalDari)+' - '+_fmtTgl(tanggalKe)],
+      ['Jumlah Lembur', items.length+' kali ('+totJam.toFixed(1)+' jam)'],
+    ];
+    const boxH = rows.length * 7 + 14;
+    doc.setDrawColor(200,200,200); doc.setLineWidth(0.3);
+    doc.rect(mL, y, W-mL-mR, boxH);
+    const col1=mL+4, col2=mL+52, col3=mL+57;
+    let ry = y+7;
+    rows.forEach(row => {
+      doc.setFont('helvetica','normal'); doc.setFontSize(10);
+      doc.text(String(row[0]), col1, ry);
+      doc.text(':', col2, ry);
+      doc.text(String(row[1]), col3, ry);
+      ry += 7;
+    });
+    // Total Bayar - baris khusus biru
+    doc.setFillColor(30,58,138);
+    doc.rect(mL, ry-5, W-mL-mR, 10, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(12);
+    doc.setTextColor(255,255,255);
+    doc.text('Total Bayar', col1, ry+1);
+    doc.text(':', col2, ry+1);
+    doc.text(_fmtRp(totByr), col3, ry+1);
+    doc.setTextColor(0,0,0);
+    y += boxH + 8;
+
+    // ── Rincian Lembur ────────────────────────────────────────
+    doc.setFont('helvetica','bold'); doc.setFontSize(10);
+    doc.text('Rincian Lembur:', mL, y); y+=6;
+
+    // Header tabel - profesional biru navy
+    const cols = [
+      {x:mL+2,   w:8,  label:'No',         align:'center'},
+      {x:mL+14,  w:28, label:'Tanggal',     align:'left'},
+      {x:mL+44,  w:32, label:'Jam Kerja',   align:'center'},
+      {x:mL+78,  w:18, label:'Durasi',      align:'center'},
+      {x:mL+98,  w:30, label:'Harga/Jam',   align:'right'},
+      {x:mL+130, w:28, label:'Total',       align:'right'},
+    ];
+
+    doc.setFillColor(30,58,138);
+    doc.rect(mL, y-5, W-mL-mR, 8, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.setTextColor(255,255,255);
+    cols.forEach(col => {
+      const tx = col.align==='center' ? col.x+col.w/2 :
+                 col.align==='right'  ? col.x+col.w   : col.x;
+      doc.text(col.label, tx, y, {align: col.align==='center'?'center':col.align==='right'?'right':'left'});
+    });
+    doc.setTextColor(0,0,0); y+=5;
+
+    // Baris data
+    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    items.forEach((l,i) => {
+      if(i%2===0){ doc.setFillColor(247,250,252); doc.rect(mL,y-4,W-mL-mR,7,'F'); }
+      const rowData = [
+        String(i+1),
+        String(_fmtTgl(l.tanggal)||'-'),
+        String(l.jam_mulai||'-')+' - '+String(l.jam_selesai||'-'),
+        String(parseFloat(l.total_jam||0).toFixed(0))+' jam',
+        String(_fmtRp(l.harga_per_jam)||'-'),
+        String(_fmtRp(l.total_bayar)||'-'),
+      ];
+      cols.forEach((col,ci) => {
+        const tx = col.align==='center' ? col.x+col.w/2 :
+                   col.align==='right'  ? col.x+col.w   : col.x;
+        doc.text(rowData[ci], tx, y, {align: col.align==='center'?'center':col.align==='right'?'right':'left', maxWidth:col.w});
+      });
+      y+=7;
+      if(y>250){ doc.addPage(); y=20; }
+    });
+
+    // Garis bawah tabel
+    doc.setDrawColor(180,180,180); doc.setLineWidth(0.3);
+    doc.line(mL, y, W-mR, y); y+=6;
+
+    // ── Terbilang ─────────────────────────────────────────────
+    const terb = typeof _terbilangRupiah==='function' ? _terbilangRupiah(totByr) : _fmtRp(totByr);
+    doc.setFillColor(255,248,220);
+    doc.setDrawColor(200,180,100); doc.setLineWidth(0.3);
+    doc.rect(mL, y-3, W-mL-mR, 12, 'FD');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.setTextColor(100,70,0);
+    doc.text('Terbilang:', mL+3, y+2);
+    doc.setFont('helvetica','italic'); doc.setFontSize(9);
+    doc.text(String(terb), mL+3, y+8, {maxWidth:W-mL-mR-6});
+    doc.setTextColor(0,0,0);
+    y += 18;
+
+    // ── Catatan ───────────────────────────────────────────────
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+    doc.setTextColor(100,100,100);
+    doc.text('* Kwitansi ini merupakan bukti pembayaran sah yang diterbitkan oleh '+String(inst?.nama_instansi||'instansi'), mL, y);
+    doc.setTextColor(0,0,0); y+=8;
+
+    if(y>220){ doc.addPage(); y=20; }
+
+    // ── Kota & Tanggal ────────────────────────────────────────
+    var alamatFull = inst?.alamat_instansi || '';
+    var kotaStr = '';
+    var kabMatch = alamatFull.match(/Kab\.?\s+([^,\u2013\-]+)|Kota\s+([^,\u2013\-]+)/i);
+    if (kabMatch) {
+      kotaStr = (kabMatch[1] || kabMatch[2] || '').trim();
+    } else {
+      var parts = alamatFull.split(/[,\u2013]/);
+      kotaStr = parts[parts.length-1].trim() || parts[0].trim();
+    }
+
+    // ── TTD 4 kolom ───────────────────────────────────────────
+    var _bersihNama = function(nm) {
+      if (!nm || nm==='-' || /super.?admin/i.test(nm)) return '';
+      return String(nm);
+    };
+    y = await _kolomTTD(doc, [
+      {label:'Karyawan',  nama: _bersihNama(nama), ttd:''},
+      {label:'Keuangan',  nama:'', ttd:''},
+      {label:'HRD',       nama:'', ttd:''},
+      {label:'Pimpinan',  nama:'', ttd:''},
+    ], mL, W-mR, y, doc);
+
+    doc.setFontSize(7.5); doc.setTextColor(150,150,150);
+    doc.text('Dicetak: '+_nowStr(), W/2, 292, {align:'center'});
     doc.save('Kwitansi_'+nama.replace(/\s+/g,'_')+'_'+tanggalDari.replace(/\//g,'-')+'.pdf');
     showToast('Kwitansi berhasil diunduh! 🧾','success',4000);
-  }catch(e){showToast('Gagal cetak kwitansi: '+e.message,'error',6000);console.error(e);}
+  } catch(e) { showToast('Gagal cetak kwitansi: '+e.message,'error',6000); console.error(e); }
 }
 
 async function cetakKwitansiLembur(idLembur) {
