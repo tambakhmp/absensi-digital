@@ -759,8 +759,6 @@ async function cetakSuratSP(idSP) {
     // Garis tebal bawah kop
     doc.setLineWidth(1);
     doc.line(mL, y, W-mR, y);
-    doc.setLineWidth(0.3);
-    doc.line(mL, y+1.2, W-mR, y+1.2);
     y += 8;
 
     // Nomor surat
@@ -790,10 +788,12 @@ async function cetakSuratSP(idSP) {
     doc.text(par1Lines, mL, y); y += par1Lines.length * 5.5 + 3;
 
     // Identitas karyawan (tabel)
-    doc.setFillColor(248,250,252);
-    doc.rect(mL, y-3, W-mL-mR, 30, 'F');
-    doc.setLineWidth(0.3);
-    doc.rect(mL, y-3, W-mL-mR, 30);
+    // Kotak identitas profesional
+    doc.setFillColor(239,246,255); // biru sangat muda
+    doc.setDrawColor(45,108,223);
+    doc.setLineWidth(0.4);
+    doc.roundedRect(mL, y-3, W-mL-mR, 30, 2, 2, 'FD');
+    doc.setDrawColor(0,0,0);
     doc.setFontSize(10);
     const identitas = [
       ['Nama Lengkap', k.nama_lengkap],
@@ -838,16 +838,32 @@ async function cetakSuratSP(idSP) {
     doc.text(penutupLines, mL, y); y += penutupLines.length*5.5 + 8;
 
     // Tanggal terbit
-    const kotaTanggal = ((instansi?.alamat_instansi||'').split(',')[0]||'') + ', ' + _nowTanggal();
+    // Ambil Kab/Kota dari alamat
+    var alamatFull = instansi?.alamat_instansi || '';
+    var kotaStr = '';
+    var kabMatch = alamatFull.match(/Kab\.?\s+([^,–\-]+)|Kota\s+([^,–\-]+)/i);
+    if (kabMatch) {
+      kotaStr = (kabMatch[1] || kabMatch[2] || '').trim();
+    } else {
+      // Fallback: ambil bagian terakhir sebelum tanda hubung/koma terakhir
+      var parts = alamatFull.split(/[,–]/);
+      kotaStr = parts[parts.length-1].trim() || parts[0].trim();
+    }
+    var kotaTanggal = (kotaStr || 'Gorontalo') + ', ' + _nowTanggal();
     doc.text(kotaTanggal, W-mR, y, {align:'right'}); y += 10;
 
     // TTD
     if (y > 220) { doc.addPage(); y = 20; }
+    // Bersihkan nama "Super Administrator" → tampil kosong/garis saja
+    var _bersihNama = function(nm) {
+      if (!nm || nm === '-' || /super.?admin/i.test(nm)) return '';
+      return nm;
+    };
     y = await _kolomTTD(doc, [
-      { label:'Karyawan Yang Diperingatkan', nama: k.nama_lengkap,                ttd: k.tanda_tangan_url },
-      { label:'Atasan Langsung',             nama: data.atasan?.nama_lengkap||'-', ttd: data.atasan?.tanda_tangan_url },
-      { label:'HRD / Manager SDM',           nama: data.hrd?.nama_lengkap||'-',    ttd: data.hrd?.tanda_tangan_url },
-      { label:'Pimpinan',                    nama: data.pimpinan?.nama_lengkap||'-', ttd: data.pimpinan?.tanda_tangan_url }
+      { label:'Karyawan Yang Diperingatkan', nama: k.nama_lengkap,                              ttd: k.tanda_tangan_url },
+      { label:'Atasan Langsung',             nama: _bersihNama(data.atasan?.nama_lengkap),      ttd: data.atasan?.tanda_tangan_url },
+      { label:'HRD / Manager SDM',           nama: _bersihNama(data.hrd?.nama_lengkap),         ttd: data.hrd?.tanda_tangan_url },
+      { label:'Pimpinan',                    nama: _bersihNama(data.pimpinan?.nama_lengkap),    ttd: data.pimpinan?.tanda_tangan_url }
     ], mL, W-mR, y, doc);
 
     doc.setFontSize(8);
