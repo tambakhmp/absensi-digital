@@ -738,140 +738,134 @@ async function cetakKwitansiLembur(idLembur) {
 async function cetakSuratSP(idSP) {
   showToast('Membuat surat peringatan...', 'info', 2000);
   const ok2 = await _ensureJsPDF();
-  if (!ok2 || !window.jspdf?.jsPDF) { showToast('Library PDF tidak tersedia. Muat ulang halaman.','error',6000); return; }
+  if (!ok2 || !window.jspdf?.jsPDF) { showToast('Library PDF tidak tersedia.','error',6000); return; }
 
   try {
     const data = await callAPI('getDataSuratSP', { id_sp: idSP });
     if (!data) throw new Error('Data SP tidak tersedia');
 
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const W   = 210;
-    const mL  = 25, mR = 25;
-    let y     = 15;
+    const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+    const W = 210;
+    const mL = 20, mR = 20;
+    let y = 15;
+
     const instansi = data.instansi;
     const sp       = data.sp;
     const k        = data.karyawan;
 
-    // Kop surat resmi
+    // ── Kop Surat ──────────────────────────────────────────────
     y = await _kopSurat(doc, instansi, W, mL, y);
+    y += 7;
 
-    // Garis tebal bawah kop
-    doc.setLineWidth(1);
-    doc.line(mL, y, W-mR, y);
-    y += 8;
+    // ── Nomor Surat ────────────────────────────────────────────
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    doc.text('Nomor    : ' + data.no_surat, mL, y); y += 5.5;
+    doc.text('Lampiran : -',                mL, y); y += 5.5;
+    doc.text('Hal      : Surat Peringatan ' + sp.jenis_sp, mL, y); y += 9;
 
-    // Nomor surat
-    doc.setFontSize(10);
-    doc.setFont('helvetica','normal');
-    doc.text('Nomor    : ' + data.no_surat, mL, y); y += 6;
-    doc.text('Lampiran : -',                mL, y); y += 6;
-    doc.text('Hal      : Surat Peringatan ' + sp.jenis_sp + ' (SP-' + sp.jenis_sp.replace('SP','') + ')', mL, y);
-    y += 10;
-
-    // Kepada
-    doc.text('Kepada Yth.',     mL, y); y += 5;
+    // ── Kepada ─────────────────────────────────────────────────
+    doc.text('Kepada Yth.',          mL, y); y += 5;
     doc.setFont('helvetica','bold');
     doc.text('Sdr. ' + k.nama_lengkap, mL, y); y += 5;
     doc.setFont('helvetica','normal');
-    doc.text(k.jabatan + ' — ' + k.departemen, mL, y); y += 5;
-    doc.text('Di Tempat',       mL, y); y += 10;
+    doc.text(k.jabatan + ' - ' + k.departemen, mL, y); y += 5;
+    doc.text('Di Tempat', mL, y); y += 9;
 
-    // Pembuka
-    doc.setFont('helvetica','normal');
-    const pembuka = 'Dengan hormat,';
-    doc.text(pembuka, mL, y); y += 6;
-
+    // ── Pembuka ────────────────────────────────────────────────
+    doc.text('Dengan hormat,', mL, y); y += 5.5;
     const par1 = 'Sehubungan dengan evaluasi kehadiran dan kedisiplinan kerja di lingkungan ' +
       (instansi?.nama_instansi||'instansi') + ', bersama ini kami sampaikan bahwa Saudara/i:';
-    const par1Lines = doc.splitTextToSize(par1, W-mL-mR);
-    doc.text(par1Lines, mL, y); y += par1Lines.length * 5.5 + 3;
+    const par1L = doc.splitTextToSize(par1, W-mL-mR);
+    doc.text(par1L, mL, y); y += par1L.length * 5 + 4;
 
-    // Identitas karyawan (tabel)
-    // Kotak identitas profesional
-    doc.setFillColor(239,246,255); // biru sangat muda
+    // ── Kotak Identitas Proporsional ───────────────────────────
+    const boxH = 32;
+    doc.setFillColor(239,246,255);
     doc.setDrawColor(45,108,223);
     doc.setLineWidth(0.4);
-    doc.roundedRect(mL, y-3, W-mL-mR, 30, 2, 2, 'FD');
+    doc.roundedRect(mL, y, W-mL-mR, boxH, 2, 2, 'FD');
     doc.setDrawColor(0,0,0);
-    doc.setFontSize(10);
+
+    const col1 = mL + 5;   // label x
+    const col2 = mL + 50;  // titik dua x
+    const col3 = mL + 55;  // nilai x
     const identitas = [
-      ['Nama Lengkap', k.nama_lengkap],
+      ['Nama Lengkap', String(k.nama_lengkap||'-')],
       ['NIK',          String(k.nik||'-')],
-      ['Jabatan',      k.jabatan],
-      ['Departemen',   k.departemen]
+      ['Jabatan',      String(k.jabatan||'-')],
+      ['Departemen',   String(k.departemen||'-')]
     ];
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    let iy = y + 8;
     identitas.forEach(function(row) {
-      doc.setFont('helvetica','bold');   doc.text(row[0], mL+4, y);
-      doc.text(':',                      mL+38, y);
-      doc.setFont('helvetica','normal'); doc.text(row[1], mL+42, y);
-      y += 7;
+      doc.setFont('helvetica','bold');   doc.text(row[0], col1, iy);
+      doc.setFont('helvetica','normal'); doc.text(':', col2, iy);
+                                         doc.text(row[1], col3, iy);
+      iy += 6.5;
     });
-    y += 2;
+    y += boxH + 5;
 
-    // Alasan
-    const par2 = 'Telah melakukan pelanggaran disiplin berupa: ' + sp.alasan +
-      '. Total ketidakhadiran tanpa keterangan (alfa): ' + sp.total_hari_alfa_pemicu + ' hari.';
-    const par2Lines = doc.splitTextToSize(par2, W-mL-mR);
-    doc.setFont('helvetica','normal');
-    doc.text(par2Lines, mL, y); y += par2Lines.length * 5.5 + 5;
+    // ── Alasan ─────────────────────────────────────────────────
+    const par2 = 'Telah melakukan pelanggaran disiplin berupa: ' + String(sp.alasan||'-') +
+      '. Total ketidakhadiran tanpa keterangan (alfa): ' + String(sp.total_hari_alfa_pemicu||0) + ' hari.';
+    const par2L = doc.splitTextToSize(par2, W-mL-mR);
+    doc.text(par2L, mL, y); y += par2L.length * 5 + 5;
 
-    // Isi SP formal
+    // ── Isi SP ─────────────────────────────────────────────────
     doc.setFont('helvetica','bold');
     doc.text('OLEH KARENA ITU', W/2, y, {align:'center'}); y += 5;
     doc.setFont('helvetica','normal');
-
     const spNama = { SP1:'PERTAMA', SP2:'KEDUA', SP3:'KETIGA' };
-    const isiSP  = 'Kami memberikan SURAT PERINGATAN ' + (spNama[sp.jenis_sp]||'') +
+    const isiSP = 'Kami memberikan SURAT PERINGATAN ' + (spNama[sp.jenis_sp]||'') +
       ' kepada yang bersangkutan. Surat ini berlaku mulai tanggal ' + _fmtTgl(sp.tanggal_berlaku) +
       ' sampai dengan ' + _fmtTgl(sp.tanggal_kadaluarsa) + '.';
-    const isiLines = doc.splitTextToSize(isiSP, W-mL-mR);
-    doc.text(isiLines, mL, y); y += isiLines.length*5.5 + 5;
+    const isiL = doc.splitTextToSize(isiSP, W-mL-mR);
+    doc.text(isiL, mL, y); y += isiL.length * 5 + 4;
 
-    // Konsekuensi
-    const konsLines = doc.splitTextToSize(data.konsekuensi, W-mL-mR);
-    doc.text(konsLines, mL, y); y += konsLines.length*5.5 + 5;
+    // ── Konsekuensi ────────────────────────────────────────────
+    const konsL = doc.splitTextToSize(data.konsekuensi, W-mL-mR);
+    doc.text(konsL, mL, y); y += konsL.length * 5 + 4;
 
-    // Penutup
+    // ── Penutup ────────────────────────────────────────────────
     const penutup = 'Demikian surat peringatan ini dibuat agar yang bersangkutan dapat memahami, menerima, dan memperbaiki perilaku kerjanya. Atas perhatian dan kerja samanya, kami ucapkan terima kasih.';
-    const penutupLines = doc.splitTextToSize(penutup, W-mL-mR);
-    doc.text(penutupLines, mL, y); y += penutupLines.length*5.5 + 8;
+    const penutupL = doc.splitTextToSize(penutup, W-mL-mR);
+    doc.text(penutupL, mL, y); y += penutupL.length * 5 + 6;
 
-    // Tanggal terbit
-    // Ambil Kab/Kota dari alamat
+    // ── Kota & Tanggal (kanan) ─────────────────────────────────
     var alamatFull = instansi?.alamat_instansi || '';
     var kotaStr = '';
     var kabMatch = alamatFull.match(/Kab\.?\s+([^,–\-]+)|Kota\s+([^,–\-]+)/i);
     if (kabMatch) {
       kotaStr = (kabMatch[1] || kabMatch[2] || '').trim();
     } else {
-      // Fallback: ambil bagian terakhir sebelum tanda hubung/koma terakhir
       var parts = alamatFull.split(/[,–]/);
       kotaStr = parts[parts.length-1].trim() || parts[0].trim();
     }
-    var kotaTanggal = (kotaStr || 'Gorontalo') + ', ' + _nowTanggal();
-    doc.text(kotaTanggal, W-mR, y, {align:'right'}); y += 10;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    doc.text((kotaStr||'') + ', ' + _nowTanggal(), W-mR, y, {align:'right'}); y += 8;
 
-    // TTD
-    if (y > 220) { doc.addPage(); y = 20; }
-    // Bersihkan nama "Super Administrator" → tampil kosong/garis saja
+    // ── Tanda Tangan (pastikan muat 1 halaman) ─────────────────
+    // Jika y > 220, kompres spacing di atas
+    if (y > 225) y = 225;
+
     var _bersihNama = function(nm) {
       if (!nm || nm === '-' || /super.?admin/i.test(nm)) return '';
-      return nm;
+      return String(nm);
     };
     y = await _kolomTTD(doc, [
-      { label:'Karyawan Yang Diperingatkan', nama: k.nama_lengkap,                              ttd: k.tanda_tangan_url },
-      { label:'Atasan Langsung',             nama: _bersihNama(data.atasan?.nama_lengkap),      ttd: data.atasan?.tanda_tangan_url },
-      { label:'HRD / Manager SDM',           nama: _bersihNama(data.hrd?.nama_lengkap),         ttd: data.hrd?.tanda_tangan_url },
-      { label:'Pimpinan',                    nama: _bersihNama(data.pimpinan?.nama_lengkap),    ttd: data.pimpinan?.tanda_tangan_url }
+      { label:'Karyawan Yang Diperingatkan', nama: String(k.nama_lengkap||''),             ttd: k.tanda_tangan_url },
+      { label:'Atasan Langsung',             nama: _bersihNama(data.atasan?.nama_lengkap), ttd: data.atasan?.tanda_tangan_url },
+      { label:'HRD / Manager SDM',           nama: _bersihNama(data.hrd?.nama_lengkap),    ttd: data.hrd?.tanda_tangan_url },
+      { label:'Pimpinan',                    nama: _bersihNama(data.pimpinan?.nama_lengkap), ttd: data.pimpinan?.tanda_tangan_url }
     ], mL, W-mR, y, doc);
 
-    doc.setFontSize(8);
-    doc.setTextColor(150,150,150);
-    doc.text('Dokumen ini dicetak secara digital melalui Sistem Absensi Digital | ' + _nowStr(), W/2, 292, { align:'center' });
+    // ── Footer ─────────────────────────────────────────────────
+    doc.setFontSize(8); doc.setTextColor(150,150,150);
+    doc.text('Dokumen dicetak digital melalui Sistem Absensi | ' + _nowStr(), W/2, 292, {align:'center'});
 
-    doc.save('Surat_SP_' + sp.jenis_sp + '_' + k.nama_lengkap.replace(/\s/g,'_') + '.pdf');
-    showToast('Surat SP berhasil diunduh! ⚠️', 'success');
+    doc.save('Surat_SP_' + sp.jenis_sp + '_' + String(k.nama_lengkap||'').replace(/\s/g,'_') + '.pdf');
+    showToast('Surat SP berhasil diunduh!', 'success');
 
   } catch(e) {
     showToast('Gagal cetak SP: ' + e.message, 'error');
@@ -1168,9 +1162,9 @@ async function _kopSurat(doc, instansi, W, mL, y) {
     );
   }
   y += 22;
-  doc.setLineWidth(0.6);
-  doc.line(mL, y, W-(W-210)/2-20, y);
-  y += 8;
+  doc.setLineWidth(0.8);
+  doc.line(mL, y, W-mL, y);
+  y += 6;
   return y;
 }
 
