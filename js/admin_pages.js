@@ -1,10 +1,3 @@
-// ── Safety stub: redirect fungsi lama ke callAPI ─────────────
-// Mencegah error "getLemburSemua is not defined" dari cache lama
-async function getLemburSemua(d) {
-  return callAPI('getLemburSemua', d||{});
-}
-// ─────────────────────────────────────────────────────────────
-
 // ============================================================
 // admin_pages.js v5 — SEMUA halaman admin dalam 1 file
 // Dashboard, Absensi, Karyawan, Pengajuan, Lembur, SP,
@@ -730,24 +723,7 @@ async function loadSPAdmin(filter='aktif'){
   if(!el) return; el.innerHTML=skeletonCard(3);
   try{
     let data=await callAPI('getSPSemua',{});
-    if(filter==='aktif') {
-      const today = new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'/');
-      const todayParts = new Date();
-      data=(data||[]).filter(s=>{
-        // Aktif jika status_aktif=true DAN belum kadaluarsa
-        const isAktif = String(s.status_aktif).toLowerCase()==='true';
-        // Cek tanggal kadaluarsa
-        const tKad = s.tanggal_kadaluarsa;
-        if (tKad) {
-          const p = String(tKad).split('/');
-          if (p.length===3) {
-            const kadDate = new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
-            return kadDate >= todayParts; // belum kadaluarsa
-          }
-        }
-        return isAktif;
-      });
-    }
+    if(filter==='aktif') data=(data||[]).filter(s=>String(s.status_aktif).toLowerCase()==='true');
     if(!data||data.length===0){showEmpty('sp-admin-list','Tidak ada SP '+filter);return;}
     el.innerHTML=data.map(s=>`
       <div class="card" style="border-left:4px solid ${s.jenis_sp==='SP3'?'#E53E3E':s.jenis_sp==='SP2'?'#D97706':'#6C63FF'}">
@@ -765,14 +741,7 @@ async function loadSPAdmin(filter='aktif'){
             </div>
             <div style="font-size:12px;color:#64748B;margin-top:4px">${s.alasan}</div>
             <div style="font-size:11px;color:#94A3B8;margin-top:2px">
-              Alfa: ${s.total_hari_alfa_pemicu} hari | Status: ${(function(){
-                var tK=s.tanggal_kadaluarsa;
-                if(tK){var p=String(tK).split('/');if(p.length===3){
-                  var d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
-                  var now=new Date(); now.setHours(0,0,0,0);
-                  return d>=now?'✅ Aktif':'⏹ Kadaluarsa';}}
-                return String(s.status_aktif).toLowerCase()==='true'?'✅ Aktif':'⏹ Kadaluarsa';
-              })()}
+              Alfa: ${s.total_hari_alfa_pemicu} hari | Status: ${String(s.status_aktif).toLowerCase()==='true'?'✅ Aktif':'⏹ Kadaluarsa'}
             </div>
           </div>
           <button class="btn btn--outline" style="font-size:13px;padding:8px 14px;
@@ -1156,10 +1125,10 @@ async function renderShiftJadwalAdmin(container) {
     <div class="card" style="background:#F0FFF4;border-left:4px solid #1A9E74;margin-bottom:16px">
       <h4 style="font-size:13px;font-weight:700;margin-bottom:8px;color:#1A9E74">📋 Pola Rotasi Otomatis</h4>
       <div style="font-size:12px;color:#475569;line-height:1.8">
-        <strong>Jam Normal (3 jaga):</strong> Pagi 07:00–15:00 | Sore 15:00–23:00 | Malam 23:00–07:00<br>
-        <strong>Jam Penuh (2 jaga):</strong> Penuh Pagi 07:00–19:00 | Penuh Malam 19:00–07:00<br>
-        <strong>Rotasi:</strong> M→S→P per 2 hari (setelah Malam → Sore → Pagi → Malam)<br>
-        <strong>Libur:</strong> 1 hari per 14 hari per karyawan — saat 1 libur, 2 lainnya jaga 12 jam
+        <strong>Jam:</strong> Pagi 07:00–15:00 | Sore 15:00–23:00 | Malam 23:00–07:00<br>
+        <strong>Pola:</strong> P→S→M→L (Libur)→P→... (karyawan berikutnya offset 1 hari)<br>
+        <strong>Aturan:</strong> Setelah Malam wajib Libur, tidak langsung Pagi<br>
+        <strong>Libur:</strong> Saat 1 orang libur, 2 lainnya tetap jaga
       </div>
     </div>
     <div class="card">
@@ -1187,14 +1156,13 @@ async function renderShiftJadwalAdmin(container) {
         <div class="form-group"><label class="form-label">Sampai Tanggal *</label>
           <input type="date" class="form-control" id="jdw-sel" value="${fmt(minggu)}"></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end">
-        <button class="btn btn--primary btn--full btn--lg" onclick="generateJadwalAdmin()">
-          <div class="spinner-btn"></div><span class="btn-text">⚡ Generate Jadwal</span></button>
-        <button class="btn btn--danger" style="padding:13px 18px;font-size:13px;white-space:nowrap"
-          onclick="resetJadwalAdmin()">🗑️ Reset</button>
-      </div>
+      <button class="btn btn--primary btn--full btn--lg" onclick="generateJadwalAdmin()">
+        <div class="spinner-btn"></div><span class="btn-text">⚡ Generate Jadwal</span></button>
     </div>
-
+    <div id="jadwal-preview" style="display:none" class="card">
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">📅 Hasil Generate</h3>
+      <div id="jadwal-preview-content"></div>
+    </div>
     <div class="card">
       <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">📋 Jadwal Berjalan</h3>
       <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
@@ -1218,6 +1186,12 @@ async function generateJadwalAdmin(){
     if(!mul||!sel) throw new Error('Tanggal mulai dan selesai wajib diisi');
     const r=await callAPI('generateJadwal',{karyawan_ids:ids,tanggal_mulai:mul,tanggal_selesai:sel});
     showToast(r.message,'success',5000);
+    const pv=document.getElementById('jadwal-preview');
+    const pc=document.getElementById('jadwal-preview-content');
+    if(pv&&pc){
+      pv.style.display='block';
+      _renderPreviewJadwal(pc,r.jadwal,r.peserta);
+    }
     loadJadwalAdmin();
   }catch(e){showToast(e.message,'error');}
   finally{if(btn){btn.disabled=false;btn.classList.remove('loading');}}
@@ -1248,10 +1222,10 @@ function _renderPreviewJadwal(el,jadwal,peserta){
       }).join('')}
     </tr>`).join('')}
     </tbody></table></div>
-    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;font-size:11px">
-      ${Object.entries({'P':'Pagi 07-15','S':'Sore 15-23','M':'Malam 23-07','L':'Libur'}).map(([k,v])=>`
-        <span style="background:${KC[k]||'#94A3B8'}22;color:${KC[k]||'#94A3B8'};border:1px solid ${KC[k]||'#94A3B8'}44;
-          padding:2px 8px;border-radius:6px;font-weight:600">${k}=${v}</span>`).join('')}
+    <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;font-size:12px">
+      ${Object.entries(KC).map(([k,c])=>`<span style="background:${c}22;color:${c};
+        border:1px solid ${c}44;padding:3px 10px;border-radius:6px;font-weight:600">
+        ${k} = ${k==='P'?'Pagi':k==='S'?'Sore':k==='M'?'Malam':'Libur'}</span>`).join('')}
     </div>`;
 }
 
@@ -1285,7 +1259,6 @@ async function loadJadwalAdmin(){
         Belum ada jadwal. Generate di atas.</div>`;return;
     }
     const KC={'P':'#1A9E74','S':'#D97706','M':'#6C63FF','L':'#94A3B8'};
-    const KN={'P':'Pagi 07-15','S':'Sore 15-23','M':'Malam 23-07','L':'🏖️ Libur'};
     el.innerHTML=`<div class="card" style="padding:0;overflow-x:auto">
       <table class="simple-table" style="min-width:500px">
         <thead><tr><th>Karyawan</th><th>Tanggal</th><th>Shift</th><th>Jam</th></tr></thead>
@@ -1295,9 +1268,9 @@ async function loadJadwalAdmin(){
             <td style="font-size:12px">${formatTanggal(j.tanggal)}</td>
             <td><span style="background:${(KC[j.kode]||'#94A3B8')+'22'};color:${KC[j.kode]||'#94A3B8'};
               font-weight:600;padding:2px 10px;border-radius:6px;font-size:12px">
-              ${j.kode==='L'?'🏖️ Libur':(j.kode+' — '+(KN[j.kode]||j.nama_shift))}</span></td>
-            <td style="font-size:12px;font-family:monospace;font-weight:600;color:#64748B">
-              ${j.kode==='L'?'—':j.jam_masuk&&j.jam_keluar?j.jam_masuk+' – '+j.jam_keluar:'-'}</td>
+              ${j.kode} — ${j.nama_shift}</span></td>
+            <td style="font-size:12px;font-family:monospace">
+              ${j.jam_masuk&&j.jam_keluar?j.jam_masuk+'–'+j.jam_keluar:'-'}</td>
           </tr>`).join('')}
         </tbody>
       </table></div>`;
@@ -1399,36 +1372,6 @@ async function loadPengaturanAdminV3(){
           ${_si('max_radius_meter','Radius GPS Maks (m)',map,'number')}
           ${_si('toleransi_terlambat_default','Toleransi Terlambat (menit)',map,'number')}
           ${_si('sisa_cuti_default_per_tahun','Default Cuti/Tahun (hari)',map,'number')}
-        </div>
-
-        <!-- BATAS WAKTU ABSENSI -->
-        <div style="margin-top:16px;border-top:1px solid #F1F5F9;padding-top:14px">
-          <h4 style="font-size:13px;font-weight:700;color:#64748B;margin-bottom:12px">
-            ⏰ Batas Waktu Absen Masuk</h4>
-          <div style="background:#EFF6FF;border-radius:8px;padding:10px 12px;
-            font-size:12px;color:#2D6CDF;margin-bottom:12px;line-height:1.7">
-            📌 <strong>Karyawan Shift:</strong> Tidak bisa absen masuk jika kurang dari X menit sebelum shift berakhir<br>
-            📌 <strong>Karyawan Non-Shift:</strong> Tidak bisa absen masuk setelah jam yang ditentukan<br>
-            📌 <strong>Dinas Luar:</strong> Berlaku aturan yang sama (hanya bebas radius GPS)
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">Batas Shift — menit sebelum shift berakhir</label>
-              <input type="number" class="form-control" id="set-batas_absen_shift_menit"
-                value="${map['batas_absen_shift_menit']||'60'}" min="15" max="300" step="15">
-              <p class="form-hint">
-                Isi dalam <strong>menit</strong>. Contoh: isi 60 → shift 07:00–15:00, batas absen masuk = pukul 14:00
-              </p>
-            </div>
-            <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">Batas Non-Shift — pukul berapa (0–23)</label>
-              <input type="number" class="form-control" id="set-batas_absen_nonshift_jam"
-                value="${map['batas_absen_nonshift_jam']||'13'}" min="8" max="23" step="1">
-              <p class="form-hint">
-                Isi dalam <strong>jam</strong> (format 24 jam). Contoh: isi 13 = batas pukul 13:00, isi 12 = batas pukul 12:00
-              </p>
-            </div>
-          </div>
         </div>
         <div class="form-group" style="margin-top:12px">
           <label class="form-label">Template Ucapan Ulang Tahun</label>
@@ -1534,8 +1477,7 @@ async function simpanPengaturanAdmin(){
       'bg_dashboard_karyawan_url','bg_dashboard_admin_url','bg_dashboard_superadmin_url',
       'max_radius_meter','toleransi_terlambat_default','sisa_cuti_default_per_tahun',
       'ucapan_ulang_tahun_template','aktif_one_device_login',
-      'favicon_url','icon_512_url','bg_login_url','login_subtitle',
-      'batas_absen_shift_menit','batas_absen_nonshift_jam'];
+      'favicon_url','icon_512_url','bg_login_url','login_subtitle'];
     const settings={};
     keys.forEach(k=>{const el=document.getElementById('set-'+k);if(el)settings[k]=el.value?.trim()||'';});
     await callAPI('setMultipleSetting',{settings});
@@ -1585,30 +1527,53 @@ async function renderLaporanAdminV3(container){
       <button class="btn btn--primary" onclick="cetakRekapLaporan()">📄 Cetak PDF + TTD</button>
     </div>
     <div class="card">
-      <h3 style="font-size:15px;font-weight:700;margin-bottom:14px">📊 Rekap Semua (Excel)</h3>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:14px">📊 Rekap Semua Karyawan (Excel)</h3>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="btn btn--primary" style="font-size:12px;padding:6px 12px"
+          onclick="_setModeExcelSemua('bln')">📅 Bulanan</button>
+        <button class="btn btn--ghost" style="font-size:12px;padding:6px 12px"
+          onclick="_setModeExcelSemua('rng')">📆 Rentang Tanggal</button>
+      </div>
+      <div id="excel-all-bln" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
         <div class="form-group" style="margin-bottom:0"><label class="form-label">Bulan</label>
           <select class="form-control" id="lap-all-bln" style="width:150px">
             ${Array.from({length:12},(_,i)=>`<option value="${i+1}" ${i===now.getMonth()?'selected':''}>${bulanNama(i+1)}</option>`).join('')}
           </select></div>
         <div class="form-group" style="margin-bottom:0"><label class="form-label">Tahun</label>
           <input type="number" class="form-control" id="lap-all-thn" value="${now.getFullYear()}" style="width:100px"></div>
-        <button class="btn btn--secondary" style="height:42px"
-          onclick="exportRekapExcel(document.getElementById('lap-all-bln').value,document.getElementById('lap-all-thn').value)">
-          📊 Export Excel</button>
       </div>
+      <div id="excel-all-rng" style="display:none;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:0">
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">Dari Tanggal</label>
+          <input type="date" class="form-control" id="lap-all-dari"></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">Sampai Tanggal</label>
+          <input type="date" class="form-control" id="lap-all-ke"></div>
+      </div>
+      <button class="btn btn--secondary btn--full" style="margin-top:10px"
+        onclick="_exportRekapSemuaExcel()">📊 Export Excel</button>
     </div>
     <div class="card">
       <h3 style="font-size:15px;font-weight:700;margin-bottom:14px">🧾 Rekap Lembur</h3>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="btn btn--primary" style="font-size:12px;padding:6px 12px"
+          onclick="_setModeLembur('bln')">📅 Bulanan</button>
+        <button class="btn btn--ghost" style="font-size:12px;padding:6px 12px"
+          onclick="_setModeLembur('rng')">📆 Rentang Tanggal</button>
+      </div>
+      <div id="lembur-mode-bln" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px">
         <select class="form-control" id="lap-lb-bln" style="width:150px">
           ${Array.from({length:12},(_,i)=>`<option value="${i+1}" ${i===now.getMonth()?'selected':''}>${bulanNama(i+1)}</option>`).join('')}
         </select>
         <input type="number" class="form-control" id="lap-lb-thn" value="${now.getFullYear()}" style="width:100px">
-        <button class="btn btn--primary" style="height:42px"
-          onclick="cetakRekapLemburPDF(document.getElementById('lap-lb-bln').value,document.getElementById('lap-lb-thn').value)">📄 PDF</button>
-        <button class="btn btn--secondary" style="height:42px"
-          onclick="exportRekapLemburExcel(document.getElementById('lap-lb-bln').value,document.getElementById('lap-lb-thn').value)">📊 Excel</button>
+      </div>
+      <div id="lembur-mode-rng" style="display:none;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">Dari Tanggal</label>
+          <input type="date" class="form-control" id="lap-lb-dari"></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">Sampai Tanggal</label>
+          <input type="date" class="form-control" id="lap-lb-ke"></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn--primary" style="flex:1" onclick="_cetakLemburPDF()">📄 PDF</button>
+        <button class="btn btn--secondary" style="flex:1" onclick="_exportLemburExcel()">📊 Excel</button>
       </div>
     </div>`;
   setTimeout(()=>_makeSearchable('lap-k-sel'),100);
@@ -1755,4 +1720,59 @@ function _getLbParams() {
   }
   return{bulan:document.getElementById('lap-lb-bulan')?.value,
     tahun:document.getElementById('lap-lb-tahun')?.value,dari:null,ke:null};
+}
+
+// ── Helper: mode toggle Excel Semua ──────────────────────────
+function _setModeExcelSemua(mode) {
+  const bln = document.getElementById('excel-all-bln');
+  const rng = document.getElementById('excel-all-rng');
+  if(mode==='bln'){ if(bln)bln.style.display='flex'; if(rng)rng.style.display='none'; }
+  else { if(bln)bln.style.display='none'; if(rng){rng.style.display='grid';} }
+}
+function _exportRekapSemuaExcel() {
+  const rng = document.getElementById('excel-all-rng');
+  const isRng = rng && rng.style.display !== 'none';
+  if (isRng) {
+    const dari = fromInputDate(document.getElementById('lap-all-dari')?.value);
+    const ke   = fromInputDate(document.getElementById('lap-all-ke')?.value);
+    if(!dari||!ke){showToast('Isi rentang tanggal','warning');return;}
+    exportRekapExcel(null, null, dari, ke);
+  } else {
+    const bln = document.getElementById('lap-all-bln')?.value;
+    const thn = document.getElementById('lap-all-thn')?.value;
+    exportRekapExcel(bln, thn, null, null);
+  }
+}
+// ── Helper: mode toggle Lembur ────────────────────────────────
+function _setModeLembur(mode) {
+  const bln = document.getElementById('lembur-mode-bln');
+  const rng = document.getElementById('lembur-mode-rng');
+  if(mode==='bln'){ if(bln)bln.style.display='flex'; if(rng)rng.style.display='none'; }
+  else { if(bln)bln.style.display='none'; if(rng){rng.style.display='grid';} }
+}
+function _cetakLemburPDF() {
+  const rng = document.getElementById('lembur-mode-rng');
+  const isRng = rng && rng.style.display !== 'none';
+  if (isRng) {
+    const dari = fromInputDate(document.getElementById('lap-lb-dari')?.value);
+    const ke   = fromInputDate(document.getElementById('lap-lb-ke')?.value);
+    if(!dari||!ke){showToast('Isi rentang tanggal','warning');return;}
+    cetakRekapLemburPDF(null,null,dari,ke);
+  } else {
+    cetakRekapLemburPDF(document.getElementById('lap-lb-bln')?.value,
+                        document.getElementById('lap-lb-thn')?.value);
+  }
+}
+function _exportLemburExcel() {
+  const rng = document.getElementById('lembur-mode-rng');
+  const isRng = rng && rng.style.display !== 'none';
+  if (isRng) {
+    const dari = fromInputDate(document.getElementById('lap-lb-dari')?.value);
+    const ke   = fromInputDate(document.getElementById('lap-lb-ke')?.value);
+    if(!dari||!ke){showToast('Isi rentang tanggal','warning');return;}
+    exportRekapLemburExcel(null,null,dari,ke);
+  } else {
+    exportRekapLemburExcel(document.getElementById('lap-lb-bln')?.value,
+                           document.getElementById('lap-lb-thn')?.value);
+  }
 }
