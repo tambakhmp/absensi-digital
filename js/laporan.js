@@ -218,7 +218,7 @@ async function cetakRekapPDF(idKaryawan, bulan, tahun, tanggalDari, tanggalKe) {
 
     const rowKaryawan = [
       [['Nama Lengkap', k.nama_lengkap], ['Jabatan', k.jabatan]],
-      [['NIK',          k.nik],          ['Departemen', k.departemen]],
+      [['NIK',          String(k.nik||'-')],          ['Departemen', k.departemen]],
       [['Bergabung',    _fmtTgl(k.tanggal_masuk)], ['Nama Atasan', k.nama_atasan||'-']],
       [['No. HP',       k.no_hp],        ['Email', k.email]]
     ];
@@ -797,7 +797,7 @@ async function cetakSuratSP(idSP) {
     doc.setFontSize(10);
     const identitas = [
       ['Nama Lengkap', k.nama_lengkap],
-      ['NIK',          k.nik],
+      ['NIK',          String(k.nik||'-')],
       ['Jabatan',      k.jabatan],
       ['Departemen',   k.departemen]
     ];
