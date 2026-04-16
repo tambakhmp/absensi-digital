@@ -544,6 +544,26 @@ async function exportRekapExcel(bulan, tahun, tanggalDari, tanggalKe) {
 }
 
 
+
+// ── Terbilang Rupiah (JS) ─────────────────────────────────────
+function _terbilangRupiah(nominal) {
+  var n = Math.floor(parseFloat(nominal)||0);
+  if (n===0) return 'Nol Rupiah';
+  var satuan  = ['','Satu','Dua','Tiga','Empat','Lima','Enam','Tujuh','Delapan','Sembilan'];
+  var belasan = ['Sepuluh','Sebelas','Dua Belas','Tiga Belas','Empat Belas','Lima Belas',
+                 'Enam Belas','Tujuh Belas','Delapan Belas','Sembilan Belas'];
+  function _tb(n) {
+    if (n<10)  return satuan[n];
+    if (n<20)  return belasan[n-10];
+    if (n<100) return satuan[Math.floor(n/10)]+' Puluh'+(n%10?' '+satuan[n%10]:'');
+    if (n<1000){var r=Math.floor(n/100);return (r===1?'Seratus':satuan[r]+' Ratus')+(n%100?' '+_tb(n%100):'');}
+    if (n<1000000){var r=Math.floor(n/1000);return (r===1?'Seribu':_tb(r)+' Ribu')+(n%1000?' '+_tb(n%1000):'');}
+    if (n<1000000000) return _tb(Math.floor(n/1000000))+' Juta'+(n%1000000?' '+_tb(n%1000000):'');
+    return _tb(Math.floor(n/1000000000))+' Miliar'+(n%1000000000?' '+_tb(n%1000000000):'');
+  }
+  return _tb(n).trim().replace(/\s+/g,' ') + ' Rupiah';
+}
+
 async function cetakKwitansiKaryawan(idKaryawan, tanggalDari, tanggalKe) {
   showToast('Membuat kwitansi...', 'info', 2000);
   const ok = await _ensureJsPDF();
@@ -622,13 +642,14 @@ async function cetakKwitansiKaryawan(idKaryawan, tanggalDari, tanggalKe) {
     doc.text('Rincian Lembur:', mL, y); y+=6;
 
     // Header tabel - profesional biru navy
+    // Lebar total = 170mm: No=10, Tanggal=30, JamKerja=38, Durasi=22, Harga=35, Total=35
     const cols = [
-      {x:mL+2,   w:8,  label:'No',         align:'center'},
-      {x:mL+14,  w:28, label:'Tanggal',     align:'left'},
-      {x:mL+44,  w:32, label:'Jam Kerja',   align:'center'},
-      {x:mL+78,  w:18, label:'Durasi',      align:'center'},
-      {x:mL+98,  w:30, label:'Harga/Jam',   align:'right'},
-      {x:mL+130, w:28, label:'Total',       align:'right'},
+      {x:mL+1,   w:10, label:'No',         align:'center'},
+      {x:mL+12,  w:30, label:'Tanggal',    align:'left'},
+      {x:mL+43,  w:38, label:'Jam Kerja',  align:'center'},
+      {x:mL+82,  w:22, label:'Durasi',     align:'center'},
+      {x:mL+105, w:34, label:'Harga/Jam',  align:'right'},
+      {x:mL+140, w:30, label:'Total',      align:'right'},
     ];
 
     doc.setFillColor(30,58,138);
@@ -704,12 +725,25 @@ async function cetakKwitansiKaryawan(idKaryawan, tanggalDari, tanggalKe) {
       if (!nm || nm==='-' || /super.?admin/i.test(nm)) return '';
       return String(nm);
     };
+    // Kota & tanggal di kanan sebelum TTD
+    var alamatKwt = inst?.alamat_instansi || '';
+    var kotaKwt = '';
+    var kabMatchKwt = alamatKwt.match(/Kab\.?\s+([^,\u2013\-]+)|Kota\s+([^,\u2013\-]+)/i);
+    if (kabMatchKwt) {
+      kotaKwt = (kabMatchKwt[1] || kabMatchKwt[2] || '').trim();
+    } else {
+      var partsKwt = alamatKwt.split(/[,\u2013]/);
+      kotaKwt = partsKwt[partsKwt.length-1].trim() || partsKwt[0].trim();
+    }
+    doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(0,0,0);
+    doc.text((kotaKwt||'') + ', ' + _nowTanggal(), W-mR, y, {align:'right'}); y += 8;
+
     y = await _kolomTTD(doc, [
       {label:'Karyawan',  nama: _bersihNama(nama), ttd:''},
       {label:'Keuangan',  nama:'', ttd:''},
       {label:'HRD',       nama:'', ttd:''},
       {label:'Pimpinan',  nama:'', ttd:''},
-    ], mL, W-mR, y, doc);
+    ], mL, W-mR, y, doc, false);
 
     doc.setFontSize(7.5); doc.setTextColor(150,150,150);
     doc.text('Dicetak: '+_nowStr(), W/2, 292, {align:'center'});
