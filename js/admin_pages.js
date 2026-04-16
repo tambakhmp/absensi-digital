@@ -1477,7 +1477,8 @@ async function simpanPengaturanAdmin(){
       'bg_dashboard_karyawan_url','bg_dashboard_admin_url','bg_dashboard_superadmin_url',
       'max_radius_meter','toleransi_terlambat_default','sisa_cuti_default_per_tahun',
       'ucapan_ulang_tahun_template','aktif_one_device_login',
-      'favicon_url','icon_512_url','bg_login_url','login_subtitle'];
+      'favicon_url','icon_512_url','bg_login_url','login_subtitle',
+      'batas_absen_shift_menit','batas_absen_nonshift_jam'];
     const settings={};
     keys.forEach(k=>{const el=document.getElementById('set-'+k);if(el)settings[k]=el.value?.trim()||'';});
     await callAPI('setMultipleSetting',{settings});
