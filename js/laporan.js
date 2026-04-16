@@ -381,136 +381,169 @@ async function cetakRekapPDF(idKaryawan, bulan, tahun, tanggalDari, tanggalKe) {
 // REKAP SEMUA KARYAWAN — EXCEL (SheetJS)
 // ─────────────────────────────────────────────────────────────
 async function exportRekapExcel(bulan, tahun, tanggalDari, tanggalKe) {
-  showToast('Mempersiapkan file Excel...', 'info', 2000);
-
+  showToast('Mempersiapkan Excel...', 'info', 2000);
   try {
     if (typeof XLSX === 'undefined') throw new Error('Library SheetJS belum dimuat');
 
-    const rekapPayload = {};
+    const payload = {};
     if (tanggalDari && tanggalKe) {
-      rekapPayload.tanggal_dari = tanggalDari;
-      rekapPayload.tanggal_ke   = tanggalKe;
+      payload.tanggal_dari = tanggalDari;
+      payload.tanggal_ke   = tanggalKe;
     } else {
-      rekapPayload.bulan = bulan;
-      rekapPayload.tahun = tahun;
+      payload.bulan = bulan;
+      payload.tahun = tahun;
     }
-    const data = await callAPI('getRekapSemua', rekapPayload);
-    if (!data) throw new Error('Data tidak tersedia');
+    const res = await callAPI('getRekapSemua', payload);
+    if (!res || !res.data) throw new Error('Data tidak tersedia');
 
-    const BULAN  = ['Januari','Februari','Maret','April','Mei','Juni',
-                    'Juli','Agustus','September','Oktober','November','Desember'];
-    const label  = BULAN[parseInt(bulan)-1] + ' ' + tahun;
-    const wb     = XLSX.utils.book_new();
+    const data      = res.data;
+    const tglList   = res.tanggal_list || [];
+    const tglDari2  = res.tgl_dari || '';
+    const tglKe2    = res.tgl_ke   || '';
+    const namaInst  = res.instansi?.nama_instansi || 'Instansi';
+    const alamat    = res.instansi?.alamat_instansi || '';
+    const now       = new Date();
+    const tglCetak  = now.toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
+    const periode   = tglDari2 ? (tglDari2 + ' s/d ' + tglKe2) : '';
 
-    // ── Sheet 1: Rekap Semua ────────────────────────────────
-    const headerRow = [
-      'No','Nama Karyawan','NIK','Jabatan','Departemen',
-      'Hadir','Terlambat','Alfa','Izin','Sakit','Cuti','Dinas Luar','Total Hadir'
-    ];
+    // Status map
+    const KODE = { hadir:'H', terlambat:'T', alfa:'A', izin:'I', sakit:'S', cuti:'C', dinas_luar:'DL', libur:'L' };
+    const WARNA= { H:'FF1A9E74', T:'FFD97706', A:'FFE53E3E', I:'FF2D6CDF',
+                   S:'FF6B7280', C:'FF6C63FF', DL:'FFEA580C', L:'FF94A3B8' };
 
-    const rows = data.data.map(function(r, i) {
-      return [
-        i+1, r.nama, r.nik, r.jabatan, r.departemen,
-        r.hadir, r.terlambat, r.alfa, r.izin, r.sakit, r.cuti, r.dinas_luar, r.hadir_total
-      ];
+    // ── Buat AOA ──────────────────────────────────────────
+    const aoa = [];
+    // Header instansi
+    aoa.push([namaInst]);
+    aoa.push(['REKAP KEHADIRAN KARYAWAN — ' + periode]);
+    aoa.push(['Dicetak: ' + tglCetak]);
+    aoa.push([]);
+
+    // Header kolom
+    const hdr = ['No','NIK','Nama Karyawan','Jabatan','Departemen'];
+    tglList.forEach(tgl => {
+      const p = tgl.split('/');
+      hdr.push(p[0] + '/' + p[1]);
     });
+    hdr.push('H','T','A','I','S','C','DL','L','Total Hadir','% Hadir','Penilaian');
+    aoa.push(hdr);
 
-    // Baris total
-    const total = rows.reduce(function(acc, r) {
-      for (let i = 5; i <= 12; i++) acc[i] = (acc[i]||0) + (r[i]||0);
-      return acc;
-    }, Array(13).fill(''));
-    total[0] = '';
-    total[1] = 'TOTAL';
-    rows.push(total);
-
-    const wsData = [
-      ['REKAP KEHADIRAN KARYAWAN — ' + label.toUpperCase()],
-      ['Instansi: ' + (data.instansi?.nama_instansi||'-')],
-      [],
-      headerRow,
-      ...rows
-    ];
-
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-    // Styling header (warna biru via sheetOpts)
-    ws['!cols'] = [
-      {wch:5},{wch:25},{wch:14},{wch:20},{wch:18},
-      {wch:8},{wch:10},{wch:6},{wch:6},{wch:7},{wch:6},{wch:11},{wch:12}
-    ];
-    ws['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:12} }];
-    ws['!freeze'] = { xSplit: 0, ySplit: 4 };
-
-    // Warnai baris header (baris ke-4, index 3)
-    const range  = XLSX.utils.decode_range(ws['!ref']);
-    for (let c = range.s.c; c <= range.e.c; c++) {
-      const addr = XLSX.utils.encode_cell({ r:3, c });
-      if (!ws[addr]) ws[addr] = {};
-      ws[addr].s = {
-        fill: { fgColor: { rgb: '2D6CDF' } },
-        font: { color: { rgb: 'FFFFFF' }, bold: true },
-        alignment: { horizontal: 'center' }
-      };
-    }
-
-    // Warnai baris total
-    const totalRow = wsData.length - 1;
-    for (let c = 0; c <= 12; c++) {
-      const addr = XLSX.utils.encode_cell({ r: totalRow, c });
-      if (!ws[addr]) ws[addr] = {};
-      ws[addr].s = {
-        fill: { fgColor: { rgb: 'EBF8EE' } },
-        font: { bold: true }
-      };
-    }
-
-    XLSX.utils.book_append_sheet(wb, ws, 'Rekap ' + label);
-
-    // ── Sheet 2 dst: Per Departemen ──────────────────────────
-    const deptMap = {};
-    data.data.forEach(function(r) {
-      if (!deptMap[r.departemen]) deptMap[r.departemen] = [];
-      deptMap[r.departemen].push(r);
-    });
-
-    Object.keys(deptMap).forEach(function(dept) {
-      const dRows = deptMap[dept].map(function(r, i) {
-        return [i+1, r.nama, r.nik, r.jabatan,
-                r.hadir, r.terlambat, r.alfa, r.izin, r.sakit, r.cuti, r.dinas_luar, r.hadir_total];
+    // Data rows
+    data.forEach((k, i) => {
+      const row = [i+1, k.nik, k.nama, k.jabatan, k.departemen];
+      tglList.forEach(tgl => {
+        const st = k.harian?.[tgl] || '';
+        row.push(st ? (KODE[st] || st.toUpperCase().slice(0,2)) : '-');
       });
-      const dHeader = ['No','Nama','NIK','Jabatan',
-                       'Hadir','Terlambat','Alfa','Izin','Sakit','Cuti','Dinas Luar','Total'];
-      const dWs = XLSX.utils.aoa_to_sheet([
-        [dept.toUpperCase() + ' — ' + label],
-        [],
-        dHeader,
-        ...dRows
-      ]);
-      dWs['!cols'] = [{wch:4},{wch:22},{wch:12},{wch:18},{wch:7},{wch:10},{wch:6},{wch:6},{wch:7},{wch:6},{wch:10},{wch:8}];
-      const sheetName = dept.substring(0,28);
-      XLSX.utils.book_append_sheet(wb, dWs, sheetName);
+      row.push(k.hadir, k.terlambat, k.alfa, k.izin, k.sakit, k.cuti, k.dinas_luar, k.libur||0,
+               k.hadir_total, k.persen_hadir + '%', k.penilaian);
+      aoa.push(row);
     });
 
-    const namaFile = 'Rekap_Semua_Karyawan_' + label.replace(' ','_') + '.xlsx';
-    // Sheet rekap harian dengan kode per tanggal
-    if (wsHarian) {
-      XLSX.utils.book_append_sheet(wb, wsHarian, 'Rekap Harian');
-    }
-    XLSX.writeFile(wb, namaFile);
-    showToast('Excel berhasil diunduh! 📊', 'success');
+    // Baris keterangan kode
+    aoa.push([]);
+    aoa.push(['Keterangan: H=Hadir T=Terlambat A=Alfa I=Izin S=Sakit C=Cuti DL=Dinas Luar L=Libur']);
 
+    // ── Buat worksheet ────────────────────────────────────
+    const ws   = XLSX.utils.aoa_to_sheet(aoa);
+    const ncol = hdr.length;
+
+    // Lebar kolom
+    const wscols = [
+      {wch:5},{wch:14},{wch:22},{wch:18},{wch:16}
+    ];
+    tglList.forEach(() => wscols.push({wch:6}));
+    ['H','T','A','I','S','C','DL','L'].forEach(() => wscols.push({wch:5}));
+    [{wch:12},{wch:9},{wch:14}].forEach(w => wscols.push(w));
+    ws['!cols'] = wscols;
+
+    // Merge header instansi
+    ws['!merges'] = [
+      {s:{r:0,c:0}, e:{r:0,c:ncol-1}},
+      {s:{r:1,c:0}, e:{r:1,c:ncol-1}},
+      {s:{r:2,c:0}, e:{r:2,c:ncol-1}},
+    ];
+    ws['!rows'] = [{hpt:28},{hpt:20},{hpt:16},{hpt:6},{hpt:22}];
+
+    // Style helper
+    const enc = (r,c) => XLSX.utils.encode_cell({r,c});
+    const bd  = () => ({style:'thin',color:{rgb:'CCCCCC'}});
+    const brd = {top:bd(),bottom:bd(),left:bd(),right:bd()};
+    const sH1 = {font:{bold:true,sz:13,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1E3A5F'}},alignment:{horizontal:'center',vertical:'center'}};
+    const sH2 = {font:{bold:true,sz:11,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'2D6CDF'}},alignment:{horizontal:'center',vertical:'center'}};
+    const sH3 = {font:{sz:9,color:{rgb:'AAAAAA'}},fill:{fgColor:{rgb:'2C3E50'}},alignment:{horizontal:'center'}};
+    const sCol= {font:{bold:true,sz:9,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1E3A5F'}},alignment:{horizontal:'center',vertical:'center'},border:brd};
+    const sDat= (alt,c2) => ({font:{sz:9},fill:{fgColor:{rgb:alt?'F0F4F8':'FFFFFF'}},alignment:{horizontal:c2>4?'center':'left',vertical:'center'},border:brd});
+    const sTotal= {font:{bold:true,sz:9},fill:{fgColor:{rgb:'EFF6FF'}},alignment:{horizontal:'center'},border:{top:{style:'medium',color:{rgb:'2D6CDF'}},bottom:{style:'medium',color:{rgb:'2D6CDF'}},left:bd(),right:bd()}};
+
+    // Apply header row styles
+    for(let c2=0;c2<ncol;c2++){
+      if(ws[enc(0,c2)]) ws[enc(0,c2)].s = sH1;
+      if(ws[enc(1,c2)]) ws[enc(1,c2)].s = sH2;
+      if(ws[enc(2,c2)]) ws[enc(2,c2)].s = sH3;
+      if(ws[enc(4,c2)]) ws[enc(4,c2)].s = sCol;
+    }
+
+    // Apply data rows with status coloring
+    const fixedCols = 5;
+    const summaryStart = fixedCols + tglList.length;
+
+    data.forEach((k,i) => {
+      const r = 5 + i;
+      const alt = i%2===1;
+      for(let c2=0;c2<ncol;c2++){
+        const cell = ws[enc(r,c2)];
+        if(!cell) continue;
+        if(c2 >= fixedCols && c2 < summaryStart) {
+          // Kolom tanggal - warnai per status
+          const st = k.harian?.[tglList[c2-fixedCols]] || '';
+          const kode = KODE[st] || '';
+          const warnaBg = WARNA[kode];
+          if(warnaBg && kode !== '-') {
+            cell.s = {font:{bold:true,sz:9,color:{rgb:'FFFFFF'}},
+                     fill:{fgColor:{rgb:warnaBg}},
+                     alignment:{horizontal:'center',vertical:'center'},border:brd};
+          } else {
+            cell.s = {font:{sz:9,color:{rgb:'BBBBBB'}},
+                     fill:{fgColor:{rgb:alt?'F0F4F8':'FFFFFF'}},
+                     alignment:{horizontal:'center'},border:brd};
+          }
+        } else if(c2 >= summaryStart && c2 < summaryStart+8) {
+          // Kolom total H/T/A/I/S/C/DL/L
+          cell.s = sTotal;
+          cell.t = 'n';
+        } else if(c2 === summaryStart+8) {
+          // Total Hadir
+          cell.s = {...sTotal, font:{bold:true,sz:10,color:{rgb:'1E3A5F'}}};
+          cell.t = 'n';
+        } else if(c2 === summaryStart+9) {
+          // % Hadir
+          const pct = k.persen_hadir || 0;
+          const clr = pct>=95?'1A9E74':pct>=75?'D97706':'E53E3E';
+          cell.s = {font:{bold:true,sz:9,color:{rgb:clr}},fill:{fgColor:{rgb:'FFFFFF'}},alignment:{horizontal:'center'},border:brd};
+        } else if(c2 === summaryStart+10) {
+          // Penilaian
+          const pen = k.penilaian||'';
+          const clr = pen==='Sangat Baik'?'1A9E74':pen==='Baik'?'0891B2':pen==='Cukup'?'D97706':pen==='Kurang'?'EA580C':'E53E3E';
+          cell.s = {font:{bold:true,sz:9,color:{rgb:clr}},fill:{fgColor:{rgb:clr+'22'}},alignment:{horizontal:'center'},border:brd};
+        } else {
+          cell.s = sDat(alt,c2);
+        }
+      }
+    });
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Rekap Kehadiran');
+    const fname = 'Rekap_Kehadiran_' + (tglDari2||bulan+'_'+tahun).replace(/\//g,'-') + '.xlsx';
+    XLSX.writeFile(wb, fname);
+    showToast('Excel berhasil diunduh! 📊','success');
   } catch(e) {
-    showToast('Gagal buat Excel: ' + e.message, 'error');
+    showToast('Gagal export: ' + e.message, 'error');
     console.error(e);
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// KWITANSI LEMBUR — PDF
-// ─────────────────────────────────────────────────────────────
 
-// ─── KWITANSI LEMBUR PER KARYAWAN + RENTANG WAKTU ──────────
 async function cetakKwitansiKaryawan(idKaryawan, tanggalDari, tanggalKe) {
   showToast('Membuat kwitansi...','info',2000);
   const ok = await _ensureJsPDF();
@@ -942,52 +975,158 @@ async function cetakRekapLemburPDF(bulan, tahun, tanggalDari, tanggalKe) {
 }
 
 async function exportRekapLemburExcel(bulan, tahun, tanggalDari, tanggalKe) {
-  const ok3 = await _ensureXLSX();
-  if (!ok3 || typeof XLSX === 'undefined') {
-    showToast('Library Excel tidak tersedia, export CSV...', 'warning', 3000);
-    await _exportFallbackCSVLembur(bulan, tahun);
-    return;
-  }
+  showToast('Mempersiapkan Excel Lembur...', 'info', 2000);
   try {
-    if (typeof XLSX === 'undefined') throw new Error('SheetJS belum dimuat');
-    const lemburPayload = {};
+    if (typeof XLSX === 'undefined') throw new Error('Library SheetJS belum dimuat');
+
+    const payload = {};
     if (tanggalDari && tanggalKe) {
-      lemburPayload.tanggal_dari = tanggalDari;
-      lemburPayload.tanggal_ke   = tanggalKe;
+      payload.tanggal_dari = tanggalDari;
+      payload.tanggal_ke   = tanggalKe;
     } else {
-      lemburPayload.bulan = bulan;
-      lemburPayload.tahun = tahun;
+      payload.bulan = bulan;
+      payload.tahun = tahun;
     }
-    const data = await callAPI('getRekapLembur', lemburPayload);
-    const BULAN = ['Januari','Februari','Maret','April','Mei','Juni',
-                   'Juli','Agustus','September','Oktober','November','Desember'];
-    const label = BULAN[parseInt(bulan)-1] + ' ' + tahun;
+    const res = await callAPI('getRekapLembur', payload);
+    if (!res || !res.data) throw new Error('Data tidak tersedia');
 
-    const header = ['No','Nama Karyawan','Jabatan','Departemen','Tanggal',
-                    'Jam Mulai','Jam Selesai','Total Jam','Harga/Jam','Total Bayar','Status'];
-    const rows   = data.data.map(function(l, i) {
-      return [i+1, l.nama_karyawan, l.jabatan, l.departemen, l.tanggal,
-              l.jam_mulai, l.jam_selesai, l.total_jam, l.harga_per_jam, l.total_bayar, l.status_bayar];
+    const grouped   = res.grouped || [];
+    const namaInst  = res.instansi?.nama_instansi || 'Instansi';
+    const tglDari2  = res.tgl_dari || '';
+    const tglKe2    = res.tgl_ke   || '';
+    const periode   = tglDari2 ? tglDari2 + ' s/d ' + tglKe2 : '';
+    const tglCetak  = new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
+    const fmtRp = n => parseInt(n||0).toLocaleString('id-ID');
+
+    const aoa = [];
+    aoa.push([namaInst]);
+    aoa.push(['REKAP LEMBUR KARYAWAN — ' + periode]);
+    aoa.push(['Dicetak: ' + tglCetak]);
+    aoa.push([]);
+
+    // Header
+    aoa.push(['No','Tanggal','Jam Mulai','Jam Selesai','Total Jam',
+              'Tarif/Jam (Rp)','Total Bayar (Rp)','Status Bayar']);
+
+    const enc = (r,c) => XLSX.utils.encode_cell({r,c});
+    const bd  = () => ({style:'thin',color:{rgb:'CCCCCC'}});
+    const brd = {top:bd(),bottom:bd(),left:bd(),right:bd()};
+    const sH1 = {font:{bold:true,sz:13,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1E3A5F'}},alignment:{horizontal:'center',vertical:'center'}};
+    const sH2 = {font:{bold:true,sz:11,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'2D6CDF'}},alignment:{horizontal:'center',vertical:'center'}};
+    const sH3 = {font:{sz:9,color:{rgb:'AAAAAA'}},fill:{fgColor:{rgb:'2C3E50'}},alignment:{horizontal:'center'}};
+    const sKar= {font:{bold:true,sz:11,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1A9E74'}},alignment:{horizontal:'left',vertical:'center'},border:brd};
+    const sCol= {font:{bold:true,sz:9,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'34495E'}},alignment:{horizontal:'center',vertical:'center'},border:brd};
+    const sDat= (alt) => ({font:{sz:9},fill:{fgColor:{rgb:alt?'F0F4F8':'FFFFFF'}},alignment:{vertical:'center'},border:brd});
+    const sRp = (alt) => ({font:{sz:9},fill:{fgColor:{rgb:alt?'F0F4F8':'FFFFFF'}},numFmt:'#,##0',alignment:{horizontal:'right',vertical:'center'},border:brd});
+    const sSub= {font:{bold:true,sz:10,color:{rgb:'1E3A5F'}},fill:{fgColor:{rgb:'EFF6FF'}},numFmt:'#,##0',alignment:{horizontal:'right',vertical:'center'},border:{top:{style:'medium',color:{rgb:'1A9E74'}},bottom:{style:'medium',color:{rgb:'1A9E74'}},left:bd(),right:bd()}};
+    const sGrand={font:{bold:true,sz:11,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1E3A5F'}},numFmt:'#,##0',alignment:{horizontal:'right',vertical:'center'}};
+
+    const ws  = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!merges'] = [
+      {s:{r:0,c:0},e:{r:0,c:7}},
+      {s:{r:1,c:0},e:{r:1,c:7}},
+      {s:{r:2,c:0},e:{r:2,c:7}},
+    ];
+    ws['!rows'] = [{hpt:28},{hpt:20},{hpt:16},{hpt:6},{hpt:20}];
+    ws['!cols'] = [{wch:5},{wch:14},{wch:12},{wch:12},{wch:11},{wch:18},{wch:20},{wch:16}];
+
+    // Apply header styles
+    for(let c2=0;c2<=7;c2++){
+      if(ws[enc(0,c2)]) ws[enc(0,c2)].s = sH1;
+      if(ws[enc(1,c2)]) ws[enc(1,c2)].s = sH2;
+      if(ws[enc(2,c2)]) ws[enc(2,c2)].s = sH3;
+      if(ws[enc(4,c2)]) ws[enc(4,c2)].s = sCol;
+    }
+
+    let curRow = 5; // setelah header (0-indexed)
+
+    grouped.forEach((grp, gi) => {
+      // Baris nama karyawan (group header)
+      const karRow = [
+        (gi+1) + '. ' + grp.nama + '  |  ' + grp.jabatan + '  |  ' + (grp.departemen||'-'),
+        '','','','','','',''
+      ];
+      XLSX.utils.sheet_add_aoa(ws, [karRow], {origin: {r: curRow, c: 0}});
+      ws['!merges'] = (ws['!merges']||[]).concat([{s:{r:curRow,c:0},e:{r:curRow,c:7}}]);
+      ws['!rows']   = (ws['!rows']||[]);
+      while(ws['!rows'].length <= curRow) ws['!rows'].push({hpt:18});
+      ws['!rows'][curRow] = {hpt:20};
+      for(let c2=0;c2<=7;c2++) if(ws[enc(curRow,c2)]) ws[enc(curRow,c2)].s = sKar;
+      curRow++;
+
+      // Rincian lembur
+      grp.rincian.forEach((l, li) => {
+        const alt = li%2===1;
+        const sudah = String(l.status_bayar||'').toLowerCase().includes('sudah');
+        const row = [li+1, l.tanggal, l.jam_mulai, l.jam_selesai,
+                     parseFloat(l.total_jam||0), parseFloat(l.harga_per_jam||0),
+                     parseFloat(l.total_bayar||0),
+                     sudah ? 'Sudah Dibayar' : 'Belum Dibayar'];
+        XLSX.utils.sheet_add_aoa(ws, [row], {origin:{r:curRow,c:0}});
+        while(ws['!rows'].length <= curRow) ws['!rows'].push({hpt:16});
+        for(let c2=0;c2<=7;c2++){
+          const cell = ws[enc(curRow,c2)];
+          if(!cell) continue;
+          if(c2===4||c2===5||c2===6){
+            cell.s = sRp(alt); cell.t = 'n';
+          } else if(c2===7){
+            cell.s = {font:{bold:true,sz:9,color:{rgb:sudah?'1A9E74':'D97706'}},
+                     fill:{fgColor:{rgb:sudah?'EBF8EE':'FFFAF0'}},
+                     alignment:{horizontal:'center'},border:brd};
+          } else {
+            cell.s = sDat(alt);
+          }
+        }
+        curRow++;
+      });
+
+      // Subtotal per karyawan
+      const subRow = ['','','','','Subtotal ' + grp.rincian.length + ' sesi:','',
+                      parseFloat(grp.total_bayar||0),''];
+      XLSX.utils.sheet_add_aoa(ws, [subRow], {origin:{r:curRow,c:0}});
+      ws['!merges'] = (ws['!merges']||[]).concat([{s:{r:curRow,c:0},e:{r:curRow,c:4}}]);
+      while(ws['!rows'].length <= curRow) ws['!rows'].push({hpt:18});
+      for(let c2=0;c2<=7;c2++){
+        const cell = ws[enc(curRow,c2)];
+        if(!cell) continue;
+        if(c2===6){cell.s=sSub;cell.t='n';}
+        else cell.s={font:{bold:true,sz:9},fill:{fgColor:{rgb:'EFF6FF'}},border:brd};
+      }
+      curRow++;
+      // Spasi antar karyawan
+      XLSX.utils.sheet_add_aoa(ws, [['']], {origin:{r:curRow,c:0}});
+      while(ws['!rows'].length <= curRow) ws['!rows'].push({hpt:6});
+      curRow++;
     });
-    rows.push(['','TOTAL','','','','','',data.total_jam,'',data.total_bayar,'']);
 
-    const ws = XLSX.utils.aoa_to_sheet([
-      ['REKAP LEMBUR KARYAWAN — ' + label.toUpperCase()],
-      ['Instansi: ' + (data.instansi?.nama_instansi||'-')],
-      [], header, ...rows
-    ]);
-    ws['!cols'] = [{wch:4},{wch:25},{wch:20},{wch:18},{wch:12},{wch:10},{wch:12},{wch:10},{wch:14},{wch:16},{wch:14}];
+    // Grand total
+    const gtRow = ['','','','','GRAND TOTAL','',parseFloat(res.total_bayar||0),''];
+    XLSX.utils.sheet_add_aoa(ws, [gtRow], {origin:{r:curRow,c:0}});
+    ws['!merges'] = (ws['!merges']||[]).concat([{s:{r:curRow,c:0},e:{r:curRow,c:5}}]);
+    while(ws['!rows'].length <= curRow) ws['!rows'].push({hpt:22});
+    ws['!rows'][curRow] = {hpt:22};
+    for(let c2=0;c2<=7;c2++){
+      const cell = ws[enc(curRow,c2)];
+      if(!cell){
+        ws[enc(curRow,c2)] = {v:'', t:'s', s:sGrand};
+      } else {
+        if(c2===6){cell.s=sGrand;cell.t='n';}
+        else cell.s = sGrand;
+      }
+    }
 
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Lembur ' + label);
-    XLSX.writeFile(wb, 'Rekap_Lembur_' + label.replace(' ','_') + '.xlsx');
-    showToast('Excel lembur berhasil diunduh! 📊', 'success');
-  } catch(e) { showToast('Gagal: ' + e.message, 'error'); }
+    XLSX.utils.book_append_sheet(wb, ws, 'Rekap Lembur');
+    const fname = 'Rekap_Lembur_' + (tglDari2||bulan+'_'+tahun).replace(/\//g,'-') + '.xlsx';
+    XLSX.writeFile(wb, fname);
+    showToast('Excel lembur berhasil diunduh! 📊','success');
+  } catch(e) {
+    showToast('Gagal export: ' + e.message, 'error');
+    console.error(e);
+  }
 }
 
-// ─────────────────────────────────────────────────────────────
-// HELPER PDF
-// ─────────────────────────────────────────────────────────────
+
 async function _kopSurat(doc, instansi, W, mL, y) {
   // Logo (jika ada & bisa dimuat)
   let logoLoaded = false;
