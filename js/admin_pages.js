@@ -1629,7 +1629,7 @@ async function renderHargaLemburAdmin(container){
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px">
       <div style="display:flex;align-items:center;gap:10px">
         <button class="btn btn--ghost" style="font-size:13px;padding:8px 14px"
-          onclick="navigateTo('lembur-admin')">← Kembali</button>
+          onclick="routeAdmin('lembur-admin')">← Kembali</button>
         <h2 style="font-size:17px;font-weight:700;margin:0">💰 Harga Lembur per Jabatan</h2>
       </div>
       <button class="btn btn--primary" style="font-size:13px" onclick="tampilFormHargaLembur(null)">+ Tambah</button>
