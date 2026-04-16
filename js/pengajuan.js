@@ -239,8 +239,6 @@ async function submitPengajuanKaryawan() {
     const mulai       = document.getElementById('pjn-mulai')?.value;
     const selesai     = document.getElementById('pjn-selesai')?.value;
     const keterangan  = document.getElementById('pjn-keterangan')?.value?.trim();
-    const fileInput   = document.getElementById('pjn-file');
-
     if (!jenis)      throw new Error('Pilih jenis pengajuan');
     if (!mulai)      throw new Error('Tanggal mulai wajib diisi');
     if (!selesai)    throw new Error('Tanggal selesai wajib diisi');
@@ -255,13 +253,9 @@ async function submitPengajuanKaryawan() {
       if (totalHari > info.sisa) throw new Error('Sisa cuti 6 bulanan tidak cukup. Sisa: ' + info.sisa + ' hari');
     }
 
-    if (jenis === 'sakit' && (!fileInput || !fileInput.files[0])) {
-      throw new Error('Surat sakit wajib dilampirkan');
-    }
-
-    // Upload foto surat sakit jika ada - compress dulu
+    // Upload foto surat sakit - pakai window._suratSakitFile dari onFotoSuratDipilih
     let fileUrl = '';
-    const _suratFile = window._suratSakitFile;  // dari onFotoSuratDipilih
+    const _suratFile = window._suratSakitFile;
     if (jenis === 'sakit' && !_suratFile) throw new Error('Foto surat sakit wajib dilampirkan');
     if (_suratFile) {
       showToast('Mengunggah foto surat...', 'info', 5000);
