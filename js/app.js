@@ -484,7 +484,6 @@ function renderAdminLayout() {
           ${_si2('karyawan-list','👥','Karyawan')}
           ${_si2('pengajuan-admin','📁','Pengajuan')}
           ${_si2('lembur-admin','🕒','Lembur')}
-          ${_si2('harga-lembur-admin','💰','Harga Lembur')}
           ${_si2('ranking-admin','🏆','Ranking')}
           ${_si2('sp-admin','⚠️','Surat Peringatan')}
           ${_si2('pengumuman-admin','📢','Pengumuman')}
