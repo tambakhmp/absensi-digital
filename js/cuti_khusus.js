@@ -296,130 +296,22 @@ async function _exportRekapTunjangan() {
 }
 
 async function exportRekapTunjanganExcel(data) {
-  const now  = new Date();
-  const thn  = now.getFullYear();
-  const tgl  = now.toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
-  const namaInstansi = (await callAPI('getSetting',{key:'nama_instansi'}).catch(()=>null))
-                    || document.querySelector('.sidebar__brand-name')?.textContent?.trim()
-                    || 'Instansi';
-  const alamat = (await callAPI('getSetting',{key:'alamat_instansi'}).catch(()=>null)) || '';
-
-  const totalNominal = data.reduce((s,t)=>s+parseInt(t.nominal_tunjangan||0),0);
-  const totalSudah   = data.filter(t=>t.status_bayar==='sudah').reduce((s,t)=>s+parseInt(t.nominal_tunjangan||0),0);
-  const totalBelum   = totalNominal - totalSudah;
-
-  const fmtRp = n => 'Rp ' + parseInt(n||0).toLocaleString('id-ID');
-
-  const rows = data.map((t,i) => `
-    <tr style="background:${i%2===0?'#FFFFFF':'#F8FAFC'}">
-      <td style="text-align:center;font-weight:600">${i+1}</td>
-      <td style="font-weight:600">${t.nama}</td>
-      <td>${t.jabatan||'-'}</td>
-      <td>${t.departemen||'-'}</td>
-      <td style="text-align:center">${t.periode}</td>
-      <td style="text-align:center">${t.tanggal_mulai}</td>
-      <td style="text-align:center">${t.tanggal_selesai}</td>
-      <td style="text-align:center;font-weight:600">${t.total_hari}</td>
-      <td style="text-align:right;font-weight:600;color:#1E3A5F">${fmtRp(t.nominal_tunjangan)}</td>
-      <td style="text-align:center;font-weight:700;color:${t.status_bayar==='sudah'?'#1A9E74':'#D97706'};
-        background:${t.status_bayar==='sudah'?'#EBF8EE':'#FFFAF0'}">
-        ${t.status_bayar==='sudah'?'✓ Sudah Dibayar':'⏳ Belum Dibayar'}
-      </td>
-      <td style="text-align:center">${t.tanggal_bayar||'-'}</td>
-    </tr>`).join('');
-
-  const html = `
-<html xmlns:o="urn:schemas-microsoft-com:office:office"
-      xmlns:x="urn:schemas-microsoft-com:office:excel"
-      xmlns="http://www.w3.org/TR/REC-html40">
-<head>
-<meta charset="UTF-8">
-<style>
-  body { font-family: Arial, sans-serif; font-size: 10pt; }
-  table { border-collapse: collapse; width: 100%; }
-  td, th { border: 1px solid #D1D5DB; padding: 6px 10px; vertical-align: middle; }
-  .hd1 { background:#1E3A5F; color:#FFFFFF; font-size:14pt; font-weight:bold; text-align:center; border:none; }
-  .hd2 { background:#2D6CDF; color:#FFFFFF; font-size:11pt; font-weight:bold; text-align:center; border:none; }
-  .hd3 { background:#34495E; color:#CBD5E0; font-size:9pt; text-align:center; border:none; }
-  .col-header { background:#1A9E74; color:#FFFFFF; font-weight:bold; text-align:center; font-size:9pt; }
-  .total-row { background:#EFF6FF; font-weight:bold; }
-  .summary-box { background:#F0F9FF; border:2px solid #2D6CDF; padding:8px; margin-bottom:12px; }
-</style>
-</head>
-<body>
-<table>
-  <!-- KOP SURAT -->
-  <tr><td colspan="11" class="hd1">${namaInstansi}</td></tr>
-  ${alamat ? `<tr><td colspan="11" class="hd3">${alamat}</td></tr>` : ''}
-  <tr><td colspan="11" class="hd2">REKAP TUNJANGAN CUTI 6 BULANAN</td></tr>
-  <tr><td colspan="11" class="hd3">Tahun ${thn} &nbsp;|&nbsp; Dicetak: ${tgl}</td></tr>
-  <tr><td colspan="11" style="border:none;padding:4px"></td></tr>
-
-  <!-- RINGKASAN -->
-  <tr>
-    <td colspan="3" style="background:#EFF6FF;font-weight:bold;color:#2D6CDF;font-size:10pt">
-      💰 Total Tunjangan: ${fmtRp(totalNominal)}
-    </td>
-    <td colspan="4" style="background:#EBF8EE;font-weight:bold;color:#1A9E74;font-size:10pt">
-      ✓ Sudah Dibayar: ${fmtRp(totalSudah)}
-    </td>
-    <td colspan="4" style="background:#FFFAF0;font-weight:bold;color:#D97706;font-size:10pt">
-      ⏳ Belum Dibayar: ${fmtRp(totalBelum)}
-    </td>
-  </tr>
-  <tr><td colspan="11" style="border:none;padding:4px"></td></tr>
-
-  <!-- HEADER KOLOM -->
-  <tr>
-    <th class="col-header" style="width:40px">No</th>
-    <th class="col-header" style="width:160px">Nama Karyawan</th>
-    <th class="col-header" style="width:120px">Jabatan</th>
-    <th class="col-header" style="width:120px">Departemen</th>
-    <th class="col-header" style="width:80px">Periode</th>
-    <th class="col-header" style="width:100px">Tgl Mulai</th>
-    <th class="col-header" style="width:100px">Tgl Selesai</th>
-    <th class="col-header" style="width:80px">Total Hari</th>
-    <th class="col-header" style="width:160px">Nominal Tunjangan</th>
-    <th class="col-header" style="width:140px">Status Bayar</th>
-    <th class="col-header" style="width:100px">Tgl Bayar</th>
-  </tr>
-
-  <!-- DATA -->
-  ${rows}
-
-  <!-- TOTAL -->
-  <tr class="total-row">
-    <td colspan="8" style="text-align:right;color:#1E3A5F;border-top:2px solid #2D6CDF">TOTAL KESELURUHAN:</td>
-    <td style="text-align:right;color:#1E3A5F;font-size:11pt;border-top:2px solid #2D6CDF">${fmtRp(totalNominal)}</td>
-    <td colspan="2" style="border-top:2px solid #2D6CDF"></td>
-  </tr>
-
-  <!-- TTD -->
-  <tr><td colspan="11" style="border:none;padding:16px"></td></tr>
-  <tr>
-    <td colspan="4" style="border:none;text-align:center">
-      <div style="margin-bottom:40px">Mengetahui,</div>
-      <div>(_____________________)</div>
-      <div style="margin-top:4px;font-weight:bold">Pimpinan</div>
-    </td>
-    <td colspan="3" style="border:none"></td>
-    <td colspan="4" style="border:none;text-align:center">
-      <div style="margin-bottom:4px">Dibuat di: ............., ${tgl}</div>
-      <div style="margin-bottom:40px">Bagian Keuangan/HRD,</div>
-      <div>(_____________________)</div>
-      <div style="margin-top:4px;font-weight:bold">Admin</div>
-    </td>
-  </tr>
-</table>
-</body></html>`;
-
-  // Download sebagai .xls (Excel bisa buka HTML)
-  const blob = new Blob([html], {type:'application/vnd.ms-excel;charset=utf-8'});
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url;
-  a.download = 'Rekap_Tunjangan_Cuti_'+thn+'.xls';
-  a.click();
-  URL.revokeObjectURL(url);
+  if (!window.XLSX) { showToast('Library Excel belum siap','error'); return; }
+  const rows = data.map(t => ({
+    'Nama Karyawan' : t.nama,
+    'Jabatan'       : t.jabatan||'-',
+    'Departemen'    : t.departemen||'-',
+    'Periode'       : t.periode,
+    'Tgl Mulai'     : t.tanggal_mulai,
+    'Tgl Selesai'   : t.tanggal_selesai,
+    'Total Hari'    : t.total_hari,
+    'Nominal (Rp)'  : t.nominal_tunjangan||0,
+    'Status Bayar'  : t.status_bayar==='sudah'?'Sudah Dibayar':'Belum Dibayar',
+    'Tgl Bayar'     : t.tanggal_bayar||'-',
+  }));
+  const ws  = XLSX.utils.json_to_sheet(rows);
+  const wb  = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Rekap Tunjangan');
+  XLSX.writeFile(wb, 'Rekap_Tunjangan_Cuti_'+new Date().getFullYear()+'.xlsx');
   showToast('Export berhasil! 📊','success');
 }
