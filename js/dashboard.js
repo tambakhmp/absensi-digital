@@ -20,13 +20,19 @@ async function loadDashboardKaryawan() {
   _setEl('dash-jabatan',  (user.jabatan||'')+(user.departemen?' · '+user.departemen:''));
   _setEl('dash-tanggal',  tanggalHariIni());
 
+  // Phase 1: kritis — profil, absen, statistik, pengumuman
   await Promise.allSettled([
     _loadProfilFoto(user),
     loadStatusAbsenHariIni(),
     loadStatsKaryawan(),
     _loadPengumuman(),
+  ]);
+
+  // Phase 2: tidak kritis — ranking, SP, jadwal (tidak block fase 1)
+  Promise.allSettled([
     renderRankingSection('ranking-section'),
-    _loadSPSaya()
+    _loadSPSaya(),
+    loadJadwalMingguSaya(),
   ]);
 }
 
