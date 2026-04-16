@@ -858,7 +858,7 @@ async function cetakSuratSP(idSP) {
       { label:'Atasan Langsung',             nama: _bersihNama(data.atasan?.nama_lengkap), ttd: data.atasan?.tanda_tangan_url },
       { label:'HRD / Manager SDM',           nama: _bersihNama(data.hrd?.nama_lengkap),    ttd: data.hrd?.tanda_tangan_url },
       { label:'Pimpinan',                    nama: _bersihNama(data.pimpinan?.nama_lengkap), ttd: data.pimpinan?.tanda_tangan_url }
-    ], mL, W-mR, y, doc);
+    ], mL, W-mR, y, doc, false);
 
     // ── Footer ─────────────────────────────────────────────────
     doc.setFontSize(8); doc.setTextColor(150,150,150);
@@ -1168,7 +1168,7 @@ async function _kopSurat(doc, instansi, W, mL, y) {
   return y;
 }
 
-async function _kolomTTD(doc, signers, xStart, xEnd, y, docRef) {
+async function _kolomTTD(doc, signers, xStart, xEnd, y, docRef, showTanggal) {
   const totalW = xEnd - xStart;
   const colW   = totalW / signers.length;
   const tglStr = _nowTanggal();
@@ -1176,10 +1176,12 @@ async function _kolomTTD(doc, signers, xStart, xEnd, y, docRef) {
   doc.setFont('helvetica','normal');
   doc.setFontSize(9);
 
-  // Tanggal hanya di kolom paling kanan (format profesional)
-  const lastCx = xStart + (signers.length - 1) * colW + colW / 2;
-  doc.text(tglStr, lastCx, y, { align: 'center' });
-  y += 6;
+  // Tanggal hanya di kolom paling kanan — bisa dimatikan lewat showTanggal=false
+  if (showTanggal !== false) {
+    const lastCx = xStart + (signers.length - 1) * colW + colW / 2;
+    doc.text(tglStr, lastCx, y, { align: 'center' });
+    y += 6;
+  }
 
   // Label jabatan tiap kolom
   signers.forEach(function(s, i) {
