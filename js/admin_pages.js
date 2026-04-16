@@ -325,6 +325,17 @@ async function debugGPSAdmin() {
 // ─────────────────────────────────────────────────────────────
 // 3. PENGAJUAN ADMIN
 // ─────────────────────────────────────────────────────────────
+
+function _toViewUrl(url) {
+  if (!url) return '';
+  // Konversi lh3.googleusercontent.com/d/ID → drive.google.com/thumbnail?id=ID&sz=w400
+  var m = url.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/);
+  if (m) return 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w400';
+  var m2 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (m2) return 'https://drive.google.com/thumbnail?id=' + m2[1] + '&sz=w400';
+  return url;
+}
+
 async function renderPengajuanAdminFull(container) {
   container.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px">
@@ -334,10 +345,10 @@ async function renderPengajuanAdminFull(container) {
     <div class="card" style="padding:12px;margin-bottom:14px">
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <select class="form-control" id="flt-pgj-st" style="flex:1;min-width:130px" onchange="loadPengajuanAdminV4()">
-          <option value="">📋 Semua</option>
-          <option value="pending">⏳ Pending</option>
+          <option value="pending" selected>⏳ Pending</option>
           <option value="disetujui">✅ Disetujui</option>
           <option value="ditolak">❌ Ditolak</option>
+          <option value="">📋 Semua</option>
         </select>
         <select class="form-control" id="flt-pgj-jn" style="flex:1;min-width:130px" onchange="loadPengajuanAdminV4()">
           <option value="" selected>📋 Semua Jenis</option>
@@ -359,7 +370,8 @@ async function loadPengajuanAdminV4() {
   if(!el) return;
   el.innerHTML=skeletonCard(3);
   try {
-    const data=await callAPI('getPengajuanSemua',{status:st,jenis:jn});
+    const data=(await callAPI('getPengajuanSemua',{status:st,jenis:jn})||[])
+      .filter(p=>p.jenis!=='lembur');
     const stat=document.getElementById('pgj-stat');
     if(stat)stat.textContent=(data?.length||0)+' pengajuan';
     if(!data||data.length===0){showEmpty('pgj-admin-list','Tidak ada pengajuan');return;}
@@ -385,12 +397,14 @@ async function loadPengajuanAdminV4() {
             ${p.file_pendukung_url ? `
               <div style="margin-top:8px;padding:8px;background:#F8FAFC;border-radius:8px;border:1px solid #E2E8F0">
                 <div style="font-size:11px;color:#64748B;font-weight:600;margin-bottom:6px">📎 Foto Surat Sakit:</div>
-                <img src="${p.file_pendukung_url}"
-                  style="max-width:100%;max-height:200px;border-radius:6px;display:block;cursor:pointer;margin-bottom:6px"
+                <a href="${p.file_pendukung_url}" target="_blank"
+                  style="display:inline-block;background:#2D6CDF;color:#fff;padding:8px 14px;
+                  border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;margin-bottom:6px">
+                  🔗 Lihat Foto Surat</a>
+                <img src="${_toViewUrl(p.file_pendukung_url)}"
+                  style="max-width:100%;max-height:200px;border-radius:6px;display:block;cursor:pointer;margin-top:6px"
                   onclick="window.open('${p.file_pendukung_url}','_blank')"
                   onerror="this.style.display='none'">
-                <a href="${p.file_pendukung_url}" target="_blank"
-                  style="font-size:12px;color:#2D6CDF;display:block">🔗 Buka / Unduh Foto</a>
               </div>` : ''}
             ${p.catatan_admin?`<div style="font-size:12px;color:#D97706;margin-top:4px">
               💬 ${p.catatan_admin}</div>`:''}
