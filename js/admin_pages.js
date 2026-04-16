@@ -334,10 +334,10 @@ async function renderPengajuanAdminFull(container) {
     <div class="card" style="padding:12px;margin-bottom:14px">
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <select class="form-control" id="flt-pgj-st" style="flex:1;min-width:130px" onchange="loadPengajuanAdminV4()">
-          <option value="pending" selected>⏳ Pending</option>
+          <option value="">📋 Semua</option>
+          <option value="pending">⏳ Pending</option>
           <option value="disetujui">✅ Disetujui</option>
           <option value="ditolak">❌ Ditolak</option>
-          <option value="">Semua</option>
         </select>
         <select class="form-control" id="flt-pgj-jn" style="flex:1;min-width:130px" onchange="loadPengajuanAdminV4()">
           <option value="" selected>📋 Semua Jenis</option>
@@ -349,13 +349,6 @@ async function renderPengajuanAdminFull(container) {
       </div>
     </div>
     <div id="pgj-admin-list">${skeletonCard(4)}</div>`;
-  // Reset filter ke default setiap halaman dibuka
-  setTimeout(function() {
-    var fj = document.getElementById('flt-pgj-jn');
-    var fs = document.getElementById('flt-pgj-st');
-    if (fj) fj.value = '';
-    if (fs) fs.value = 'pending';
-  }, 0);
   await loadPengajuanAdminV4();
 }
 
