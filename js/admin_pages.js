@@ -488,12 +488,15 @@ async function loadLemburAdmin(status='pending') {
             <div style="font-size:13px;color:#64748B">
               📅 ${formatTanggal(l.tanggal)} · 🕐 ${l.jam_mulai}–${l.jam_selesai} · <strong>${l.total_jam} jam</strong>
             </div>
-            ${l.foto_spl_url?`<div style="margin-top:8px">
-              <div style="font-size:11px;color:#64748B;font-weight:600;margin-bottom:4px">📎 Foto SPL:</div>
-              <img src="${normalizeDriveUrlFrontend(l.foto_spl_url)}"
-                style="max-width:100%;max-height:150px;border-radius:8px;border:1px solid #E2E8F0;
-                object-fit:contain;cursor:pointer"
-                onclick="window.open('${normalizeDriveUrlFrontend(l.foto_spl_url)}','_blank')"
+            ${l.foto_spl_url?`<div style="margin-top:8px;padding:8px;background:#EFF6FF;border-radius:8px;border:1px solid #BFDBFE">
+              <div style="font-size:11px;color:#1E40AF;font-weight:700;margin-bottom:6px">📎 Foto SPL:</div>
+              <a href="${l.foto_spl_url}" target="_blank"
+                style="display:block;background:#1D4ED8;color:#fff;padding:8px 12px;
+                border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;text-align:center;margin-bottom:6px">
+                🔗 Lihat Foto SPL</a>
+              <img src="${_toViewUrl(l.foto_spl_url)}"
+                style="max-width:100%;max-height:150px;border-radius:6px;display:block;cursor:pointer"
+                onclick="window.open('${l.foto_spl_url}','_blank')"
                 onerror="this.style.display='none'">
             </div>`:``}
             <div style="font-size:14px;color:#1A9E74;font-weight:700;margin-top:4px">
