@@ -270,9 +270,11 @@ async function cetakRekapPDF(idKaryawan, bulan, tahun, tanggalDari, tanggalKe) {
       doc.setTextColor(255,255,255);
       doc.setFont('helvetica','bold');
       doc.setFontSize(8);
-      doc.text(s[0], cx+3, cy+3);
+      // Label di tengah horizontal
+      doc.text(s[0], cx + ringColW/2 - 1, cy+3, {align:'center'});
       doc.setFontSize(16);
-      doc.text(String(s[1]), cx+3, cy+12);
+      // Angka di tengah horizontal dan vertikal
+      doc.text(String(s[1]), cx + ringColW/2 - 1, cy+12, {align:'center'});
     });
     doc.setTextColor(0,0,0);
     doc.setDrawColor(0,0,0);
@@ -346,12 +348,26 @@ async function cetakRekapPDF(idKaryawan, bulan, tahun, tanggalDari, tanggalKe) {
 
     // ── TANDA TANGAN ───────────────────────────────────────
     if (y > 230) { doc.addPage(); y = 20; }
+    // Kota & tanggal sebelum TTD
+    var _alamatRekap = data.instansi?.alamat_instansi || '';
+    var _kotaRekap = '';
+    var _kabRekap = _alamatRekap.match(/Kab\.?\s+([^,\u2013\-]+)|Kota\s+([^,\u2013\-]+)/i);
+    if (_kabRekap) {
+      _kotaRekap = (_kabRekap[1] || _kabRekap[2] || '').trim();
+    } else {
+      var _prRekap = _alamatRekap.split(/[,\u2013]/);
+      _kotaRekap = _prRekap[_prRekap.length-1].trim() || _prRekap[0].trim();
+    }
+    doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(0,0,0);
+    doc.text((_kotaRekap||'') + ', ' + _nowTanggal(), W-mR, y, {align:'right'});
+    y += 8;
+
     y = await _kolomTTD(doc, [
       { label: 'Karyawan',      nama: k.nama_lengkap,               ttd: k.tanda_tangan_url },
       { label: 'Atasan',        nama: data.atasan?.nama_lengkap||'-', ttd: data.atasan?.tanda_tangan_url },
       { label: 'HRD',           nama: data.hrd?.nama_lengkap||'-',    ttd: data.hrd?.tanda_tangan_url },
       { label: 'Pimpinan',      nama: data.pimpinan?.nama_lengkap||'-', ttd: data.pimpinan?.tanda_tangan_url }
-    ], mL, W-mR, y, doc);
+    ], mL, W-mR, y, doc, false);
 
     // ── FOOTER ─────────────────────────────────────────────
     const totalPages = doc.getNumberOfPages();
