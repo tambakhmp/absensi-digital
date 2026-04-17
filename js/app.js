@@ -129,13 +129,8 @@ function renderLoginPage() {
     <div class="login-page">
       <div class="login-card">
         <div class="login-logo">
-          <div id="login-logo-wrap"
-            style="width:88px;height:88px;margin:0 auto 14px;
-            display:flex;align-items:center;justify-content:center">
-            <span id="login-logo-placeholder" style="font-size:52px">📋</span>
-          </div>
-          <h1 class="nama-instansi" id="login-nama-instansi">Sistem Absensi</h1>
-          <p class="login-subtitle" id="login-subtitle">Masuk dengan akun karyawan Anda</p>
+          <p class="login-subtitle" id="login-subtitle" style="margin-bottom:8px">
+            Masuk dengan akun Anda</p>
         </div>
         <div id="login-err" style="display:none;background:#FFF5F5;border:1px solid #FC8181;
           border-radius:8px;padding:12px;color:#C53030;font-size:13px;margin-bottom:16px"></div>
@@ -162,7 +157,6 @@ function renderLoginPage() {
         <p style="text-align:center;font-size:11px;color:#CBD5E0;margin-top:8px" id="footer-text"></p>
       </div>
     </div>`;
-  loadBranding('karyawan');
 }
 
 function togglePW(){
