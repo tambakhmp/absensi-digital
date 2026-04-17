@@ -397,14 +397,11 @@ async function loadPengajuanAdminV4() {
             <div style="font-size:13px;color:#475569;background:#F8FAFC;
               border-radius:6px;padding:6px 10px;margin-bottom:6px">"${p.keterangan||'-'}"</div>
             ${p.file_pendukung_url ? `
-              <div style="margin-top:8px;background:#F8FAFC;border-radius:8px;
-                border:1px solid #E2E8F0;padding:10px">
-                <div style="font-size:12px;color:#64748B;font-weight:600;margin-bottom:8px">📎 Foto Surat Sakit:</div>
-                <a href="${p.file_pendukung_url}" target="_blank"
-                  style="display:block;background:#2D6CDF;color:#fff;padding:9px;
-                  border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;
-                  text-align:center">🔗 Lihat Foto Surat</a>
-              </div>` : ''}
+              <a href="${p.file_pendukung_url}" target="_blank"
+                style="display:inline-block;margin-top:6px;background:#EFF6FF;color:#1D4ED8;
+                padding:5px 12px;border-radius:6px;font-size:12px;font-weight:600;
+                text-decoration:none;border:1px solid #BFDBFE">
+                📎 Lihat Foto Surat</a>` : ''}
             ${p.catatan_admin?`<div style="font-size:12px;color:#D97706;margin-top:4px">
               💬 ${p.catatan_admin}</div>`:''}
           </div>
