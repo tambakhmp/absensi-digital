@@ -8,19 +8,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       .then(r => console.log('SW:', r.scope))
       .catch(e => console.warn('SW:', e));
   }
-  if (!isLoggedIn()) { renderLoginPage(); return; }
-  const user = getSession();
-  await loadBranding(user?.role || 'karyawan');
-  if (user?.role === 'superadmin' || user?.role === 'admin') {
-    renderAdminLayout();
-  } else {
-    renderKaryawanLayout();
-  }
-  // Splash screen saat pertama buka app
+
+  // Tampilkan splash dulu, baru render halaman
+  var _splashInst = {};
   try {
-    var _inst = await callAPI('getMultipleSetting',{keys:'nama_instansi,logo_url'});
-    _showSplashScreen(_inst);
+    _splashInst = await callAPI('getMultipleSetting',{keys:'nama_instansi,logo_url'});
   } catch(e) {}
+
+  _showSplashScreen(_splashInst, async function() {
+    if (!isLoggedIn()) { renderLoginPage(); return; }
+    const user = getSession();
+    await loadBranding(user?.role || 'karyawan');
+    if (user?.role === 'superadmin' || user?.role === 'admin') {
+      renderAdminLayout();
+    } else {
+      renderKaryawanLayout();
+    }
+  });
 });
 
 window.addEventListener('hashchange', () => {
@@ -182,16 +186,9 @@ async function doLoginForm() {
     const result=await doLogin(user,pass);
     if(result){
       await loadBranding(result.role);
-      // Ambil info instansi untuk splash
-      var splashInst = {};
-      try {
-        splashInst = await callAPI('getMultipleSetting',{keys:'nama_instansi,logo_url'});
-      } catch(e) {}
-      // Render layout dulu (tersembunyi di belakang splash)
+      // Render layout langsung setelah login
       if(result.role==='superadmin'||result.role==='admin') renderAdminLayout();
       else renderKaryawanLayout();
-      // Tampilkan splash screen
-      _showSplashScreen(splashInst);
     }
   }catch(e){
     if(err){err.style.display='block';err.textContent='⚠️ '+e.message;}
