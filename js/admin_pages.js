@@ -403,11 +403,7 @@ async function loadPengajuanAdminV4() {
                 <a href="${p.file_pendukung_url}" target="_blank"
                   style="display:block;background:#2D6CDF;color:#fff;padding:9px;
                   border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;
-                  text-align:center;margin-bottom:8px">🔗 Lihat Foto Surat</a>
-                <img src="${_toViewUrl(p.file_pendukung_url)}"
-                  style="max-width:100%;max-height:200px;border-radius:6px;display:block;cursor:pointer"
-                  onclick="window.open('${p.file_pendukung_url}','_blank')"
-                  onerror="this.style.display='none'">
+                  text-align:center">🔗 Lihat Foto Surat</a>
               </div>` : ''}
             ${p.catatan_admin?`<div style="font-size:12px;color:#D97706;margin-top:4px">
               💬 ${p.catatan_admin}</div>`:''}
