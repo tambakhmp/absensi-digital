@@ -370,8 +370,10 @@ async function loadPengajuanAdminV4() {
   if(!el) return;
   el.innerHTML=skeletonCard(3);
   try {
-    const data=(await callAPI('getPengajuanSemua',{status:st,jenis:jn})||[])
+    const raw=(await callAPI('getPengajuanSemua',{status:st,jenis:jn})||[])
       .filter(p=>p.jenis!=='lembur');
+    const data = raw;
+    console.log('[DEBUG pengajuan] total:', data.length, 'contoh[0]:', JSON.stringify(data[0]));
     const stat=document.getElementById('pgj-stat');
     if(stat)stat.textContent=(data?.length||0)+' pengajuan';
     if(!data||data.length===0){showEmpty('pgj-admin-list','Tidak ada pengajuan');return;}
@@ -395,12 +397,17 @@ async function loadPengajuanAdminV4() {
             <div style="font-size:13px;color:#475569;background:#F8FAFC;
               border-radius:6px;padding:6px 10px;margin-bottom:6px">"${p.keterangan||'-'}"</div>
             ${p.file_pendukung_url ? `
-              <div style="margin-top:8px;padding:10px;background:#EFF6FF;border-radius:8px;border:1px solid #BFDBFE">
-                <div style="font-size:11px;color:#1E40AF;font-weight:700;margin-bottom:8px">📎 FOTO SURAT SAKIT</div>
+              <div style="margin-top:8px;background:#F8FAFC;border-radius:8px;
+                border:1px solid #E2E8F0;padding:10px">
+                <div style="font-size:12px;color:#64748B;font-weight:600;margin-bottom:8px">📎 Foto Surat Sakit:</div>
                 <a href="${p.file_pendukung_url}" target="_blank"
-                  style="display:block;background:#1D4ED8;color:#fff;padding:10px 14px;
-                  border-radius:6px;font-size:13px;font-weight:700;text-decoration:none;text-align:center">
-                  🔗 Klik Untuk Lihat Foto</a>
+                  style="display:block;background:#2D6CDF;color:#fff;padding:9px;
+                  border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;
+                  text-align:center;margin-bottom:8px">🔗 Lihat Foto Surat</a>
+                <img src="${_toViewUrl(p.file_pendukung_url)}"
+                  style="max-width:100%;max-height:200px;border-radius:6px;display:block;cursor:pointer"
+                  onclick="window.open('${p.file_pendukung_url}','_blank')"
+                  onerror="this.style.display='none'">
               </div>` : ''}
             ${p.catatan_admin?`<div style="font-size:12px;color:#D97706;margin-top:4px">
               💬 ${p.catatan_admin}</div>`:''}
