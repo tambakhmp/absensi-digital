@@ -395,16 +395,12 @@ async function loadPengajuanAdminV4() {
             <div style="font-size:13px;color:#475569;background:#F8FAFC;
               border-radius:6px;padding:6px 10px;margin-bottom:6px">"${p.keterangan||'-'}"</div>
             ${p.file_pendukung_url ? `
-              <div style="margin-top:8px;padding:8px;background:#F8FAFC;border-radius:8px;border:1px solid #E2E8F0">
-                <div style="font-size:11px;color:#64748B;font-weight:600;margin-bottom:6px">📎 Foto Surat Sakit:</div>
+              <div style="margin-top:8px;padding:10px;background:#EFF6FF;border-radius:8px;border:1px solid #BFDBFE">
+                <div style="font-size:11px;color:#1E40AF;font-weight:700;margin-bottom:8px">📎 FOTO SURAT SAKIT</div>
                 <a href="${p.file_pendukung_url}" target="_blank"
-                  style="display:inline-block;background:#2D6CDF;color:#fff;padding:8px 14px;
-                  border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;margin-bottom:6px">
-                  🔗 Lihat Foto Surat</a>
-                <img src="${_toViewUrl(p.file_pendukung_url)}"
-                  style="max-width:100%;max-height:200px;border-radius:6px;display:block;cursor:pointer;margin-top:6px"
-                  onclick="window.open('${p.file_pendukung_url}','_blank')"
-                  onerror="this.style.display='none'">
+                  style="display:block;background:#1D4ED8;color:#fff;padding:10px 14px;
+                  border-radius:6px;font-size:13px;font-weight:700;text-decoration:none;text-align:center">
+                  🔗 Klik Untuk Lihat Foto</a>
               </div>` : ''}
             ${p.catatan_admin?`<div style="font-size:12px;color:#D97706;margin-top:4px">
               💬 ${p.catatan_admin}</div>`:''}
