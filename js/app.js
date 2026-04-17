@@ -8,14 +8,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       .then(r => console.log('SW:', r.scope))
       .catch(e => console.warn('SW:', e));
   }
-
-  // Tampilkan splash dulu, baru render halaman
-  var _splashInst = {};
-  try {
-    _splashInst = await callAPI('getMultipleSetting',{keys:'nama_instansi,logo_url'});
-  } catch(e) {}
-
-  _showSplashScreen(_splashInst, async function() {
+  _showSplashScreen(async function() {
     if (!isLoggedIn()) { renderLoginPage(); return; }
     const user = getSession();
     await loadBranding(user?.role || 'karyawan');
@@ -42,86 +35,64 @@ window.addEventListener('hashchange', () => {
 // ─────────────────────────────────────────────────────────────
 // SPLASH SCREEN setelah login berhasil
 // ─────────────────────────────────────────────────────────────
-function _showSplashScreen(instansi, callback) {
-  var logoUrl  = instansi?.logo_url  || '';
-  var namaInst = instansi?.nama_instansi || 'Sistem Absensi';
+function _showSplashScreen(callback) {
+  var cached = {};
+  try { var raw = localStorage.getItem('branding_cache'); if (raw) cached = JSON.parse(raw); } catch(e) {}
+  var logoUrl  = cached.logo_url || '';
+  var namaInst = cached.nama_instansi || 'Sistem Absensi Digital';
 
-  var splash = document.createElement('div');
-  splash.id  = 'splash-screen';
-  splash.style.cssText = [
-    'position:fixed','inset:0','z-index:99999',
-    'display:flex','flex-direction:column',
-    'align-items:center','justify-content:center',
-    'background:linear-gradient(135deg,#1E3A5F 0%,#2D6CDF 60%,#1A9E74 100%)',
-    'animation:splashFadeIn .3s ease'
-  ].join(';');
+  var el = document.createElement('div');
+  el.id = 'splash-screen';
+  el.setAttribute('style',
+    'position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;' +
+    'align-items:center;justify-content:center;' +
+    'background:linear-gradient(135deg,#1E3A5F 0%,#2D6CDF 60%,#1A9E74 100%)');
 
-  splash.innerHTML = `
-    <style>
-      @keyframes splashFadeIn { from{opacity:0} to{opacity:1} }
-      @keyframes splashFadeOut { from{opacity:1} to{opacity:0} }
-      @keyframes rotateLogo {
-        0%   { transform: rotate(0deg) scale(1); }
-        25%  { transform: rotate(90deg) scale(1.08); }
-        50%  { transform: rotate(180deg) scale(1); }
-        75%  { transform: rotate(270deg) scale(1.08); }
-        100% { transform: rotate(360deg) scale(1); }
-      }
-      @keyframes splashDots {
-        0%,80%,100% { opacity:.2; transform:scale(.8); }
-        40%         { opacity:1;  transform:scale(1); }
-      }
-      #splash-logo-wrap {
-        width:110px; height:110px;
-        border-radius:50%;
-        background:rgba(255,255,255,.15);
-        display:flex; align-items:center; justify-content:center;
-        margin-bottom:24px;
-        box-shadow:0 0 0 12px rgba(255,255,255,.08), 0 0 0 24px rgba(255,255,255,.04);
-      }
-      #splash-logo-wrap img, #splash-logo-wrap span {
-        animation: rotateLogo 2s linear infinite;
-      }
-      .splash-dot {
-        display:inline-block; width:8px; height:8px;
-        border-radius:50%; background:#fff; margin:0 3px;
-      }
-      .splash-dot:nth-child(1){ animation:splashDots 1.4s ease-in-out .0s infinite; }
-      .splash-dot:nth-child(2){ animation:splashDots 1.4s ease-in-out .2s infinite; }
-      .splash-dot:nth-child(3){ animation:splashDots 1.4s ease-in-out .4s infinite; }
-    </style>
-    <div id="splash-logo-wrap">
-            <div id="splash-logo-img" style="width:80px;height:80px;display:flex;align-items:center;justify-content:center">
-        <img src="${logoUrl}" id="spl-img"
-          style="width:80px;height:80px;object-fit:contain;border-radius:50%;display:${logoUrl?'block':'none'}"
-          onerror="document.getElementById('spl-img').style.display='none';document.getElementById('spl-ico').style.display='block'">
-        <span id="spl-ico" style="font-size:52px;display:${logoUrl?'none':'block'}">📋</span>
-      </div>
-    </div>
-    <div style="color:#fff;font-size:20px;font-weight:800;letter-spacing:.5px;
-      text-align:center;padding:0 24px;text-shadow:0 2px 8px rgba(0,0,0,.3);margin-bottom:8px">
-      ${namaInst}
-    </div>
-    <div style="color:rgba(255,255,255,.7);font-size:13px;margin-bottom:28px">
-      Memuat data...
-    </div>
-    <div>
-      <span class="splash-dot"></span>
-      <span class="splash-dot"></span>
-      <span class="splash-dot"></span>
-    </div>`;
+  var logoHtml = logoUrl
+    ? '<img src="' + logoUrl + '" id="spl-img" style="width:80px;height:80px;object-fit:contain;border-radius:50%;animation:rotateLogo 2s linear infinite">'
+    : '<span id="spl-ico" style="font-size:52px;display:inline-block;animation:rotateLogo 2s linear infinite">&#x1F4CB;</span>';
 
-  document.body.appendChild(splash);
+  el.innerHTML =
+    '<style>' +
+    '@keyframes rotateLogo{0%{transform:rotate(0deg) scale(1)}25%{transform:rotate(90deg) scale(1.08)}50%{transform:rotate(180deg)}75%{transform:rotate(270deg) scale(1.08)}100%{transform:rotate(360deg) scale(1)}}' +
+    '@keyframes splashDot{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}' +
+    '@keyframes splashOut{from{opacity:1}to{opacity:0}}' +
+    '#spl-ring{width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;margin-bottom:24px;box-shadow:0 0 0 12px rgba(255,255,255,.08),0 0 0 24px rgba(255,255,255,.04)}' +
+    '.sd{display:inline-block;width:8px;height:8px;border-radius:50%;background:#fff;margin:0 3px}' +
+    '.sd:nth-child(1){animation:splashDot 1.4s ease-in-out 0s infinite}' +
+    '.sd:nth-child(2){animation:splashDot 1.4s ease-in-out .2s infinite}' +
+    '.sd:nth-child(3){animation:splashDot 1.4s ease-in-out .4s infinite}' +
+    '</style>' +
+    '<div id="spl-ring">' + logoHtml + '</div>' +
+    '<div id="spl-nama" style="color:#fff;font-size:20px;font-weight:800;text-align:center;padding:0 24px;margin-bottom:8px">' + namaInst + '</div>' +
+    '<div style="color:rgba(255,255,255,.7);font-size:13px;margin-bottom:28px">Memuat...</div>' +
+    '<div><span class="sd"></span><span class="sd"></span><span class="sd"></span></div>';
 
-  // Hilang setelah 3 detik
+  document.body.appendChild(el);
+
+  // Update logo/nama dari API di background
+  try {
+    callAPI('getMultipleSetting',{keys:'nama_instansi,logo_url'}).then(function(d) {
+      if (!d) return;
+      try { localStorage.setItem('branding_cache', JSON.stringify(d)); } catch(e2) {}
+      var ring = document.getElementById('spl-ring');
+      if (ring && d.logo_url && !document.getElementById('spl-img')) {
+        ring.innerHTML = '<img src="' + d.logo_url + '" id="spl-img" style="width:80px;height:80px;object-fit:contain;border-radius:50%;animation:rotateLogo 2s linear infinite">';
+      }
+      var nm = document.getElementById('spl-nama');
+      if (nm && d.nama_instansi) nm.textContent = d.nama_instansi;
+    }).catch(function() {});
+  } catch(e) {}
+
   setTimeout(function() {
-    splash.style.animation = 'splashFadeOut .4s ease forwards';
+    el.style.animation = 'splashOut .4s ease forwards';
     setTimeout(function() {
-      splash.remove();
+      try { el.remove(); } catch(e) {}
       if (typeof callback === 'function') callback();
     }, 400);
   }, 3000);
 }
+
 
 function renderLoginPage() {
   document.getElementById('app').innerHTML = `
