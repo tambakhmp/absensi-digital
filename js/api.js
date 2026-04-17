@@ -1,6 +1,6 @@
 // api.js — Komunikasi ke Google Apps Script
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxqxiFzX15uyhRcjOHmBo4w907oEd-PZpLgAPiED4A1UNz9vqBvaYDW3H27BtCuhPZCmQ/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzwAD_xXVTJxhcOsmfBgO4rZ3EWxyE9CZwFmlGq6aQmtds4-uPOul78agB01c63PRMEzw/exec'
 };
 
 async function callAPI(action, payload = {}) {
