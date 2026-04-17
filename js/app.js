@@ -16,6 +16,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   } else {
     renderKaryawanLayout();
   }
+  // Splash screen saat pertama buka app
+  try {
+    var _inst = await callAPI('getMultipleSetting',{keys:'nama_instansi,logo_url'});
+    _showSplashScreen(_inst);
+  } catch(e) {}
 });
 
 window.addEventListener('hashchange', () => {
@@ -29,6 +34,91 @@ window.addEventListener('hashchange', () => {
 // ─────────────────────────────────────────────────────────────
 // LOGIN
 // ─────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────
+// SPLASH SCREEN setelah login berhasil
+// ─────────────────────────────────────────────────────────────
+function _showSplashScreen(instansi, callback) {
+  var logoUrl  = instansi?.logo_url  || '';
+  var namaInst = instansi?.nama_instansi || 'Sistem Absensi';
+
+  var splash = document.createElement('div');
+  splash.id  = 'splash-screen';
+  splash.style.cssText = [
+    'position:fixed','inset:0','z-index:99999',
+    'display:flex','flex-direction:column',
+    'align-items:center','justify-content:center',
+    'background:linear-gradient(135deg,#1E3A5F 0%,#2D6CDF 60%,#1A9E74 100%)',
+    'animation:splashFadeIn .3s ease'
+  ].join(';');
+
+  splash.innerHTML = `
+    <style>
+      @keyframes splashFadeIn { from{opacity:0} to{opacity:1} }
+      @keyframes splashFadeOut { from{opacity:1} to{opacity:0} }
+      @keyframes rotateLogo {
+        0%   { transform: rotate(0deg) scale(1); }
+        25%  { transform: rotate(90deg) scale(1.08); }
+        50%  { transform: rotate(180deg) scale(1); }
+        75%  { transform: rotate(270deg) scale(1.08); }
+        100% { transform: rotate(360deg) scale(1); }
+      }
+      @keyframes splashDots {
+        0%,80%,100% { opacity:.2; transform:scale(.8); }
+        40%         { opacity:1;  transform:scale(1); }
+      }
+      #splash-logo-wrap {
+        width:110px; height:110px;
+        border-radius:50%;
+        background:rgba(255,255,255,.15);
+        display:flex; align-items:center; justify-content:center;
+        margin-bottom:24px;
+        box-shadow:0 0 0 12px rgba(255,255,255,.08), 0 0 0 24px rgba(255,255,255,.04);
+      }
+      #splash-logo-wrap img, #splash-logo-wrap span {
+        animation: rotateLogo 2s linear infinite;
+      }
+      .splash-dot {
+        display:inline-block; width:8px; height:8px;
+        border-radius:50%; background:#fff; margin:0 3px;
+      }
+      .splash-dot:nth-child(1){ animation:splashDots 1.4s ease-in-out .0s infinite; }
+      .splash-dot:nth-child(2){ animation:splashDots 1.4s ease-in-out .2s infinite; }
+      .splash-dot:nth-child(3){ animation:splashDots 1.4s ease-in-out .4s infinite; }
+    </style>
+    <div id="splash-logo-wrap">
+            <div id="splash-logo-img" style="width:80px;height:80px;display:flex;align-items:center;justify-content:center">
+        <img src="${logoUrl}" id="spl-img"
+          style="width:80px;height:80px;object-fit:contain;border-radius:50%;display:${logoUrl?'block':'none'}"
+          onerror="document.getElementById('spl-img').style.display='none';document.getElementById('spl-ico').style.display='block'">
+        <span id="spl-ico" style="font-size:52px;display:${logoUrl?'none':'block'}">📋</span>
+      </div>
+    </div>
+    <div style="color:#fff;font-size:20px;font-weight:800;letter-spacing:.5px;
+      text-align:center;padding:0 24px;text-shadow:0 2px 8px rgba(0,0,0,.3);margin-bottom:8px">
+      ${namaInst}
+    </div>
+    <div style="color:rgba(255,255,255,.7);font-size:13px;margin-bottom:28px">
+      Memuat data...
+    </div>
+    <div>
+      <span class="splash-dot"></span>
+      <span class="splash-dot"></span>
+      <span class="splash-dot"></span>
+    </div>`;
+
+  document.body.appendChild(splash);
+
+  // Hilang setelah 3 detik
+  setTimeout(function() {
+    splash.style.animation = 'splashFadeOut .4s ease forwards';
+    setTimeout(function() {
+      splash.remove();
+      if (typeof callback === 'function') callback();
+    }, 400);
+  }, 3000);
+}
+
 function renderLoginPage() {
   document.getElementById('app').innerHTML = `
     <div id="app-bg"></div><div id="app-overlay"></div>
@@ -92,8 +182,16 @@ async function doLoginForm() {
     const result=await doLogin(user,pass);
     if(result){
       await loadBranding(result.role);
+      // Ambil info instansi untuk splash
+      var splashInst = {};
+      try {
+        splashInst = await callAPI('getMultipleSetting',{keys:'nama_instansi,logo_url'});
+      } catch(e) {}
+      // Render layout dulu (tersembunyi di belakang splash)
       if(result.role==='superadmin'||result.role==='admin') renderAdminLayout();
       else renderKaryawanLayout();
+      // Tampilkan splash screen
+      _showSplashScreen(splashInst);
     }
   }catch(e){
     if(err){err.style.display='block';err.textContent='⚠️ '+e.message;}
