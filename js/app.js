@@ -92,12 +92,6 @@ async function doLoginForm() {
     const result=await doLogin(user,pass);
     if(result){
       await loadBranding(result.role);
-      // Simpan branding ke cache untuk splash screen
-      try {
-        callAPI('getMultipleSetting',{keys:'nama_instansi,logo_url'}).then(function(d){
-          if(d) localStorage.setItem('branding_cache', JSON.stringify(d));
-        }).catch(function(){});
-      } catch(e) {}
       if(result.role==='superadmin'||result.role==='admin') renderAdminLayout();
       else renderKaryawanLayout();
     }
