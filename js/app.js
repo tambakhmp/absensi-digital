@@ -2,7 +2,66 @@
 // app.js v5 — SPA Router Final, Bersih, Tidak Ada Duplikat
 // ============================================================
 
+// ── Splash Screen ──────────────────────────────────────────
+function _showSplash() {
+  var cached = {};
+  try { var r = localStorage.getItem('branding_cache'); if (r) cached = JSON.parse(r); } catch(e) {}
+  var logo = cached.logo_url || '';
+  var nama = cached.nama_instansi || 'Sistem Absensi Digital';
+
+  var el = document.createElement('div');
+  el.id  = 'spl';
+  el.style.cssText =
+    'position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;' +
+    'align-items:center;justify-content:center;' +
+    'background:linear-gradient(135deg,#1E3A5F 0%,#2D6CDF 60%,#1A9E74 100%)';
+
+  var logoHtml = logo
+    ? '<img src="'+logo+'" style="width:80px;height:80px;object-fit:contain;border-radius:50%;animation:splRot 2s linear infinite">'
+    : '<span style="font-size:52px;display:inline-block;animation:splRot 2s linear infinite">&#x1F4CB;</span>';
+
+  el.innerHTML =
+    '<style>' +
+    '@keyframes splRot{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}' +
+    '@keyframes splOut{from{opacity:1}to{opacity:0}}' +
+    '@keyframes splDot{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}' +
+    '#spl-ring{width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.15);' +
+    'display:flex;align-items:center;justify-content:center;margin-bottom:24px;' +
+    'box-shadow:0 0 0 12px rgba(255,255,255,.08),0 0 0 24px rgba(255,255,255,.04)}' +
+    '.sd{display:inline-block;width:8px;height:8px;border-radius:50%;background:#fff;margin:0 3px}' +
+    '.sd:nth-child(1){animation:splDot 1.4s ease-in-out 0s infinite}' +
+    '.sd:nth-child(2){animation:splDot 1.4s ease-in-out .2s infinite}' +
+    '.sd:nth-child(3){animation:splDot 1.4s ease-in-out .4s infinite}' +
+    '</style>' +
+    '<div id="spl-ring">'+logoHtml+'</div>' +
+    '<div id="spl-nama" style="color:#fff;font-size:20px;font-weight:800;text-align:center;' +
+    'padding:0 24px;margin-bottom:8px">'+nama+'</div>' +
+    '<div style="color:rgba(255,255,255,.7);font-size:13px;margin-bottom:28px">Memuat...</div>' +
+    '<div><span class="sd"></span><span class="sd"></span><span class="sd"></span></div>';
+
+  document.body.appendChild(el);
+
+  try {
+    callAPI('getMultipleSetting',{keys:'nama_instansi,logo_url'}).then(function(d) {
+      if (!d) return;
+      try { localStorage.setItem('branding_cache', JSON.stringify(d)); } catch(e2) {}
+      var nm = document.getElementById('spl-nama');
+      if (nm && d.nama_instansi) nm.textContent = d.nama_instansi;
+      var ring = document.getElementById('spl-ring');
+      if (ring && d.logo_url) {
+        ring.innerHTML = '<img src="'+d.logo_url+'" style="width:80px;height:80px;object-fit:contain;border-radius:50%;animation:splRot 2s linear infinite">';
+      }
+    }).catch(function(){});
+  } catch(e) {}
+
+  setTimeout(function() {
+    el.style.animation = 'splOut .4s ease forwards';
+    setTimeout(function() { try { el.remove(); } catch(e) {} }, 400);
+  }, 3000);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
+  _showSplash();
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/service-worker.js')
       .then(r => console.log('SW:', r.scope))
