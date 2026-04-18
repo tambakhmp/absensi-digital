@@ -57,70 +57,32 @@
   </style>
 </head>
 <body>
-  <!-- SPLASH SCREEN -->
-  <style>
-    @keyframes splRot{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
-    @keyframes splOut{0%{opacity:1}100%{opacity:0}}
-    @keyframes splDot{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
-    #spl-cover{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;
-      align-items:center;justify-content:center;
-      background:linear-gradient(135deg,#1E3A5F 0%,#2D6CDF 60%,#1A9E74 100%)}
-    #spl-ring{width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.15);
-      display:flex;align-items:center;justify-content:center;margin-bottom:24px;
-      box-shadow:0 0 0 12px rgba(255,255,255,.08),0 0 0 24px rgba(255,255,255,.04)}
-    .spl-spin{animation:splRot 2s linear infinite}
-    #spl-ico{font-size:52px}
-    .sd{display:inline-block;width:8px;height:8px;border-radius:50%;background:#fff;margin:0 3px}
-    .sd:nth-child(1){animation:splDot 1.4s ease-in-out 0s infinite}
-    .sd:nth-child(2){animation:splDot 1.4s ease-in-out .2s infinite}
-    .sd:nth-child(3){animation:splDot 1.4s ease-in-out .4s infinite}
-  </style>
-  <div id="spl-cover">
-    <div id="spl-ring"><span id="spl-ico" class="spl-spin">📋</span></div>
-    <div id="spl-nama" style="color:#fff;font-size:20px;font-weight:800;text-align:center;padding:0 24px;margin-bottom:8px">Sistem Absensi Digital</div>
-    <div style="color:rgba(255,255,255,.7);font-size:13px;margin-bottom:28px">Memuat...</div>
-    <div><span class="sd"></span><span class="sd"></span><span class="sd"></span></div>
+  <div id="app">
+    <!-- Loading awal -->
+    <div style="height:100vh;display:flex;flex-direction:column;align-items:center;
+      justify-content:center;gap:16px;background:#F8FAFC">
+      <div style="width:60px;height:60px;border-radius:14px;background:linear-gradient(135deg,#2D6CDF,#1A9E74);
+        display:flex;align-items:center;justify-content:center;font-size:28px">📋</div>
+      <div style="font-size:15px;font-weight:600;color:#1E293B">Sistem Absensi Digital</div>
+      <div style="width:40px;height:40px;border:3px solid #E2E8F0;border-top-color:#2D6CDF;
+        border-radius:50%;animation:spin .8s linear infinite"></div>
+    </div>
   </div>
-  <div id="app"></div>
-  <script>
-    // Splash: ambil cache & set timer — script di luar div, lebih reliable
-    (function() {
-      try {
-        var bc = JSON.parse(localStorage.getItem('branding_cache') || '{}');
-        if (bc.nama_instansi) document.getElementById('spl-nama').textContent = bc.nama_instansi;
-        if (bc.logo_url) {
-          document.getElementById('spl-ring').innerHTML =
-            '<img src="' + bc.logo_url + '" class="spl-spin" style="width:80px;height:80px;' +
-            'object-fit:contain;border-radius:50%" onerror="this.style.display='none'">';
-        }
-      } catch(e) {}
-      setTimeout(function() {
-        var spl = document.getElementById('spl-cover');
-        if (!spl) return;
-        spl.style.transition = 'opacity .4s ease';
-        spl.style.opacity = '0';
-        setTimeout(function() {
-          var s = document.getElementById('spl-cover');
-          if (s) s.style.display = 'none';
-        }, 400);
-      }, 3000);
-    })();
-  </script>
 
   <!-- JS — urutan penting, tidak boleh ditukar -->
-  <script src="/js/api.js?v=202604181000"></script>
-  <script src="/js/auth.js?v=202604181000"></script>
-  <script src="/js/utils.js?v=202604181000"></script>
-  <script src="/js/branding.js?v=202604181000"></script>
-  <script src="/js/ranking.js?v=202604181000"></script>
-  <script src="/js/dashboard.js?v=202604181000"></script>
-  <script src="/js/absensi.js?v=202604181000"></script>
-  <script src="/js/pengajuan.js?v=202604181000"></script>
-  <script src="/js/profil.js?v=202604181000"></script>
-  <script src="/js/laporan.js?v=202604181000"></script>
-  <script src="/js/admin_karyawan.js?v=202604181000"></script>
+  <script src="/js/api.js?v=202604131230"></script>
+  <script src="/js/auth.js?v=202604131230"></script>
+  <script src="/js/utils.js?v=202604131230"></script>
+  <script src="/js/branding.js?v=202604131230"></script>
+  <script src="/js/ranking.js?v=202604131230"></script>
+  <script src="/js/dashboard.js?v=202604131230"></script>
+  <script src="/js/absensi.js?v=202604131230"></script>
+  <script src="/js/pengajuan.js?v=202604131230"></script>
+  <script src="/js/profil.js?v=202604131230"></script>
+  <script src="/js/laporan.js?v=202604131230"></script>
+  <script src="/js/admin_karyawan.js?v=202604131230"></script>
   <script src="/js/cuti_khusus.js"></script>
-  <script src="/js/admin_pages.js?v=202604181000"></script>
-  <script src="/js/app.js?v=202604181000"></script>
+  <script src="/js/admin_pages.js?v=202604131230"></script>
+  <script src="/js/app.js?v=202604131230"></script>
 </body>
 </html>
