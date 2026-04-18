@@ -8,16 +8,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       .then(r => console.log('SW:', r.scope))
       .catch(e => console.warn('SW:', e));
   }
-  _showSplashScreen(async function() {
-    if (!isLoggedIn()) { renderLoginPage(); return; }
-    const user = getSession();
-    await loadBranding(user?.role || 'karyawan');
-    if (user?.role === 'superadmin' || user?.role === 'admin') {
-      renderAdminLayout();
-    } else {
-      renderKaryawanLayout();
-    }
-  });
+  if (!isLoggedIn()) { renderLoginPage(); return; }
+  const user = getSession();
+  await loadBranding(user?.role || 'karyawan');
+  if (user?.role === 'superadmin' || user?.role === 'admin') {
+    renderAdminLayout();
+  } else {
+    renderKaryawanLayout();
+  }
 });
 
 window.addEventListener('hashchange', () => {
@@ -31,77 +29,19 @@ window.addEventListener('hashchange', () => {
 // ─────────────────────────────────────────────────────────────
 // LOGIN
 // ─────────────────────────────────────────────────────────────
-
-// ─────────────────────────────────────────────────────────────
-// SPLASH SCREEN setelah login berhasil
-// ─────────────────────────────────────────────────────────────
-function _showSplashScreen(callback) {
-  var cached = {};
-  try { var raw = localStorage.getItem('branding_cache'); if (raw) cached = JSON.parse(raw); } catch(e) {}
-  var logoUrl  = cached.logo_url || '';
-  var namaInst = cached.nama_instansi || 'Sistem Absensi Digital';
-
-  var el = document.createElement('div');
-  el.id = 'splash-screen';
-  el.setAttribute('style',
-    'position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;' +
-    'align-items:center;justify-content:center;' +
-    'background:linear-gradient(135deg,#1E3A5F 0%,#2D6CDF 60%,#1A9E74 100%)');
-
-  var logoHtml = logoUrl
-    ? '<img src="' + logoUrl + '" id="spl-img" style="width:80px;height:80px;object-fit:contain;border-radius:50%;animation:rotateLogo 2s linear infinite">'
-    : '<span id="spl-ico" style="font-size:52px;display:inline-block;animation:rotateLogo 2s linear infinite">&#x1F4CB;</span>';
-
-  el.innerHTML =
-    '<style>' +
-    '@keyframes rotateLogo{0%{transform:rotate(0deg) scale(1)}25%{transform:rotate(90deg) scale(1.08)}50%{transform:rotate(180deg)}75%{transform:rotate(270deg) scale(1.08)}100%{transform:rotate(360deg) scale(1)}}' +
-    '@keyframes splashDot{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}' +
-    '@keyframes splashOut{from{opacity:1}to{opacity:0}}' +
-    '#spl-ring{width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;margin-bottom:24px;box-shadow:0 0 0 12px rgba(255,255,255,.08),0 0 0 24px rgba(255,255,255,.04)}' +
-    '.sd{display:inline-block;width:8px;height:8px;border-radius:50%;background:#fff;margin:0 3px}' +
-    '.sd:nth-child(1){animation:splashDot 1.4s ease-in-out 0s infinite}' +
-    '.sd:nth-child(2){animation:splashDot 1.4s ease-in-out .2s infinite}' +
-    '.sd:nth-child(3){animation:splashDot 1.4s ease-in-out .4s infinite}' +
-    '</style>' +
-    '<div id="spl-ring">' + logoHtml + '</div>' +
-    '<div id="spl-nama" style="color:#fff;font-size:20px;font-weight:800;text-align:center;padding:0 24px;margin-bottom:8px">' + namaInst + '</div>' +
-    '<div style="color:rgba(255,255,255,.7);font-size:13px;margin-bottom:28px">Memuat...</div>' +
-    '<div><span class="sd"></span><span class="sd"></span><span class="sd"></span></div>';
-
-  document.body.appendChild(el);
-
-  // Update logo/nama dari API di background
-  try {
-    callAPI('getMultipleSetting',{keys:'nama_instansi,logo_url'}).then(function(d) {
-      if (!d) return;
-      try { localStorage.setItem('branding_cache', JSON.stringify(d)); } catch(e2) {}
-      var ring = document.getElementById('spl-ring');
-      if (ring && d.logo_url && !document.getElementById('spl-img')) {
-        ring.innerHTML = '<img src="' + d.logo_url + '" id="spl-img" style="width:80px;height:80px;object-fit:contain;border-radius:50%;animation:rotateLogo 2s linear infinite">';
-      }
-      var nm = document.getElementById('spl-nama');
-      if (nm && d.nama_instansi) nm.textContent = d.nama_instansi;
-    }).catch(function() {});
-  } catch(e) {}
-
-  setTimeout(function() {
-    el.style.animation = 'splashOut .4s ease forwards';
-    setTimeout(function() {
-      try { el.remove(); } catch(e) {}
-      if (typeof callback === 'function') callback();
-    }, 400);
-  }, 3000);
-}
-
-
 function renderLoginPage() {
   document.getElementById('app').innerHTML = `
     <div id="app-bg"></div><div id="app-overlay"></div>
     <div class="login-page">
       <div class="login-card">
         <div class="login-logo">
-          <p class="login-subtitle" id="login-subtitle" style="margin-bottom:8px">
-            Masuk dengan akun Anda</p>
+          <div id="login-logo-wrap"
+            style="width:88px;height:88px;margin:0 auto 14px;
+            display:flex;align-items:center;justify-content:center">
+            <span id="login-logo-placeholder" style="font-size:52px">📋</span>
+          </div>
+          <h1 class="nama-instansi" id="login-nama-instansi">Sistem Absensi</h1>
+          <p class="login-subtitle" id="login-subtitle">Masuk dengan akun karyawan Anda</p>
         </div>
         <div id="login-err" style="display:none;background:#FFF5F5;border:1px solid #FC8181;
           border-radius:8px;padding:12px;color:#C53030;font-size:13px;margin-bottom:16px"></div>
@@ -128,6 +68,7 @@ function renderLoginPage() {
         <p style="text-align:center;font-size:11px;color:#CBD5E0;margin-top:8px" id="footer-text"></p>
       </div>
     </div>`;
+  loadBranding('karyawan');
 }
 
 function togglePW(){
@@ -151,7 +92,6 @@ async function doLoginForm() {
     const result=await doLogin(user,pass);
     if(result){
       await loadBranding(result.role);
-      // Render layout langsung setelah login
       if(result.role==='superadmin'||result.role==='admin') renderAdminLayout();
       else renderKaryawanLayout();
     }
