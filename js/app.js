@@ -5,8 +5,9 @@
 document.addEventListener('DOMContentLoaded', async () => {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/service-worker.js')
-      .then(r => console.log('SW:', r.scope))
+      .then(r => { r.update(); console.log('SW:', r.scope); })
       .catch(e => console.warn('SW:', e));
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{ window.location.reload(); });
   }
   if (!isLoggedIn()) { renderLoginPage(); return; }
   const user = getSession();
@@ -96,9 +97,8 @@ async function doLoginForm() {
   try{
     const result=await doLogin(user,pass);
     if(result){
-      await loadBranding(result.role);
-      if(result.role==='superadmin'||result.role==='admin') renderAdminLayout();
-      else renderKaryawanLayout();
+      // Reload agar JS terbaru dari server, bukan dari cache
+      window.location.reload();
     }
   }catch(e){
     if(err){err.style.display='block';err.textContent='⚠️ '+e.message;}
@@ -613,7 +613,11 @@ function routeAdmin(page) {
 }
 
 function confirmLogout(){
-  showModal('🚪 Logout?','Anda akan keluar dari aplikasi.',()=>doLogout(),'Ya, Logout');
+  showModal('🚪 Logout?','Anda akan keluar dari aplikasi.',function() {
+    doLogout();
+    // Reload halaman setelah logout agar halaman bersih
+    setTimeout(function() { window.location.reload(); }, 200);
+  },'Ya, Logout');
 }
 
 // ─── Chart 6 Bulan ───────────────────────────────────────────
