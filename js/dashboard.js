@@ -58,7 +58,16 @@ async function _loadProfilFoto(user) {
     try {
       const rank  = await getPredikatSaya(user.id_karyawan);
       const wrap  = document.getElementById('dash-foto-wrap');
-      if (wrap) wrap.innerHTML = renderFotoProfil(profil.foto_profil_url, user.nama, rank?.predikat||'', 80);
+      if (wrap) {
+        // Normalize URL sebelum render
+        const _fotoUrl = profil.foto_profil_url
+          ? (typeof normalizeDriveUrlFrontend === 'function'
+              ? normalizeDriveUrlFrontend(profil.foto_profil_url)
+              : profil.foto_profil_url)
+          : '';
+        const _profilFixed = Object.assign({}, profil, { foto_profil_url: _fotoUrl });
+        wrap.innerHTML = renderFotoProfil(_profilFixed.foto_profil_url, user.nama, rank?.predikat||'', 80);
+      }
     } catch(e) {}
   } catch(e) {}
 }
