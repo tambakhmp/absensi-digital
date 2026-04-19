@@ -69,7 +69,7 @@ function _renderUltah(ultah) {
     🎂 Ulang Tahun Hari Ini (${ultah.length})</h3>
     ${ultah.map(k=>`<div style="display:flex;align-items:center;gap:10px;
       padding:8px 0;border-bottom:1px solid #F1F5F9">
-      <img src="${getPhotoSrc(k.foto||'',k.nama)}"
+      <img src="${_normFoto(k.foto||'',k.nama)}"
         style="width:36px;height:36px;border-radius:50%;object-fit:cover"
         onerror="this.src='${avatarInisial(k.nama||'U',36)}'">
       <div><div style="font-weight:600;font-size:14px">${k.nama} 🎂</div>
@@ -361,6 +361,15 @@ async function renderPengajuanAdminFull(container) {
     </div>
     <div id="pgj-admin-list">${skeletonCard(4)}</div>`;
   await loadPengajuanAdminV4();
+}
+
+
+// Normalize URL foto untuk tampil di browser
+function _normFoto(url, nama, size) {
+  if (!url || url === '' || url === 'null') return getPhotoSrc('', nama, size);
+  const norm = typeof normalizeDriveUrlFrontend === 'function'
+    ? normalizeDriveUrlFrontend(url) : url;
+  return norm && norm.startsWith('http') ? norm : getPhotoSrc('', nama, size);
 }
 
 async function loadPengajuanAdminV4() {
@@ -657,7 +666,7 @@ async function loadRankingAdmin() {
 
     function rCard(r) {
       const border=BORDER[parseInt(r.peringkat)]||WBORDER[r.predikat]||'';
-      const foto=getPhotoSrc(r.foto||'',r.nama_karyawan,48);
+      const foto=_normFoto(r.foto||'',r.nama_karyawan,48);
       const emoji=['🥇','🥈','🥉'][parseInt(r.peringkat)-1]||'#'+r.peringkat;
       return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;
           border-bottom:1px solid #F1F5F9">
