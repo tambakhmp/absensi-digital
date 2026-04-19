@@ -1453,25 +1453,67 @@ function _sc2(key,label,map){
         oninput="document.getElementById('set-${key}-color').value=this.value">
     </div></div>`;
 }
-function _siUrl(key,label,map){
-  const val=map[key]||'';
-  const normUrl=val?normalizeDriveUrlFrontend(val):'';
+function _siUrl(key, label, map) {
+  const val     = map[key] || '';
+  const normUrl = val ? normalizeDriveUrlFrontend(val) : '';
   return `<div class="form-group">
     <label class="form-label">${label}</label>
-    <input type="url" class="form-control" id="set-${key}" value="${val}"
-      placeholder="https://drive.google.com/file/d/..."
-      oninput="_prevImg(this.value,'${key}-prev')">
-    <div id="${key}-prev" style="margin-top:6px;display:${val?'block':'none'}">
-      <img src="${normUrl}" style="max-width:100%;max-height:70px;border-radius:6px;
+    <input type="hidden" id="set-${key}" value="${val}">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <label for="file-${key}" style="display:inline-flex;align-items:center;gap:6px;
+        background:#2D6CDF;color:#fff;padding:8px 14px;border-radius:8px;
+        cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap">
+        📁 Pilih File
+        <input type="file" id="file-${key}" accept="image/*"
+          style="display:none" onchange="_uploadAsset(this,'${key}')">
+      </label>
+      <span id="stt-${key}" style="font-size:12px;color:#64748B">
+        ${val ? '✅ Sudah ada file' : '⬜ Belum ada'}
+      </span>
+    </div>
+    <div id="${key}-prev" style="margin-top:8px;display:${val?'block':'none'}">
+      <img src="${normUrl}" style="max-height:70px;max-width:100%;border-radius:6px;
         border:1px dashed #CBD5E0;object-fit:cover"
         onerror="this.style.display='none'" onload="this.style.display='block'">
-    </div></div>`;
+    </div>
+  </div>`;
 }
-function _prevImg(url,previewId){
-  const el=document.getElementById(previewId);if(!el) return;
-  const n=normalizeDriveUrlFrontend(url);
-  if(n){el.style.display='block';const img=el.querySelector('img');if(img){img.src=n;img.style.display='block';}}
-  else el.style.display='none';
+
+async function _uploadAsset(input, key) {
+  const file = input.files[0];
+  if (!file) return;
+  const stt = document.getElementById('stt-' + key);
+  if (stt) stt.textContent = '⏳ Mengupload...';
+  try {
+    const base64 = await new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onload = () => res(reader.result.split(',')[1]);
+      reader.onerror = rej;
+      reader.readAsDataURL(file);
+    });
+    const result = await callAPI('uploadAsset', {
+      base64: base64,
+      fileName: key + '_' + Date.now() + '.' + file.name.split('.').pop(),
+      mimeType: file.type || 'image/jpeg'
+    });
+    if (!result || !result.url) throw new Error('Upload gagal');
+    // Simpan URL ke hidden input
+    const hidden = document.getElementById('set-' + key);
+    if (hidden) hidden.value = result.url;
+    // Update preview
+    const prev = document.getElementById(key + '-prev');
+    if (prev) {
+      prev.style.display = 'block';
+      const img = prev.querySelector('img');
+      if (img) { img.src = normalizeDriveUrlFrontend(result.url); img.style.display = 'block'; }
+    }
+    if (stt) stt.textContent = '✅ ' + file.name;
+    showToast('Upload berhasil! ✅', 'success');
+  } catch(e) {
+    if (stt) stt.textContent = '❌ Gagal: ' + e.message;
+    showToast('Upload gagal: ' + e.message, 'error');
+  }
+  input.value = '';
 }
 
 async function simpanPengaturanAdmin(){
