@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     navigator.serviceWorker.register('/service-worker.js')
       .then(r => { r.update(); console.log('SW:', r.scope); })
       .catch(e => console.warn('SW:', e));
-    navigator.serviceWorker.addEventListener('controllerchange',()=>{ window.location.reload(); });
   }
   if (!isLoggedIn()) { renderLoginPage(); return; }
   const user = getSession();
