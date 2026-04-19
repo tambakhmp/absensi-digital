@@ -38,7 +38,12 @@ function renderLoginPage() {
           <div id="login-logo-wrap"
             style="width:88px;height:88px;margin:0 auto 14px;
             display:flex;align-items:center;justify-content:center">
-            <span id="login-logo-placeholder" style="font-size:52px">📋</span>
+              <img class="logo-instansi" id="login-logo-img"
+                src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
+                alt="Logo" style="width:88px;height:88px;object-fit:contain;
+                border-radius:14px;display:none"
+                onload="this.style.display='block';document.getElementById('login-logo-placeholder').style.display='none'">
+              <span id="login-logo-placeholder" style="font-size:52px">📋</span>
           </div>
           <h1 class="nama-instansi" id="login-nama-instansi">Sistem Absensi</h1>
           <p class="login-subtitle" id="login-subtitle">Masuk dengan akun karyawan Anda</p>
