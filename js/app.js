@@ -38,6 +38,10 @@ function renderLoginPage() {
           <div id="login-logo-wrap"
             style="width:88px;height:88px;margin:0 auto 14px;
             display:flex;align-items:center;justify-content:center">
+            <img class="logo-instansi" id="login-logo-img"
+              src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
+              alt="" style="width:88px;height:88px;object-fit:contain;border-radius:14px;display:none"
+              onload="this.style.display='block';document.getElementById('login-logo-placeholder').style.display='none'">
             <span id="login-logo-placeholder" style="font-size:52px">📋</span>
           </div>
           <h1 class="nama-instansi" id="login-nama-instansi">Sistem Absensi</h1>
@@ -68,6 +72,21 @@ function renderLoginPage() {
         <p style="text-align:center;font-size:11px;color:#CBD5E0;margin-top:8px" id="footer-text"></p>
       </div>
     </div>`;
+  // Tampilkan branding dari cache dulu (instant, tanpa tunggu API)
+  try {
+    var _bc = JSON.parse(localStorage.getItem('_brand') || '{}');
+    if (_bc.logo_url) {
+      var _img = document.getElementById('login-logo-img');
+      var _ph  = document.getElementById('login-logo-placeholder');
+      if (_img) { _img.src = _bc.logo_url; _img.style.display='block'; }
+      if (_ph)  _ph.style.display = 'none';
+    }
+    if (_bc.nama_instansi) {
+      var _nm = document.getElementById('login-nama-instansi');
+      if (_nm) _nm.textContent = _bc.nama_instansi;
+    }
+  } catch(e) {}
+  // Tetap panggil loadBranding untuk update + simpan cache terbaru
   loadBranding('karyawan');
 }
 
@@ -91,9 +110,13 @@ async function doLoginForm() {
   try{
     const result=await doLogin(user,pass);
     if(result){
-      await loadBranding(result.role);
-      if(result.role==='superadmin'||result.role==='admin') renderAdminLayout();
-      else renderKaryawanLayout();
+      // Simpan branding ke cache agar tampil langsung next open
+      try {
+        callAPI('getMultipleSetting',{keys:'nama_instansi,logo_url'}).then(function(d){
+          if(d) localStorage.setItem('_brand', JSON.stringify(d));
+          window.location.reload();
+        }).catch(function(){ window.location.reload(); });
+      } catch(e) { window.location.reload(); }
     }
   }catch(e){
     if(err){err.style.display='block';err.textContent='⚠️ '+e.message;}
@@ -608,7 +631,10 @@ function routeAdmin(page) {
 }
 
 function confirmLogout(){
-  showModal('🚪 Logout?','Anda akan keluar dari aplikasi.',()=>doLogout(),'Ya, Logout');
+  showModal('🚪 Logout?','Anda akan keluar dari aplikasi.',function(){
+    doLogout();
+    setTimeout(function(){ window.location.reload(); },150);
+  },'Ya, Logout');
 }
 
 // ─── Chart 6 Bulan ───────────────────────────────────────────
