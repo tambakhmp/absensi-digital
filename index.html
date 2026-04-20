@@ -22,6 +22,29 @@
   <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png">
   <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png">
 
+  <!-- ⚡ EARLY BRANDING CACHE — harus dijalankan SEBELUM CSS supaya tidak ada kedipan warna default -->
+  <script>
+  (function() {
+    try {
+      var c = JSON.parse(localStorage.getItem('_brand') || 'null');
+      if (!c) return;
+      // Expire cache 7 hari
+      if (c._ts && (Date.now() - c._ts) > 7*24*60*60*1000) {
+        localStorage.removeItem('_brand');
+        return;
+      }
+      var r = document.documentElement;
+      if (c.warna_primer)   r.style.setProperty('--color-primer', c.warna_primer);
+      if (c.warna_sekunder) r.style.setProperty('--color-sekunder', c.warna_sekunder);
+      var mt = document.querySelector('meta[name="theme-color"]');
+      if (mt && c.warna_primer) mt.setAttribute('content', c.warna_primer);
+      if (c.nama_instansi) document.title = c.nama_instansi + ' — Absensi';
+      // Expose ke script lain (branding.js & app.js) supaya tidak perlu re-parse
+      window.__brandCache = c;
+    } catch(e) {}
+  })();
+  </script>
+
   <!-- CSS -->
   <link rel="stylesheet" href="/css/main.css">
   <link rel="stylesheet" href="/css/ranking.css">
@@ -58,16 +81,38 @@
 </head>
 <body>
   <div id="app">
-    <!-- Loading awal -->
-    <div style="height:100vh;display:flex;flex-direction:column;align-items:center;
+    <!-- Loading awal — pakai CSS variables supaya ikut warna cached branding -->
+    <div id="boot-loader" style="height:100vh;display:flex;flex-direction:column;align-items:center;
       justify-content:center;gap:16px;background:#F8FAFC">
-      <div style="width:60px;height:60px;border-radius:14px;background:linear-gradient(135deg,#2D6CDF,#1A9E74);
-        display:flex;align-items:center;justify-content:center;font-size:28px">📋</div>
-      <div style="font-size:15px;font-weight:600;color:#1E293B">Sistem Absensi Digital</div>
-      <div style="width:40px;height:40px;border:3px solid #E2E8F0;border-top-color:#2D6CDF;
+      <div id="boot-logo" style="width:60px;height:60px;border-radius:14px;
+        background:linear-gradient(135deg,var(--color-primer,#2D6CDF),var(--color-sekunder,#1A9E74));
+        display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;overflow:hidden">📋</div>
+      <div id="boot-text" style="font-size:15px;font-weight:600;color:#1E293B">Sistem Absensi Digital</div>
+      <div style="width:40px;height:40px;border:3px solid #E2E8F0;
+        border-top-color:var(--color-primer,#2D6CDF);
         border-radius:50%;animation:spin .8s linear infinite"></div>
     </div>
   </div>
+  <!-- Inline: pakai cache utk logo/nama di loader -->
+  <script>
+  (function(){
+    try {
+      var c = window.__brandCache;
+      if (!c) return;
+      if (c.logo_url) {
+        var bl = document.getElementById('boot-logo');
+        if (bl) {
+          bl.innerHTML = '<img src="'+c.logo_url+'" alt="" style="max-width:60px;max-height:60px;object-fit:contain" onerror="this.parentNode.innerHTML=\'📋\'">';
+          bl.style.background = 'transparent';
+        }
+      }
+      if (c.nama_instansi) {
+        var bt = document.getElementById('boot-text');
+        if (bt) bt.textContent = c.nama_instansi;
+      }
+    } catch(e) {}
+  })();
+  </script>
 
   <!-- JS — urutan penting, tidak boleh ditukar -->
   <script src="/js/api.js?v=202604191200"></script>
