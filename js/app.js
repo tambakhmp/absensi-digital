@@ -74,16 +74,43 @@ function renderLoginPage() {
     </div>`;
   // Tampilkan branding dari cache dulu (instant, tanpa tunggu API)
   try {
-    var _bc = JSON.parse(localStorage.getItem('_brand') || '{}');
+    var _bc = window.__brandCache || JSON.parse(localStorage.getItem('_brand') || '{}');
+    // Warna CSS variables (paling penting utk hilangkan flash biru default)
+    if (_bc.warna_primer)   document.documentElement.style.setProperty('--color-primer', _bc.warna_primer);
+    if (_bc.warna_sekunder) document.documentElement.style.setProperty('--color-sekunder', _bc.warna_sekunder);
+    // Logo
     if (_bc.logo_url) {
       var _img = document.getElementById('login-logo-img');
       var _ph  = document.getElementById('login-logo-placeholder');
       if (_img) { _img.src = _bc.logo_url; _img.style.display='block'; }
       if (_ph)  _ph.style.display = 'none';
     }
+    // Nama instansi
     if (_bc.nama_instansi) {
       var _nm = document.getElementById('login-nama-instansi');
       if (_nm) _nm.textContent = _bc.nama_instansi;
+    }
+    // Subtitle
+    if (_bc.login_subtitle) {
+      var _sub = document.getElementById('login-subtitle');
+      if (_sub) _sub.textContent = _bc.login_subtitle;
+    }
+    // Footer
+    if (_bc.footer_text) {
+      var _ft = document.getElementById('footer-text');
+      if (_ft) _ft.textContent = _bc.footer_text;
+    }
+    // Background (dari bg_karyawan yg sudah di-cache setelah login pertama)
+    if (_bc.bg_karyawan) {
+      var _bg = document.getElementById('app-bg');
+      if (_bg) {
+        _bg.style.backgroundImage = "url('" + _bc.bg_karyawan + "')";
+        _bg.style.backgroundSize = 'cover';
+        _bg.style.backgroundPosition = 'center';
+        _bg.style.backgroundAttachment = 'fixed';
+      }
+      var _ov = document.getElementById('app-overlay');
+      if (_ov) _ov.style.background = 'rgba(255,255,255,0.88)';
     }
   } catch(e) {}
   // Tetap panggil loadBranding untuk update + simpan cache terbaru
