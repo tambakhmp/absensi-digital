@@ -132,6 +132,25 @@ async function loadBranding(role = 'karyawan') {
     // Title browser
     if (s.nama_instansi) document.title = 'Absensi — ' + s.nama_instansi;
 
+    // ⚡ Simpan cache utk mengurangi flash di kunjungan berikutnya
+    try {
+      var _oldCache = {};
+      try { _oldCache = JSON.parse(localStorage.getItem('_brand') || '{}'); } catch(_){}
+      const _cacheData = {
+        nama_instansi: s.nama_instansi || '',
+        singkatan_instansi: s.singkatan_instansi || '',
+        logo_url: (logoUrl && logoUrl.startsWith('http')) ? logoUrl : '',
+        warna_primer: primer,
+        warna_sekunder: sekund,
+        login_subtitle: s.login_subtitle || '',
+        footer_text: s.footer_text || '',
+        [`bg_${role}`]: (bgUrl && bgUrl.startsWith('http')) ? bgUrl : '',
+        _ts: Date.now()
+      };
+      // Merge agar bg_role lain tidak hilang
+      localStorage.setItem('_brand', JSON.stringify(Object.assign({}, _oldCache, _cacheData)));
+    } catch(_) {}
+
     _brandingLoaded = true;
   } catch(e) {
     console.warn('loadBranding error:', e.message);
@@ -141,6 +160,7 @@ async function loadBranding(role = 'karyawan') {
 // Reset cache branding (dipanggil setelah simpan pengaturan)
 function resetBrandingCache() {
   _brandingLoaded = false;
+  try { localStorage.removeItem('_brand'); } catch(_) {}
 }
 
 // Ambil branding tanpa token (untuk halaman login)
