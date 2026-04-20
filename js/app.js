@@ -8,7 +8,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       .then(r => console.log('SW:', r.scope))
       .catch(e => console.warn('SW:', e));
   }
-  if (!isLoggedIn()) { renderLoginPage(); return; }
+  if (!isLoggedIn()) {
+    // Tunggu branding selesai dulu (timeout 3s agar tidak hang kalau offline)
+    // supaya login form langsung muncul dengan warna/logo yang benar — tidak ada kedipan
+    try {
+      await Promise.race([
+        loadBranding('karyawan'),
+        new Promise(resolve => setTimeout(resolve, 3000))
+      ]);
+    } catch(e) {}
+    renderLoginPage();
+    return;
+  }
   const user = getSession();
   await loadBranding(user?.role || 'karyawan');
   if (user?.role === 'superadmin' || user?.role === 'admin') {
