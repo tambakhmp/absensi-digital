@@ -162,7 +162,7 @@
         if (tp) {
           var nm = c.nama_instansi.trim();
           // Repeat cukup banyak supaya lingkaran penuh walau nama pendek
-          var repeats = Math.max(2, Math.ceil(60 / (nm.length + 3)));
+          var repeats = Math.max(2, Math.ceil(60 / (nm.length + 2)));
           tp.textContent = (nm + ' • ').repeat(repeats);
         }
       }
