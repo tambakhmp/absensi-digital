@@ -733,10 +733,6 @@ async function loadJadwalMingguSaya() {
     if (!card || !list) return;
     if (!data || data.length === 0) { card.style.display='none'; return; }
 
-    // Ambil nama user dari session
-    const user = (typeof getSession === 'function') ? getSession() : null;
-    const userName = user?.nama_lengkap || user?.nama || 'Saya';
-
     const now  = new Date(); now.setHours(0,0,0,0);
     const HARI = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
     const BULAN= ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
@@ -758,61 +754,49 @@ async function loadJadwalMingguSaya() {
       const isPast  = d<now && !isToday;
       const isLibur = j.kode==='L';
       const warna   = KC[j.kode]||'#94A3B8';
-      const jm = j.shift?.jam_masuk||j.jam_masuk||'', jk = j.shift?.jam_keluar||j.jam_keluar||'';
-      return `<div style="display:flex;align-items:center;gap:8px;padding:8px 6px;
-        border-bottom:1px solid #F1F5F9;opacity:${isPast?'0.45':'1'};
-        ${isToday?'background:#EFF6FF;border-radius:8px;':''}">
-        <div style="min-width:42px;text-align:center;flex-shrink:0">
+      const jm = j.shift?.jam_masuk||'', jk = j.shift?.jam_keluar||'';
+      return `<div style="display:flex;align-items:center;gap:8px;padding:7px 4px;
+        border-bottom:1px solid #F1F5F9;opacity:${isPast?'0.4':'1'};
+        ${isToday?'background:#EFF6FF;margin:0 -4px;padding:7px 8px;border-radius:8px;':''}">
+        <div style="min-width:40px;text-align:center;flex-shrink:0">
           <div style="font-size:9px;font-weight:700;color:${isToday?'#2D6CDF':'#94A3B8'}">${HARI[d.getDay()]}</div>
-          <div style="font-size:15px;font-weight:800;color:${isToday?'#2D6CDF':'#1E293B'};line-height:1.1">${String(d.getDate()).padStart(2,'0')}</div>
+          <div style="font-size:14px;font-weight:700;color:${isToday?'#2D6CDF':'#1E293B'};line-height:1.2">${String(d.getDate()).padStart(2,'0')}</div>
           <div style="font-size:9px;color:#94A3B8">${BULAN[d.getMonth()]}</div>
         </div>
-        <div style="flex:1;min-width:0">
-          <span style="background:${warna}22;color:${isLibur?'#94A3B8':warna};border:1px solid ${warna}55;
-            padding:3px 10px;border-radius:6px;font-size:12px;font-weight:${isToday?'700':'600'};
-            display:inline-block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">
+        <div style="flex:1">
+          <span style="background:${warna}22;color:${isLibur?'#94A3B8':warna};border:1px solid ${warna}33;
+            padding:2px 8px;border-radius:6px;font-size:12px;font-weight:${isToday?'700':'600'}">
             ${isLibur?'🏖️ Libur':(KN[j.kode]||j.kode)+(jm&&jk?' · '+jm+'–'+jk:'')}
           </span>
         </div>
-        ${isToday?'<span style="font-size:9px;background:#2D6CDF;color:#fff;padding:3px 7px;border-radius:8px;flex-shrink:0;font-weight:700">HARI INI</span>':''}
+        ${isToday?'<span style="font-size:9px;background:#2D6CDF;color:#fff;padding:2px 6px;border-radius:8px;flex-shrink:0">Hari Ini</span>':''}
       </div>`;
     };
 
-    // Default: HANYA HARI INI (compact)
+    // Tampil default: HANYA HARI INI (compact)
     const todayJadwal = data[todayIdx];
-    const preview = todayJadwal ? makeRow(todayJadwal) : '<div style="padding:14px;color:#94A3B8;font-size:12px;text-align:center">Tidak ada jadwal hari ini</div>';
+    const preview = todayJadwal ? [todayJadwal] : [];
 
     list.innerHTML = `
-      <div id="jdw-preview">${preview}</div>
-
+      <div id="jdw-preview">${preview.map(makeRow).join('')}</div>
       ${data.length > 0 ? `
-      <button onclick="_toggleJadwalAll(this)" id="jdw-toggle-btn"
-        style="width:100%;margin-top:10px;padding:10px;
-        background:linear-gradient(135deg,#EFF6FF,#DBEAFE);
-        border:1px solid #BFDBFE;border-radius:10px;font-size:13px;
-        color:#2D6CDF;cursor:pointer;font-weight:700;
-        display:flex;align-items:center;justify-content:center;gap:8px">
-        <span>📋 Lihat Semua Jadwal Saya (${data.length} hari)</span>
-        <span id="jdw-toggle-arrow" style="font-size:14px">▼</span>
-      </button>
-
-      <div id="jdw-all" style="display:none;max-height:380px;overflow-y:auto;
-        border:1px solid #E2E8F0;border-radius:10px;padding:6px 10px;margin-top:8px;
-        background:#FAFBFF">
-        <div style="font-size:11px;color:#64748B;font-weight:700;padding:6px 4px 8px;
-          border-bottom:1px solid #E2E8F0;margin-bottom:4px">
-          📅 Jadwal lengkap ${userName} (${data.length} hari ke depan)
-        </div>
+      <div id="jdw-all" style="display:none;max-height:360px;overflow-y:auto;
+        border:1px solid #E2E8F0;border-radius:8px;padding:4px 8px;margin-top:6px">
         ${data.map(makeRow).join('')}
       </div>
-      ` : ''}`;
+      <button onclick="_toggleJadwalAll(this)"
+        style="width:100%;margin-top:8px;padding:8px;background:#F8FAFC;
+        border:1px solid #E2E8F0;border-radius:8px;font-size:12px;
+        color:#2D6CDF;cursor:pointer;font-weight:600;text-align:center">
+        📋 Lihat Semua Jadwal (${data.length} hari) ▼
+      </button>` : ''}`;
 
     card.style.display = 'block';
 
-    // Auto scroll ke hari ini saat panel dibuka
+    // Auto scroll ke hari ini di panel semua
     setTimeout(()=>{
       const all = document.getElementById('jdw-all');
-      if (all && todayIdx > 1) all.scrollTop = (todayIdx-1) * 50;
+      if (all && todayIdx > 1) all.scrollTop = (todayIdx-1) * 41;
     }, 100);
 
   } catch(e) { console.error('loadJadwalMingguSaya:', e); }
@@ -821,14 +805,10 @@ async function loadJadwalMingguSaya() {
 function _toggleJadwalAll(btn) {
   const preview = document.getElementById('jdw-preview');
   const all     = document.getElementById('jdw-all');
-  const arrow   = document.getElementById('jdw-toggle-arrow');
   if (!all) return;
   const open = all.style.display !== 'none';
   all.style.display     = open ? 'none' : 'block';
-  if (preview) preview.style.display = open ? 'block' : 'none';
-  if (arrow) arrow.textContent = open ? '▼' : '▲';
-  btn.querySelector('span:first-child').textContent = open
-    ? `📋 Lihat Semua Jadwal Saya (${all.querySelectorAll('div[style*="border-bottom"]').length - 1} hari)`
-    : '📅 Tutup';
+  preview.style.display = open ? 'block' : 'none';
+  btn.innerHTML = open ? '📋 Lihat Semua ▼' : '📅 Tutup ▲';
 }
 
