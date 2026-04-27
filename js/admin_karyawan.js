@@ -592,8 +592,11 @@ async function _eksekusiResetPassword(idKaryawan, namaKaryawan) {
     showToast('Password minimal 6 karakter', 'error'); return;
   }
 
+  if (!btn) return;
+  const oriTxt = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span style="opacity:.7">Memproses...</span>';
   try {
-    setBtnLoading(btn, true);
     const pwHash = await sha256(pw);
     await callAPI('resetPasswordKaryawan', {
       id_karyawan   : idKaryawan,
@@ -601,13 +604,10 @@ async function _eksekusiResetPassword(idKaryawan, namaKaryawan) {
     });
     document.getElementById('modal-reset-pw')?.remove();
     document.getElementById('modal-profil-k')?.remove();
-    showToast(
-      'Password ' + namaKaryawan + ' berhasil direset ke: ' + pw,
-      'success', 8000
-    );
+    showToast('Password ' + namaKaryawan + ' berhasil direset. Password baru: ' + pw, 'success', 8000);
   } catch(e) {
     showToast(e.message, 'error');
-  } finally {
-    setBtnLoading(btn, false);
+    btn.disabled = false;
+    btn.innerHTML = oriTxt;
   }
 }
