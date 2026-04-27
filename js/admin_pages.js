@@ -1143,9 +1143,9 @@ async function renderShiftJadwalAdmin(container) {
       <h4 style="font-size:13px;font-weight:700;margin-bottom:8px;color:#1A9E74">📋 Pola Rotasi Otomatis</h4>
       <div style="font-size:12px;color:#475569;line-height:1.8">
         <strong>Jam:</strong> Pagi 07:00–15:00 | Sore 15:00–23:00 | Malam 23:00–07:00<br>
-        <strong>Pola:</strong> P→S→M→L (Libur)→P→... (karyawan berikutnya offset 1 hari)<br>
-        <strong>Aturan:</strong> Setelah Malam wajib Libur, tidak langsung Pagi<br>
-        <strong>Libur:</strong> Saat 1 orang libur, 2 lainnya tetap jaga
+        <strong>Pola:</strong> P→S→M→S→P→M (siklus 6 hari, setiap karyawan berbeda offset)<br>
+        <strong>Libur:</strong> 1 hari per 14 hari, posisi acak, min selang 4 hari antar karyawan<br>
+        <strong>Lanjut:</strong> Generate periode berikutnya menerus (tidak mengulang dari awal)
       </div>
     </div>
     <div class="card">
@@ -1172,6 +1172,27 @@ async function renderShiftJadwalAdmin(container) {
           <input type="date" class="form-control" id="jdw-mul" value="${fmt(senin)}"></div>
         <div class="form-group"><label class="form-label">Sampai Tanggal *</label>
           <input type="date" class="form-control" id="jdw-sel" value="${fmt(minggu)}"></div>
+      </div>
+      <div class="form-group" style="margin-bottom:10px">
+        <label class="form-label" style="margin-bottom:6px">Mode Generate</label>
+        <div style="display:flex;gap:12px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+            <input type="radio" name="jdw-mode" value="continue" checked
+              style="width:15px;height:15px;cursor:pointer">
+            <div>
+              <div style="font-weight:600;color:#1A9E74">🔄 Lanjutkan</div>
+              <div style="font-size:11px;color:#64748B">Teruskan dari jadwal terakhir</div>
+            </div>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+            <input type="radio" name="jdw-mode" value="fresh"
+              style="width:15px;height:15px;cursor:pointer">
+            <div>
+              <div style="font-weight:600;color:#D97706">🆕 Baru</div>
+              <div style="font-size:11px;color:#64748B">Mulai dari awal (acak offset)</div>
+            </div>
+          </label>
+        </div>
       </div>
       <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px">
         <button class="btn btn--primary btn--lg" onclick="generateJadwalAdmin()">
@@ -1207,7 +1228,9 @@ async function generateJadwalAdmin(){
     const mul=fromInputDate(document.getElementById('jdw-mul')?.value);
     const sel=fromInputDate(document.getElementById('jdw-sel')?.value);
     if(!mul||!sel) throw new Error('Tanggal mulai dan selesai wajib diisi');
-    const r=await callAPI('generateJadwal',{karyawan_ids:ids,tanggal_mulai:mul,tanggal_selesai:sel});
+    const modeEl=document.querySelector('input[name="jdw-mode"]:checked');
+    const mode=modeEl?modeEl.value:'continue';
+    const r=await callAPI('generateJadwal',{karyawan_ids:ids,tanggal_mulai:mul,tanggal_selesai:sel,mode:mode});
     showToast(r.message,'success',5000);
     const pv=document.getElementById('jadwal-preview');
     const pc=document.getElementById('jadwal-preview-content');
