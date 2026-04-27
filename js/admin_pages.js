@@ -209,41 +209,65 @@ function lihatBuktiAbsenAdmin(jsonStr) {
     const latF = parseFloat(lat), lonF = parseFloat(lon);
     if (!latF || !lonF || (latF===0 && lonF===0)) return '';
     return `
-      <div style="margin-bottom:12px">
-        <div style="font-size:11px;font-weight:600;color:#64748B;margin-bottom:6px">${label}</div>
-        <div style="position:relative;border-radius:10px;overflow:hidden;border:1px solid #E2E8F0">
-          <div id="${mapId}" style="width:100%;height:180px"></div>
-          <div style="position:absolute;top:6px;left:8px;background:rgba(0,0,0,.65);
-            color:#fff;font-size:10px;padding:3px 8px;border-radius:10px;pointer-events:none;z-index:999">
-            📍 ${latF.toFixed(5)}, ${lonF.toFixed(5)}
+      <div style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:11px;font-weight:600;color:#64748B">${label}</div>
+          <div style="display:flex;gap:6px">
+            <button onclick="_toggleMapLayer('${mapId}','street')"
+              id="btn-street-${mapId}"
+              style="background:#2D6CDF;color:#fff;border:none;border-radius:6px;
+              padding:3px 10px;font-size:10px;cursor:pointer;font-weight:600">🗺️ Peta</button>
+            <button onclick="_toggleMapLayer('${mapId}','satellite')"
+              id="btn-sat-${mapId}"
+              style="background:#F1F5F9;color:#64748B;border:none;border-radius:6px;
+              padding:3px 10px;font-size:10px;cursor:pointer;font-weight:600">🛰️ Satelit</button>
+          </div>
+        </div>
+        <div style="position:relative;border-radius:12px;overflow:hidden;
+          border:2px solid #E2E8F0;box-shadow:0 2px 8px rgba(0,0,0,.08)">
+          <div id="${mapId}" style="width:100%;height:260px"></div>
+          <div style="position:absolute;top:8px;left:8px;background:rgba(0,0,0,.7);
+            color:#fff;font-size:10px;padding:4px 10px;border-radius:20px;
+            pointer-events:none;z-index:999;font-weight:600">
+            📍 ${latF.toFixed(6)}, ${lonF.toFixed(6)}
           </div>
           <a href="https://maps.google.com?q=${latF},${lonF}" target="_blank"
-            style="position:absolute;bottom:8px;right:8px;background:rgba(255,255,255,.92);
-            color:#2D6CDF;font-size:11px;padding:4px 10px;border-radius:20px;
-            text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.15);z-index:999">
-            🗺️ Buka Maps</a>
+            style="position:absolute;bottom:10px;right:10px;background:rgba(255,255,255,.95);
+            color:#2D6CDF;font-size:11px;padding:6px 12px;border-radius:20px;
+            text-decoration:none;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.2);z-index:999">
+            🗺️ Google Maps</a>
         </div>
-        <div style="font-size:10px;color:#94A3B8;margin-top:4px;text-align:right">
-          Koordinat: ${latF.toFixed(6)}, ${lonF.toFixed(6)}</div>
       </div>`;
   };
 
   const fotoCard = (url, label, jam) => {
     const norm = normFotoUrl(url);
     if (!norm) return '';
+    const fotoId = 'foto-' + Math.random().toString(36).substr(2,6);
     return `
-      <div style="margin-bottom:12px">
-        <div style="font-size:11px;font-weight:600;color:#64748B;margin-bottom:6px">
-          ${label} ${jam ? `<span style="color:#94A3B8">· ${jam}</span>` : ''}
+      <div style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:11px;font-weight:600;color:#64748B">
+            ${label} ${jam ? `<span style="color:#94A3B8">· ${jam}</span>` : ''}
+          </div>
+          <button onclick="_bukaFotoFullscreen('${norm}')"
+            style="background:#EFF6FF;border:none;border-radius:8px;padding:4px 10px;
+            font-size:11px;color:#2D6CDF;cursor:pointer;font-weight:600">
+            🔍 Perbesar
+          </button>
         </div>
-        <a href="${norm}" target="_blank">
-          <img src="${norm}" loading="lazy"
-            style="width:100%;border-radius:10px;object-fit:cover;max-height:220px;
-            border:2px solid #E2E8F0;cursor:zoom-in"
-            onerror="this.parentElement.innerHTML='<div style=\'padding:20px;text-align:center;color:#94A3B8;font-size:12px;background:#F8FAFC;border-radius:10px\'>📷 Foto tidak dapat dimuat</div>'"
+        <div style="cursor:zoom-in;border-radius:12px;overflow:hidden;
+          border:2px solid #E2E8F0;background:#F8FAFC"
+          onclick="_bukaFotoFullscreen('${norm}')">
+          <img id="${fotoId}" src="${norm}" loading="lazy"
+            style="width:100%;display:block;object-fit:contain;
+            max-height:none;min-height:120px"
+            onerror="this.parentElement.innerHTML='<div style=\'padding:32px;text-align:center;color:#94A3B8;font-size:12px\'>📷 Foto tidak dapat dimuat</div>'"
           >
-        </a>
-        <div style="font-size:10px;color:#94A3B8;margin-top:4px">Ketuk foto untuk perbesar</div>
+        </div>
+        <div style="font-size:10px;color:#94A3B8;margin-top:4px;text-align:center">
+          Ketuk foto untuk melihat ukuran penuh
+        </div>
       </div>`;
   };
 
@@ -283,15 +307,15 @@ function lihatBuktiAbsenAdmin(jsonStr) {
           <span style="font-size:12px">${(data.keterangan||'-').substring(0,60)}</span></div>
       </div>
 
-      <!-- Foto & Peta Masuk -->
-      ${fotoCard(data.foto_masuk, '📸 Foto Masuk', data.jam_masuk)}
+      <!-- Peta Masuk (foto karyawan jadi pin langsung di peta) -->
       ${petaMini(data.lat_masuk, data.lon_masuk, '📍 Lokasi Masuk', 'peta-masuk-admin')}
+      ${!data.lat_masuk && data.foto_masuk ? fotoCard(data.foto_masuk,'📸 Foto Masuk',data.jam_masuk) : ''}
 
-      <!-- Foto & Peta Keluar (kalau ada) -->
+      <!-- Peta Keluar (kalau ada) -->
       ${data.foto_keluar || parseFloat(data.lat_keluar||0) !== 0 ? `
         <div style="border-top:1px dashed #E2E8F0;margin:8px 0 16px"></div>
-        ${fotoCard(data.foto_keluar, '📸 Foto Keluar', data.jam_keluar)}
         ${petaMini(data.lat_keluar, data.lon_keluar, '📍 Lokasi Keluar', 'peta-keluar-admin')}
+        ${!data.lat_keluar && data.foto_keluar ? fotoCard(data.foto_keluar,'📸 Foto Keluar',data.jam_keluar) : ''}
       ` : ''}
 
       <!-- Tidak ada bukti sama sekali -->
@@ -310,9 +334,12 @@ function lihatBuktiAbsenAdmin(jsonStr) {
   document.body.appendChild(modal);
 
   // Init Leaflet maps setelah modal tampil di DOM
+  // Foto karyawan jadi pin langsung di peta
+  const _fotoNorm = normFotoUrl(data.foto_masuk||'');
+  const _fotoKNorm= normFotoUrl(data.foto_keluar||'');
   _initLeafletMaps([
-    { id: 'peta-masuk-admin',  lat: parseFloat(data.lat_masuk||0),  lon: parseFloat(data.lon_masuk||0)  },
-    { id: 'peta-keluar-admin', lat: parseFloat(data.lat_keluar||0), lon: parseFloat(data.lon_keluar||0) }
+    { id:'peta-masuk-admin',  lat:parseFloat(data.lat_masuk||0),  lon:parseFloat(data.lon_masuk||0),  foto:_fotoNorm  },
+    { id:'peta-keluar-admin', lat:parseFloat(data.lat_keluar||0), lon:parseFloat(data.lon_keluar||0), foto:_fotoKNorm }
   ]);
 }
 
@@ -327,19 +354,60 @@ function _initLeafletMaps(maps) {
   }
   const doInit = () => {
     maps.forEach(m => {
-      if (!m.lat || !m.lon || m.lat===0 || m.lon===0) return;
+      if (!m.lat||!m.lon||m.lat===0||m.lon===0) return;
       const el = document.getElementById(m.id);
       if (!el) return;
       if (el._leafletMap) { el._leafletMap.remove(); el._leafletMap=null; }
       try {
         const map = window.L.map(m.id,{zoomControl:true,attributionControl:false})
-                            .setView([m.lat,m.lon],16);
-        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
-        window.L.marker([m.lat,m.lon]).addTo(map);
-        el._leafletMap = map;
+                            .setView([m.lat,m.lon],18);
+        // Layer peta (default)
+        const streetLayer = window.L.tileLayer(
+          'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}
+        ).addTo(map);
+        // Layer satelit — Esri World Imagery (gratis, tanpa API key)
+        const satLayer = window.L.tileLayer(
+          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          {maxZoom:19}
+        );
+        // Marker: foto karyawan (kalau ada) atau pin merah
+        let markerIcon;
+        if (m.foto) {
+          // Foto bulat dengan penunjuk di bawah
+          markerIcon = window.L.divIcon({
+            html: `<div style="
+              width:54px;height:54px;border-radius:50%;
+              border:3px solid #fff;
+              background:url('${m.foto}') center/cover no-repeat #E2E8F0;
+              box-shadow:0 3px 12px rgba(0,0,0,.5);
+              position:relative">
+              <div style="
+                position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);
+                width:0;height:0;
+                border-left:8px solid transparent;
+                border-right:8px solid transparent;
+                border-top:11px solid #fff;
+                filter:drop-shadow(0 2px 2px rgba(0,0,0,.3))">
+              </div>
+            </div>`,
+            iconSize:[54,65], iconAnchor:[27,65], className:''
+          });
+        } else {
+          // Fallback: pin merah kalau tidak ada foto
+          markerIcon = window.L.divIcon({
+            html:'<div style="width:22px;height:22px;background:#E53E3E;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.6)"></div>',
+            iconSize:[22,22], iconAnchor:[11,11], className:''
+          });
+        }
+        window.L.marker([m.lat,m.lon],{icon:markerIcon}).addTo(map);
+        // Simpan state layer
+        el._leafletMap   = map;
+        el._streetLayer  = streetLayer;
+        el._satLayer     = satLayer;
+        el._currentLayer = 'street';
       } catch(e){ console.warn('Leaflet init:',e); }
     });
-  };
+  }};
   if (window.L) {
     setTimeout(doInit,150);
   } else {
@@ -349,6 +417,65 @@ function _initLeafletMaps(maps) {
     script.onerror = ()=>console.warn('Leaflet gagal dimuat');
     document.head.appendChild(script);
   }
+}
+
+// Toggle peta → satelit dan sebaliknya
+function _toggleMapLayer(mapId, mode) {
+  const el = document.getElementById(mapId);
+  if (!el || !el._leafletMap) return;
+  const map = el._leafletMap;
+
+  if (mode === 'satellite') {
+    if (el._currentLayer === 'satellite') return;
+    map.removeLayer(el._streetLayer);
+    el._satLayer.addTo(map);
+    el._currentLayer = 'satellite';
+    // Update tombol
+    const btnStr = document.getElementById('btn-street-' + mapId);
+    const btnSat = document.getElementById('btn-sat-' + mapId);
+    if (btnStr) { btnStr.style.background='#F1F5F9'; btnStr.style.color='#64748B'; }
+    if (btnSat) { btnSat.style.background='#2D6CDF'; btnSat.style.color='#fff'; }
+  } else {
+    if (el._currentLayer === 'street') return;
+    map.removeLayer(el._satLayer);
+    el._streetLayer.addTo(map);
+    el._currentLayer = 'street';
+    const btnStr = document.getElementById('btn-street-' + mapId);
+    const btnSat = document.getElementById('btn-sat-' + mapId);
+    if (btnStr) { btnStr.style.background='#2D6CDF'; btnStr.style.color='#fff'; }
+    if (btnSat) { btnSat.style.background='#F1F5F9'; btnSat.style.color='#64748B'; }
+  }
+}
+
+// Lightbox foto fullscreen
+function _bukaFotoFullscreen(url) {
+  document.getElementById('lightbox-foto')?.remove();
+
+  const lb = document.createElement('div');
+  lb.id    = 'lightbox-foto';
+  lb.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:99999;
+    display:flex;align-items:center;justify-content:center;
+    cursor:zoom-out;animation:fadeIn .2s ease`;
+
+  lb.innerHTML = `
+    <div style="position:relative;max-width:100vw;max-height:100vh;
+      display:flex;align-items:center;justify-content:center;padding:16px">
+      <img src="${url}"
+        style="max-width:calc(100vw - 32px);max-height:calc(100vh - 80px);
+        object-fit:contain;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.6)"
+        onerror="this.alt='Foto tidak dapat dimuat'">
+      <button onclick="document.getElementById('lightbox-foto').remove()"
+        style="position:fixed;top:16px;right:16px;background:rgba(255,255,255,.15);
+        border:none;border-radius:50%;width:40px;height:40px;font-size:20px;
+        color:#fff;cursor:pointer;backdrop-filter:blur(4px);
+        display:flex;align-items:center;justify-content:center;
+        z-index:100000">✕</button>
+      <div style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+        color:rgba(255,255,255,.6);font-size:12px">Ketuk di luar foto atau ✕ untuk tutup</div>
+    </div>`;
+
+  lb.onclick = e => { if (e.target === lb || e.target.parentElement === lb.firstElementChild) lb.remove(); };
+  document.body.appendChild(lb);
 }
 
 async function tampilFormAbsensiManualAdmin() {
