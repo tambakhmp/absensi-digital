@@ -1468,9 +1468,17 @@ async function loadPengaturanAdminV3(){
       <div class="card">
         <h3 style="font-size:14px;font-weight:700;color:#64748B;text-transform:uppercase;
           letter-spacing:.6px;margin-bottom:16px">📋 Kebijakan Kehadiran</h3>
+        <div style="background:#EFF6FF;border-radius:8px;padding:10px 12px;font-size:12px;color:#2D6CDF;margin-bottom:14px;line-height:1.7">
+          ⏰ <strong>Aturan jam berlaku untuk semua karyawan termasuk shift & dinas luar</strong><br>
+          Absen dibuka <strong>batas_awal_absen</strong> menit sebelum jam masuk, tutup <strong>batas_terlambat</strong> menit setelahnya.
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          ${_si('max_radius_meter','Radius GPS Maks (m)',map,'number')}
-          ${_si('toleransi_terlambat_default','Toleransi Terlambat (menit)',map,'number')}
+          ${_si('jam_masuk_default','Jam Masuk Default',map,'time')}
+          ${_si('jam_keluar_default','Jam Keluar Default',map,'time')}
+          ${_si('batas_awal_absen_menit','Buka Absen Sebelum Jam Masuk (menit)',map,'number')}
+          ${_si('toleransi_terlambat_menit','Toleransi Terlambat (menit)',map,'number')}
+          ${_si('batas_absen_masuk_menit','Batas Maks Terlambat (menit)',map,'number')}
+          ${_si('max_radius_meter','Radius GPS Maks (meter)',map,'number')}
           ${_si('sisa_cuti_default_per_tahun','Default Cuti/Tahun (hari)',map,'number')}
         </div>
         <div class="form-group" style="margin-top:12px">
@@ -1617,10 +1625,11 @@ async function simpanPengaturanAdmin(){
       'email_instansi','website_instansi','tahun_berdiri','footer_text',
       'warna_primer','warna_sekunder','logo_url',
       'bg_dashboard_karyawan_url','bg_dashboard_admin_url','bg_dashboard_superadmin_url',
-      'max_radius_meter','toleransi_terlambat_default','sisa_cuti_default_per_tahun',
+      'jam_masuk_default','jam_keluar_default',
+      'batas_awal_absen_menit','toleransi_terlambat_menit','batas_absen_masuk_menit',
+      'max_radius_meter','sisa_cuti_default_per_tahun',
       'ucapan_ulang_tahun_template','aktif_one_device_login',
-      'favicon_url','icon_512_url','bg_login_url','login_subtitle',
-      'batas_absen_shift_menit','batas_absen_nonshift_jam'];
+      'favicon_url','icon_512_url','bg_login_url','login_subtitle'];
     const settings={};
     keys.forEach(k=>{const el=document.getElementById('set-'+k);if(el)settings[k]=el.value?.trim()||'';});
     await callAPI('setMultipleSetting',{settings});
