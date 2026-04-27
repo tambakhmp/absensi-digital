@@ -396,8 +396,13 @@ async function _prosesAbsenKamera(jenis, posisi) {
       try {
         const lat = posisi?.coords?.latitude  ?? null;
         const lon = posisi?.coords?.longitude ?? null;
+        // Reverse geocoding di browser (tidak butuh otorisasi GAS baru)
+        let namaLokasi = '';
+        if (lat && lon && jenis === 'masuk') {
+          try { namaLokasi = await _reverseGeocode(lat, lon); } catch(e) {}
+        }
         const result = await callAPI(jenis === 'masuk' ? 'absenMasuk' : 'absenKeluar', {
-          lat, lon, foto_base64: fotoB64
+          lat, lon, foto_base64: fotoB64, nama_lokasi: namaLokasi
         });
         _tutupKamera();
         const isWarn = result.status === 'terlambat';
@@ -551,6 +556,26 @@ async function loadHalamanAbsensi() {
           <div>${badgeStatus(a.status)}</div>
         </div>`).join('')}`;
   } catch(e) { showError('absensi-list', 'Gagal: ' + e.message); }
+}
+
+// Reverse geocoding browser-side (Nominatim) — tidak butuh API key
+// Dipanggil sebelum kirim absenMasuk agar nama kota tersedia
+async function _reverseGeocode(lat, lon) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json` +
+                `&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`;
+    const resp = await fetch(url, {
+      headers: { 'Accept-Language': 'id', 'User-Agent': 'AbsensiDigital/1.0' }
+    });
+    if (!resp.ok) return '';
+    const data = await resp.json();
+    const addr = data.address || {};
+    const kota = addr.city || addr.town || addr.municipality ||
+                 addr.county || addr.suburb || addr.village || '';
+    const prov = addr.state || '';
+    if (kota && prov) return `${kota}, ${prov}`;
+    return kota || prov || '';
+  } catch(e) { return ''; }
 }
 
 function _statusEmoji(s) {
