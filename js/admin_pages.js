@@ -307,23 +307,20 @@ function lihatBuktiAbsenAdmin(jsonStr) {
           <span style="font-size:12px">${(data.keterangan||'-').substring(0,60)}</span></div>
       </div>
 
-      <!-- Peta Masuk (foto karyawan jadi pin langsung di peta) -->
+      <!-- PETA MASUK: foto karyawan jadi pin di peta -->
       ${petaMini(data.lat_masuk, data.lon_masuk, '📍 Lokasi Masuk', 'peta-masuk-admin')}
-      ${!data.lat_masuk && data.foto_masuk ? fotoCard(data.foto_masuk,'📸 Foto Masuk',data.jam_masuk) : ''}
 
-      <!-- Peta Keluar (kalau ada) -->
-      ${data.foto_keluar || parseFloat(data.lat_keluar||0) !== 0 ? `
-        <div style="border-top:1px dashed #E2E8F0;margin:8px 0 16px"></div>
+      <!-- PETA KELUAR (kalau ada GPS atau foto keluar) -->
+      ${parseFloat(data.lat_keluar||0) !== 0 ? `
+        <div style="border-top:1px dashed #E2E8F0;margin:4px 0 14px"></div>
         ${petaMini(data.lat_keluar, data.lon_keluar, '📍 Lokasi Keluar', 'peta-keluar-admin')}
-        ${!data.lat_keluar && data.foto_keluar ? fotoCard(data.foto_keluar,'📸 Foto Keluar',data.jam_keluar) : ''}
       ` : ''}
 
       <!-- Tidak ada bukti sama sekali -->
-      ${!data.foto_masuk && !data.foto_keluar &&
-        parseFloat(data.lat_masuk||0)===0 && parseFloat(data.lat_keluar||0)===0
+      ${parseFloat(data.lat_masuk||0)===0 && parseFloat(data.lat_keluar||0)===0
         ? `<div style="text-align:center;padding:24px;color:#94A3B8">
-            <div style="font-size:32px;margin-bottom:8px">📷</div>
-            Tidak ada foto atau data GPS untuk absensi ini.
+            <div style="font-size:32px;margin-bottom:8px">📍</div>
+            Tidak ada data GPS untuk absensi ini.
             <br><small>(Mungkin diinput manual oleh admin)</small>
           </div>` : ''}
 
