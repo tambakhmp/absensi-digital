@@ -48,7 +48,7 @@ async function loadHalamanProfil() {
         <div style="font-size:12px;color:#94A3B8;margin-top:2px">NIK: ${profil.nik||'-'}</div>
         <label class="btn btn--outline" style="margin-top:14px;display:inline-flex;cursor:pointer;font-size:13px;padding:8px 16px">
           📷 Ganti Foto
-          <input type="file" accept="image/*" capture="user" style="display:none" onchange="uploadFotoProfil(this)">
+          <input type="file" accept="image/*" style="display:none" onchange="uploadFotoProfil(this)">
         </label>
       </div>
 
