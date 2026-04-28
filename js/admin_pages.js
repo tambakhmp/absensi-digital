@@ -362,10 +362,10 @@ function _initLeafletMaps(maps) {
         const streetLayer = window.L.tileLayer(
           'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}
         ).addTo(map);
-        // Layer satelit — Esri World Imagery (gratis, tanpa API key)
+        // Layer satelit — Google Satellite (lebih reliable di Indonesia)
         const satLayer = window.L.tileLayer(
-          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-          {maxZoom:19}
+          'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+          {maxZoom:20, subdomains:['mt0','mt1','mt2','mt3']}
         );
         // Marker: foto karyawan (kalau ada) atau pin merah
         let markerIcon;
