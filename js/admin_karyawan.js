@@ -494,8 +494,10 @@ async function lihatProfilKaryawan(idKaryawan) {
           </div>
           <!-- Tombol -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
-            <button class="btn btn--primary" style="font-size:13px;padding:11px"
-              onclick="cetakIDCard('${k.id_karyawan}')">🪪 Cetak ID Card</button>
+            <button class="btn btn--primary" style="font-size:13px;padding:11px;flex:1"
+              onclick="cetakIDCardJPG('${k.id_karyawan}')">🪪 JPG</button>
+          <button class="btn btn--ghost" style="font-size:13px;padding:11px;flex:1"
+              onclick="cetakIDCardPNG('${k.id_karyawan}')">🖼️ PNG</button>
             <button class="btn btn--ghost" style="font-size:13px;padding:11px"
               onclick="document.getElementById('modal-profil-k').remove();tampilFormEditKaryawan('${k.id_karyawan}')">
               ✏️ Edit Data</button>
