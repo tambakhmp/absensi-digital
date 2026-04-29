@@ -8,75 +8,82 @@ function _injectGlobalStyles() {
   const style = document.createElement('style');
   style.id = 'hmp-visual-styles';
   style.textContent = `
-    /* ── Background gradient langit biru muda ── */
-    body {
-      background: linear-gradient(145deg,#E8F4FD 0%,#DBEAFE 30%,#EFF6FF 60%,#F0F9FF 100%);
+    /* ── Fix 1: Full width layout ── */
+    html, body {
+      margin: 0; padding: 0;
       min-height: 100vh;
+      overflow-x: hidden;
+    }
+    body {
+      background: linear-gradient(145deg,
+        #C8E6FF 0%, #DBEAFE 25%,
+        #EFF6FF 55%, #F0F9FF 80%,
+        #E8F4FD 100%) fixed !important;
+      background-attachment: fixed !important;
     }
 
-    /* ── Glassmorphism card ── */
-    .glass-card, .card {
-      background: rgba(255,255,255,0.72) !important;
-      backdrop-filter: blur(16px) saturate(1.4) !important;
-      -webkit-backdrop-filter: blur(16px) saturate(1.4) !important;
-      border: 1px solid rgba(255,255,255,0.85) !important;
-      box-shadow: 0 4px 24px rgba(30,87,210,0.08), 0 1px 4px rgba(0,0,0,0.04) !important;
-      border-radius: 16px !important;
+    /* ── Fix 2: Admin layout full width ── */
+    .admin-layout {
+      display: flex;
+      min-height: 100vh;
+      width: 100%;
+    }
+    .admin-main {
+      flex: 1;
+      min-width: 0;
+      width: calc(100% - 260px);
+      background: transparent !important;
     }
 
-    /* ── Sidebar glass ── */
+    /* ── Fix 3: Sidebar glassmorphism ── */
     .sidebar {
-      background: linear-gradient(180deg,rgba(13,59,122,0.97) 0%,rgba(27,92,191,0.97) 100%) !important;
-      backdrop-filter: blur(20px) !important;
-      -webkit-backdrop-filter: blur(20px) !important;
+      background: linear-gradient(180deg,
+        rgba(10,38,97,0.96) 0%,
+        rgba(20,65,168,0.96) 50%,
+        rgba(13,50,122,0.96) 100%) !important;
+      backdrop-filter: blur(24px) !important;
+      -webkit-backdrop-filter: blur(24px) !important;
+      border-right: 1px solid rgba(212,160,23,0.25) !important;
+      box-shadow: 4px 0 24px rgba(13,50,122,0.25) !important;
     }
 
-    /* ── Topbar glass ── */
-    .topbar {
-      background: rgba(255,255,255,0.80) !important;
-      backdrop-filter: blur(20px) !important;
-      -webkit-backdrop-filter: blur(20px) !important;
+    /* Gold strip kiri sidebar */
+    .sidebar::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: linear-gradient(180deg, #F0C040, #B8860B, #F0C040);
+      z-index: 1;
+    }
+
+    /* ── Fix 4: Topbar/header glass ── */
+    .admin-topbar, .topbar, .mobile-header {
+      background: rgba(255,255,255,0.82) !important;
+      backdrop-filter: blur(20px) saturate(1.5) !important;
+      -webkit-backdrop-filter: blur(20px) saturate(1.5) !important;
       border-bottom: 1px solid rgba(45,108,223,0.12) !important;
+      box-shadow: 0 2px 16px rgba(30,87,210,0.06) !important;
     }
 
-    /* ── Bottom nav glass (mobile) ── */
+    /* ── Fix 5: Bottom nav glass ── */
     .bottom-nav {
-      background: rgba(255,255,255,0.88) !important;
+      background: rgba(255,255,255,0.90) !important;
       backdrop-filter: blur(20px) !important;
       -webkit-backdrop-filter: blur(20px) !important;
       border-top: 1px solid rgba(45,108,223,0.10) !important;
+      box-shadow: 0 -4px 20px rgba(30,87,210,0.08) !important;
     }
 
-    /* ── Bounce animasi card masuk ── */
-    @keyframes cardBounceIn {
-      0%   { opacity:0; transform:translateY(28px) scale(0.96); }
-      60%  { opacity:1; transform:translateY(-6px) scale(1.01); }
-      80%  { transform:translateY(3px) scale(0.99); }
-      100% { opacity:1; transform:translateY(0) scale(1); }
-    }
-    .bounce-in {
-      animation: cardBounceIn 0.5s cubic-bezier(.34,1.56,.64,1) both;
-    }
-
-    /* ── Stagger delay untuk multiple cards ── */
-    .bounce-in:nth-child(1) { animation-delay: 0.00s; }
-    .bounce-in:nth-child(2) { animation-delay: 0.06s; }
-    .bounce-in:nth-child(3) { animation-delay: 0.12s; }
-    .bounce-in:nth-child(4) { animation-delay: 0.18s; }
-    .bounce-in:nth-child(5) { animation-delay: 0.24s; }
-    .bounce-in:nth-child(6) { animation-delay: 0.30s; }
-
-    /* ── Spring button press ── */
-    .btn:active {
-      transform: scale(0.94) !important;
-      transition: transform 0.1s cubic-bezier(.34,1.56,.64,1) !important;
-    }
-    .btn {
-      transition: transform 0.2s cubic-bezier(.34,1.56,.64,1),
-                  box-shadow 0.2s ease, background 0.2s ease !important;
-    }
-    .btn:hover:not(:active) {
-      transform: translateY(-1px) scale(1.01) !important;
+    /* ── Glassmorphism card ── */
+    .card {
+      background: rgba(255,255,255,0.75) !important;
+      backdrop-filter: blur(16px) saturate(1.4) !important;
+      -webkit-backdrop-filter: blur(16px) saturate(1.4) !important;
+      border: 1px solid rgba(255,255,255,0.90) !important;
+      box-shadow: 0 4px 24px rgba(30,87,210,0.07),
+                  0 1px 4px rgba(0,0,0,0.04) !important;
+      border-radius: 16px !important;
     }
 
     /* ── Stat card aksen emas ── */
@@ -90,75 +97,100 @@ function _injectGlobalStyles() {
       box-shadow: 0 8px 32px rgba(30,87,210,0.14) !important;
     }
 
-    /* ── Progress bar emas ── */
-    .progress-gold {
-      background: linear-gradient(90deg, #B8860B, #F0C040, #D4A017) !important;
+    /* ── Bounce animasi halaman masuk ── */
+    @keyframes pageSlideIn {
+      0%   { opacity:0; transform:translateY(18px) scale(0.98); }
+      60%  { opacity:1; transform:translateY(-4px) scale(1.005); }
+      80%  { transform:translateY(2px) scale(0.998); }
+      100% { opacity:1; transform:translateY(0) scale(1); }
+    }
+    .page-bounce {
+      animation: pageSlideIn 0.45s cubic-bezier(.34,1.56,.64,1) both;
+    }
+    @keyframes cardBounceIn {
+      0%   { opacity:0; transform:translateY(20px) scale(0.96); }
+      60%  { opacity:1; transform:translateY(-5px) scale(1.01); }
+      80%  { transform:translateY(2px) scale(0.99); }
+      100% { opacity:1; transform:translateY(0) scale(1); }
+    }
+    .bounce-in { animation: cardBounceIn 0.5s cubic-bezier(.34,1.56,.64,1) both; }
+    .bounce-in:nth-child(1) { animation-delay:0.00s; }
+    .bounce-in:nth-child(2) { animation-delay:0.05s; }
+    .bounce-in:nth-child(3) { animation-delay:0.10s; }
+    .bounce-in:nth-child(4) { animation-delay:0.15s; }
+    .bounce-in:nth-child(5) { animation-delay:0.20s; }
+    .bounce-in:nth-child(6) { animation-delay:0.25s; }
+
+    /* ── Spring button ── */
+    .btn:active {
+      transform: scale(0.93) !important;
+      transition: transform 0.1s cubic-bezier(.34,1.56,.64,1) !important;
+    }
+    .btn {
+      transition: transform 0.2s cubic-bezier(.34,1.56,.64,1),
+                  box-shadow 0.2s ease, background 0.2s ease !important;
+    }
+    .btn:hover:not(:active):not(:disabled) {
+      transform: translateY(-1px) scale(1.01) !important;
     }
 
-    /* ── Particle canvas ── */
-    #hmp-particles {
+    /* ── Canvas partikel teks ── */
+    #hmp-float-canvas {
       position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
+      top:0; left:0;
+      width:100%; height:100%;
       pointer-events: none;
       z-index: 0;
-      opacity: 0.45;
     }
 
-    /* ── Konten di atas particle ── */
-    .main-content, .sidebar, .topbar, .bottom-nav,
-    #app-root, .modal-overlay {
+    /* ── Semua konten di atas canvas ── */
+    .admin-layout, .admin-main, .sidebar,
+    .admin-topbar, .main-content, .topbar,
+    .bottom-nav, #app-root, .modal-overlay,
+    .card, [class*="page"] {
       position: relative;
       z-index: 1;
     }
 
     /* ── Scrollbar tipis ── */
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(45,108,223,0.25); border-radius: 99px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(45,108,223,0.45); }
-
-    /* ── Emas aksen border kiri card penting ── */
-    .card.card--gold {
-      border-left: 4px solid #D4A017 !important;
+    ::-webkit-scrollbar { width:5px; height:5px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb {
+      background:rgba(45,108,223,0.25);
+      border-radius:99px;
     }
+    ::-webkit-scrollbar-thumb:hover { background:rgba(45,108,223,0.45); }
 
-    /* ── Loading shimmer lebih halus ── */
-    @keyframes shimmer {
-      0%   { background-position: -400px 0; }
-      100% { background-position: 400px 0; }
+    /* ── Sidebar item hover lebih halus ── */
+    .sidebar__item {
+      transition: background 0.2s, color 0.2s,
+                  transform 0.15s cubic-bezier(.34,1.56,.64,1) !important;
     }
-    .skeleton {
-      background: linear-gradient(90deg,
-        rgba(255,255,255,0.4) 25%,
-        rgba(255,255,255,0.8) 50%,
-        rgba(255,255,255,0.4) 75%);
-      background-size: 800px 100%;
-      animation: shimmer 1.4s infinite linear;
+    .sidebar__item:hover {
+      background: rgba(255,255,255,0.12) !important;
+      color: #fff !important;
+      transform: translateX(3px) !important;
+    }
+    .sidebar__item.active {
+      background: rgba(212,160,23,0.20) !important;
+      border-left: 3px solid #D4A017 !important;
+      color: #fff !important;
     }
   `;
   document.head.appendChild(style);
 }
 
-// Particle system — adaptif berdasarkan device capability
+// Floating nama instansi sebagai latar belakang dekoratif
 function _initParticles() {
   try {
-    // Cek kemampuan device: skip kalau RAM rendah atau HP lama
-    const isLowEnd = navigator.deviceMemory < 2 ||
-                     navigator.hardwareConcurrency < 3 ||
-                     /Android [1-6]\./.test(navigator.userAgent);
-    if (isLowEnd) return; // HP lama: tanpa particle, visual tetap bagus
-
-    // Cek sudah ada
-    if (document.getElementById('hmp-particles')) return;
+    if (document.getElementById('hmp-float-canvas')) return;
 
     const cvs = document.createElement('canvas');
-    cvs.id = 'hmp-particles';
+    cvs.id = 'hmp-float-canvas';
     document.body.insertBefore(cvs, document.body.firstChild);
-
     const ctx = cvs.getContext('2d');
-    let W, H, dots = [];
 
+    let W, H;
     const resize = () => {
       W = cvs.width  = window.innerWidth;
       H = cvs.height = window.innerHeight;
@@ -166,50 +198,88 @@ function _initParticles() {
     resize();
     window.addEventListener('resize', resize);
 
-    // Buat partikel — dot kecil biru muda + emas
-    const COLORS = ['rgba(45,108,223,0.6)','rgba(147,197,253,0.5)',
-                    'rgba(212,160,23,0.5)', 'rgba(255,255,255,0.7)'];
-    const N = Math.min(40, Math.floor(window.innerWidth / 30));
+    // Ambil nama instansi dari DOM
+    const getNamaInst = () => {
+      return document.getElementById('sb-nama-instansi')?.textContent?.trim() ||
+             document.querySelector('.nama-instansi')?.textContent?.trim() ||
+             'PT. HUTAKALO MINATANI PRIMA';
+    };
 
-    for (let i = 0; i < N; i++) {
-      dots.push({
-        x  : Math.random() * window.innerWidth,
-        y  : Math.random() * window.innerHeight,
-        r  : Math.random() * 2.5 + 0.8,
-        vx : (Math.random() - 0.5) * 0.4,
-        vy : (Math.random() - 0.5) * 0.4,
-        c  : COLORS[Math.floor(Math.random() * COLORS.length)]
-      });
+    // Cek HP lama: skip particle kalau RAM < 2GB
+    const isLowEnd = navigator.deviceMemory < 2 ||
+                     /Android [1-6]\./.test(navigator.userAgent);
+
+    if (isLowEnd) {
+      // HP lama: hanya 3 teks statis opacity sangat rendah
+      const drawStatic = () => {
+        ctx.clearRect(0, 0, W, H);
+        const nama = getNamaInst();
+        ctx.save();
+        ctx.fillStyle = 'rgba(45,108,223,0.04)';
+        ctx.font = 'bold 28px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(nama, W*0.5, H*0.33);
+        ctx.fillText(nama, W*0.5, H*0.66);
+        ctx.restore();
+      };
+      drawStatic();
+      window.addEventListener('resize', drawStatic);
+      return;
     }
 
-    // Koneksi antar partikel terdekat
+    // HP normal: teks melayang
+    let items = [];
+    const init = () => {
+      const nama = getNamaInst();
+      const N    = Math.min(8, Math.max(4, Math.floor(W / 200)));
+      items = [];
+      for (let i = 0; i < N; i++) {
+        const size = 10 + Math.random() * 14;
+        items.push({
+          text : nama,
+          x    : Math.random() * W,
+          y    : Math.random() * H,
+          vx   : (Math.random() - 0.5) * 0.25,
+          vy   : (Math.random() - 0.5) * 0.18,
+          size : size,
+          alpha: 0.035 + Math.random() * 0.045,
+          rot  : (Math.random() - 0.5) * 0.3,
+          vrot : (Math.random() - 0.5) * 0.002,
+        });
+      }
+    };
+
+    // Init setelah nama instansi kemungkinan sudah load
+    setTimeout(init, 1200);
+
+    const GOLD  = [212, 160, 23];
+    const BLUE  = [45,  108, 223];
+
     const draw = () => {
       ctx.clearRect(0, 0, W, H);
-      dots.forEach(d => {
-        d.x += d.vx; d.y += d.vy;
-        if (d.x < 0 || d.x > W) d.vx *= -1;
-        if (d.y < 0 || d.y > H) d.vy *= -1;
-        ctx.beginPath();
-        ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
-        ctx.fillStyle = d.c;
-        ctx.fill();
+      items.forEach(p => {
+        p.x   += p.vx;  p.y += p.vy;
+        p.rot += p.vrot;
+        if (p.x < -200) p.x = W + 100;
+        if (p.x > W+200) p.x = -100;
+        if (p.y < -50)  p.y = H + 30;
+        if (p.y > H+50) p.y = -30;
+
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.globalAlpha = p.alpha;
+
+        // Alternasi warna emas dan biru
+        const useGold = (items.indexOf(p) % 2 === 0);
+        const [r,g,b] = useGold ? GOLD : BLUE;
+        ctx.fillStyle = 'rgb('+r+','+g+','+b+')';
+        ctx.font = '600 '+p.size+'px Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.letterSpacing = '2px';
+        ctx.fillText(p.text, 0, 0);
+        ctx.restore();
       });
-      // Garis koneksi
-      for (let i = 0; i < dots.length; i++) {
-        for (let j = i+1; j < dots.length; j++) {
-          const dx = dots[i].x - dots[j].x;
-          const dy = dots[i].y - dots[j].y;
-          const dist = Math.sqrt(dx*dx + dy*dy);
-          if (dist < 100) {
-            ctx.beginPath();
-            ctx.moveTo(dots[i].x, dots[i].y);
-            ctx.lineTo(dots[j].x, dots[j].y);
-            ctx.strokeStyle = `rgba(45,108,223,${0.08 * (1 - dist/100)})`;
-            ctx.lineWidth = 0.5;
-            ctx.stroke();
-          }
-        }
-      }
       requestAnimationFrame(draw);
     };
     draw();
@@ -422,6 +492,12 @@ function switchTab(tab) {
   if(nav)nav.classList.add('active');
   const main=document.getElementById('main-content');
   if(!main) return;
+  // Bounce animasi saat ganti tab
+  try {
+    main.classList.remove('page-bounce');
+    void main.offsetWidth;
+    main.classList.add('page-bounce');
+  } catch(e) {}
   if(tab==='dashboard')   renderPageDashboard(main);
   else if(tab==='absensi')    renderPageAbsensi(main);
   else if(tab==='pengajuan')  renderPagePengajuan(main);
@@ -831,6 +907,13 @@ function renderAdminLayout() {
     if(window.innerWidth<=768){
       document.getElementById('sidebar')?.classList.remove('open');
       document.getElementById('sidebar-backdrop')?.classList.remove('show');
+    }
+    // Bounce animasi saat ganti halaman
+    const c = document.getElementById('admin-content');
+    if (c) {
+      c.classList.remove('page-bounce');
+      void c.offsetWidth; // reflow
+      c.classList.add('page-bounce');
     }
     routeAdmin(page);
   });
