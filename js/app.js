@@ -23,31 +23,9 @@ function _injectGlobalStyles() {
     }
 
     /* ── Fix 2: Admin layout full width ── */
-    .admin-layout {
-      display: flex;
-      min-height: 100vh;
-      width: 100%;
+    /* Sudah dihandle di main.css langsung */
+    .admin-layout, .admin-main, .admin-content {
       background: transparent !important;
-    }
-    .admin-main {
-      flex: 1;
-      min-width: 0;
-      margin-left: 260px !important;
-      background: transparent !important;
-      min-height: 100vh;
-    }
-    .sidebar.collapsed ~ .admin-main,
-    .sidebar.collapsed + .admin-main {
-      margin-left: 70px !important;
-    }
-    /* Pastikan tidak ada background putih yang menutupi */
-    .admin-content {
-      background: transparent !important;
-      min-height: 100vh;
-    }
-    .admin-topbar {
-      margin-left: 0 !important;
-      width: 100% !important;
     }
 
     /* ── Fix 3: Sidebar glassmorphism ── */
@@ -158,28 +136,25 @@ function _injectGlobalStyles() {
       z-index: 2;
     }
 
-    /* ── Semua konten di atas canvas ── */
+    /* ── Konten di atas canvas ── */
     .admin-layout, .admin-main, .sidebar,
-    .admin-topbar, .mobile-header, .topbar,
-    .bottom-nav, #app-root, .modal-overlay,
-    .card, [class*="page"], main, header, nav,
+    .admin-topbar, #app-root,
+    .card, [class*="page"], main,
     .admin-content, #main-content {
       position: relative;
       z-index: 3;
     }
 
-    /* ── Fix gap sidebar-konten ── */
-    /* Pastikan background mengisi SELURUH halaman termasuk area sidebar */
-    html {
-      background: linear-gradient(145deg,
-        #C8E6FF 0%, #DBEAFE 25%,
-        #EFF6FF 55%, #F0F9FF 80%,
-        #E8F4FD 100%) fixed !important;
+    /* ── Bottom nav & mobile header HARUS di paling atas ── */
+    .bottom-nav {
+      position: fixed !important;
+      bottom: 0 !important; left: 0 !important; right: 0 !important;
+      z-index: 500 !important;
     }
-    /* Hapus background putih dari wrapper apapun */
-    #admin-wrapper, .admin-wrapper,
-    [id*="wrapper"], [class*="wrapper"] {
-      background: transparent !important;
+    .mobile-header, .topbar {
+      position: fixed !important;
+      top: 0 !important; left: 0 !important; right: 0 !important;
+      z-index: 500 !important;
     }
 
     /* ── Scrollbar tipis ── */
