@@ -27,12 +27,27 @@ function _injectGlobalStyles() {
       display: flex;
       min-height: 100vh;
       width: 100%;
+      background: transparent !important;
     }
     .admin-main {
       flex: 1;
       min-width: 0;
-      width: calc(100% - 260px);
+      margin-left: 260px !important;
       background: transparent !important;
+      min-height: 100vh;
+    }
+    .sidebar.collapsed ~ .admin-main,
+    .sidebar.collapsed + .admin-main {
+      margin-left: 70px !important;
+    }
+    /* Pastikan tidak ada background putih yang menutupi */
+    .admin-content {
+      background: transparent !important;
+      min-height: 100vh;
+    }
+    .admin-topbar {
+      margin-left: 0 !important;
+      width: 100% !important;
     }
 
     /* ── Fix 3: Sidebar glassmorphism ── */
@@ -134,22 +149,37 @@ function _injectGlobalStyles() {
       transform: translateY(-1px) scale(1.01) !important;
     }
 
-    /* ── Canvas partikel teks ── */
+    /* ── Canvas teks melayang ── */
     #hmp-float-canvas {
       position: fixed;
-      top:0; left:0;
-      width:100%; height:100%;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
       pointer-events: none;
-      z-index: 0;
+      z-index: 2;
     }
 
     /* ── Semua konten di atas canvas ── */
     .admin-layout, .admin-main, .sidebar,
-    .admin-topbar, .main-content, .topbar,
+    .admin-topbar, .mobile-header, .topbar,
     .bottom-nav, #app-root, .modal-overlay,
-    .card, [class*="page"] {
+    .card, [class*="page"], main, header, nav,
+    .admin-content, #main-content {
       position: relative;
-      z-index: 1;
+      z-index: 3;
+    }
+
+    /* ── Fix gap sidebar-konten ── */
+    /* Pastikan background mengisi SELURUH halaman termasuk area sidebar */
+    html {
+      background: linear-gradient(145deg,
+        #C8E6FF 0%, #DBEAFE 25%,
+        #EFF6FF 55%, #F0F9FF 80%,
+        #E8F4FD 100%) fixed !important;
+    }
+    /* Hapus background putih dari wrapper apapun */
+    #admin-wrapper, .admin-wrapper,
+    [id*="wrapper"], [class*="wrapper"] {
+      background: transparent !important;
     }
 
     /* ── Scrollbar tipis ── */
@@ -205,36 +235,21 @@ function _initParticles() {
              'PT. HUTAKALO MINATANI PRIMA';
     };
 
-    // Cek HP lama: skip particle kalau RAM < 2GB
-    const isLowEnd = navigator.deviceMemory < 2 ||
-                     /Android [1-6]\./.test(navigator.userAgent);
-
-    if (isLowEnd) {
-      // HP lama: hanya 3 teks statis opacity sangat rendah
-      const drawStatic = () => {
-        ctx.clearRect(0, 0, W, H);
-        const nama = getNamaInst();
-        ctx.save();
-        ctx.fillStyle = 'rgba(45,108,223,0.04)';
-        ctx.font = 'bold 28px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(nama, W*0.5, H*0.33);
-        ctx.fillText(nama, W*0.5, H*0.66);
-        ctx.restore();
-      };
-      drawStatic();
-      window.addEventListener('resize', drawStatic);
-      return;
-    }
+    // Adaptif: kurangi jumlah teks di HP lama
+    // deviceMemory tidak selalu tersedia, pakai fallback false
+    const isLowEnd = (navigator.deviceMemory !== undefined && navigator.deviceMemory < 2) ||
+                     /Android [1-5]\./.test(navigator.userAgent);
 
     // HP normal: teks melayang
     let items = [];
     const init = () => {
       const nama = getNamaInst();
-      const N    = Math.min(8, Math.max(4, Math.floor(W / 200)));
+      const N    = isLowEnd
+      ? Math.min(4, Math.max(2, Math.floor(W / 400)))
+      : Math.min(8, Math.max(5, Math.floor(W / 180)));
       items = [];
       for (let i = 0; i < N; i++) {
-        const size = 10 + Math.random() * 14;
+        const size = 14 + Math.random() * 16;
         items.push({
           text : nama,
           x    : Math.random() * W,
@@ -242,7 +257,7 @@ function _initParticles() {
           vx   : (Math.random() - 0.5) * 0.25,
           vy   : (Math.random() - 0.5) * 0.18,
           size : size,
-          alpha: 0.035 + Math.random() * 0.045,
+          alpha: 0.06 + Math.random() * 0.07,
           rot  : (Math.random() - 0.5) * 0.3,
           vrot : (Math.random() - 0.5) * 0.002,
         });
