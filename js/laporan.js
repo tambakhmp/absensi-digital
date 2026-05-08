@@ -648,7 +648,7 @@ async function exportRekapExcel(bulan, tahun, tanggalDari, tanggalKe) {
       const row = [i+1, k.nik, k.nama, k.jabatan, k.departemen];
       tglList.forEach(tgl => {
         const st = k.harian?.[tgl] || '';
-        row.push(st ? (STATUS_KODE[st] || (String(a.jam_masuk||'').trim() ? 'H' : '') || st.slice(0,2).toUpperCase()) : '');
+        row.push(st ? (STATUS_KODE[st] || st.slice(0,2).toUpperCase()) : '');
       });
       row.push(
         k.hadir || 0, k.terlambat || 0, k.alfa || 0, k.izin || 0,
@@ -814,7 +814,7 @@ async function exportRekapExcel(bulan, tahun, tanggalDari, tanggalKe) {
         if (c >= FIXED && c < FIXED + tglList.length) {
           const tgl  = tglList[c - FIXED];
           const st   = k.harian?.[tgl] || '';
-          const kode = STATUS_KODE[st] || (String(a.jam_masuk||'').trim() ? 'H' : '');
+          const kode = STATUS_KODE[st] || '';
           const w    = WARNA_STATUS[kode];
 
           // Cek hari weekend utk kolom kosong
