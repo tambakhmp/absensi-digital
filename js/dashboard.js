@@ -254,11 +254,12 @@ async function loadDashboardKaryawan() {
     _loadInfoHariLibur(),
   ]);
 
-  // Phase 2: tidak kritis — ranking, SP, jadwal (tidak block fase 1)
+  // Phase 2: tidak kritis — ranking, SP, jadwal, surat tugas pending
   Promise.allSettled([
     renderRankingSection('ranking-section'),
     _loadSPSaya(),
     loadJadwalMingguSaya(),
+    _loadSuratTugasPendingDashboard(),
   ]);
 }
 
@@ -1370,3 +1371,57 @@ function _renderInsight(insights) {
   </div>`;
 }
 
+// ─── SURAT TUGAS PENDING di Dashboard ───────────────────────
+// Tampil untuk karyawan (perlu TTD), atasan, dan pimpinan
+async function _loadSuratTugasPendingDashboard() {
+  const el = document.getElementById('surat-tugas-pending-section');
+  if (!el) return;
+  try {
+    const data = await callAPI('getSuratTugasPending', {});
+    if (!data || data.length === 0) { el.innerHTML = ''; return; }
+
+    const session = getSession();
+    const idMe    = String(session?.id_karyawan || '');
+
+    const cards = data.map(s => {
+      // Label aksi sesuai status dan siapa usernya
+      let aksiLabel = '✍️ Tanda Tangani';
+      if (s.status_surat === 'menunggu_karyawan' && idMe === String(s.id_karyawan))
+        aksiLabel = '✍️ Tanda Tangani';
+      else if (s.status_surat === 'menunggu_atasan' && idMe === String(s.id_atasan))
+        aksiLabel = '✍️ Tanda Tangani sebagai Atasan';
+      else if (s.status_surat === 'menunggu_pimpinan' && idMe === String(s.id_pimpinan))
+        aksiLabel = '✍️ Tanda Tangani sebagai Pimpinan';
+
+      return `<div style="background:#FFF7ED;border:1.5px solid #FDBA74;border-radius:12px;
+        padding:12px 14px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#C2410C">
+              📋 Surat Tugas Menunggu TTD</div>
+            <div style="font-size:12px;color:#64748B;margin-top:2px">
+              ${s.nama_karyawan} &nbsp;·&nbsp; ${s.no_surat||''}
+            </div>
+            <div style="font-size:12px;color:#64748B;margin-top:2px">
+              🗓️ ${s.tanggal_mulai||''} – ${s.tanggal_selesai||''}
+            </div>
+            <div style="font-size:12px;color:#64748B;margin-top:2px">
+              📍 ${s.tujuan_tugas||'-'}
+            </div>
+          </div>
+        </div>
+        <button onclick="_lihatSuratTugas('${s.id_surat}')"
+          style="margin-top:10px;width:100%;padding:9px;background:#EA580C;color:#fff;
+          border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+          ${aksiLabel}
+        </button>
+      </div>`;
+    }).join('');
+
+    el.innerHTML = `<div class="card" style="border-left:4px solid #EA580C">
+      <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;color:#C2410C">
+        📋 Surat Tugas Perlu TTD (${data.length})</h3>
+      ${cards}
+    </div>`;
+  } catch(e) { /* senyap — fitur opsional */ }
+}
