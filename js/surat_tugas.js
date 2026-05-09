@@ -576,29 +576,49 @@ async function _cetakSuratTugasPDF(idSurat) {
     });
     y+=4;
 
-    // Box tugas — hitung tinggi dinamis dulu
-    const tugasRows=[['Tujuan Tugas',s.tujuan_tugas||'-'],['Keperluan',s.keperluan||'-'],
-      ['Periode',_fmtTglST(s.tanggal_mulai)+' s/d '+_fmtTglST(s.tanggal_selesai)+' ('+s.total_hari+' hari)']];
-    let boxH = 4;
-    tugasRows.forEach(r=>{
-      const lines=doc.splitTextToSize(': '+r[1], W-mL-mR-42);
-      boxH += lines.length * 6;
-    });
-    boxH += 4;
+    // ── Box tugas proporsional ────────────────────────────────
+    doc.setFontSize(10.5);
+    const padV   = 5;   // padding atas & bawah dalam box
+    const lineH  = 7;   // jarak antar baris (mm)
+    const xLabel = mL + 8;          // label kiri mulai dari sini
+    const xColon = mL + 42;         // titik dua sejajar
+    const xValue = mL + 45;         // nilai mulai dari sini
+    const valW   = W - mR - xValue; // lebar maksimal nilai
 
-    doc.setFillColor(239,246,255);
-    doc.roundedRect(mL, y-3, W-mL-mR, boxH, 3, 3, 'F');
-    doc.setDrawColor(37,99,235); doc.setLineWidth(0.8);
-    doc.line(mL+1, y-3, mL+1, y-3+boxH);
+    const tugasRows = [
+      ['Tujuan Tugas', s.tujuan_tugas||'-'],
+      ['Keperluan',    s.keperluan||'-'],
+      ['Periode',      _fmtTglST(s.tanggal_mulai)+' s/d '+_fmtTglST(s.tanggal_selesai)+' ('+s.total_hari+' hari)']
+    ];
+
+    // Hitung tinggi box dinamis
+    let boxH = padV * 2;
+    tugasRows.forEach(r => {
+      const lines = doc.splitTextToSize(r[1], valW);
+      boxH += lines.length * lineH;
+    });
+
+    // Gambar box + garis aksen kiri
+    doc.setFillColor(239, 246, 255);
+    doc.roundedRect(mL, y, W-mL-mR, boxH, 2, 2, 'F');
+    doc.setDrawColor(37, 99, 235); doc.setLineWidth(1.2);
+    doc.line(mL, y, mL, y + boxH);          // garis kiri tebal
+    doc.setDrawColor(180, 210, 255); doc.setLineWidth(0.3);
+    doc.roundedRect(mL, y, W-mL-mR, boxH, 2, 2, 'S'); // border tipis
     doc.setDrawColor(0,0,0); doc.setLineWidth(0.2);
 
-    tugasRows.forEach(r=>{
-      doc.setTextColor(100,100,100); doc.text(r[0], mL+4, y);
-      doc.setTextColor(0,0,0);
-      const lines=doc.splitTextToSize(': '+r[1], W-mL-mR-42);
-      doc.text(lines, mL+40, y); y+=lines.length*6;
+    // Tulis isi baris — dimulai setelah padding atas
+    let ty = y + padV + 4.5; // baseline baris pertama
+    tugasRows.forEach(r => {
+      const lines = doc.splitTextToSize(r[1], valW);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(90, 90, 90);   doc.text(r[0], xLabel, ty);
+      doc.setTextColor(80, 80, 80);   doc.text(':', xColon, ty);
+      doc.setTextColor(0, 0, 0);      doc.text(lines, xValue, ty);
+      ty += lines.length * lineH;
     });
-    y += 8;
+
+    y += boxH + 8; // avancer après la box
 
     // Penutup
     doc.setFontSize(10.5);
