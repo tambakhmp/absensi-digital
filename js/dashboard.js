@@ -848,6 +848,9 @@ async function loadDashboardAdminV3() {
     }
   } catch(e) {}
 
+  // Load surat tugas menunggu persetujuan admin (non-blocking)
+  _loadSuratTugasAdminApproval().catch(()=>{});
+
   try {
     showLoading('admin-stats-container', 'Memuat statistik...');
     const s = await callAPI('getStatsDashboard', {});
@@ -1424,4 +1427,70 @@ async function _loadSuratTugasPendingDashboard() {
       ${cards}
     </div>`;
   } catch(e) { /* senyap — fitur opsional */ }
+}
+
+// ─── SURAT TUGAS MENUNGGU PERSETUJUAN ADMIN ──────────────────
+// Tampil di dashboard admin bila ada surat yg semua TTD sudah lengkap
+async function _loadSuratTugasAdminApproval() {
+  const el = document.getElementById('surat-tugas-admin-section');
+  if (!el) return;
+  try {
+    const session = getSession();
+    const role    = String(session?.role || '').toLowerCase();
+    if (role !== 'admin' && role !== 'superadmin') return;
+
+    const data = await callAPI('getSuratTugasPending', {});
+    if (!data || data.length === 0) { el.innerHTML = ''; return; }
+
+    // Admin hanya lihat yang menunggu_admin
+    const pending = data.filter(s => s.status_surat === 'menunggu_admin');
+    if (pending.length === 0) { el.innerHTML = ''; return; }
+
+    const cards = pending.map(s => `
+      <div style="background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:12px;
+        padding:12px 14px;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:700;color:#15803D;margin-bottom:4px">
+          📋 ${s.no_surat||''} — Semua TTD Lengkap ✅
+        </div>
+        <div style="font-size:12px;color:#64748B">
+          👤 ${s.nama_karyawan} &nbsp;·&nbsp; ${s.jabatan||''}
+        </div>
+        <div style="font-size:12px;color:#64748B;margin-top:2px">
+          🗓️ ${s.tanggal_mulai||''} – ${s.tanggal_selesai||''}
+          &nbsp;·&nbsp; 📍 ${s.tujuan_tugas||'-'}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button onclick="_lihatSuratTugas('${s.id_surat}')"
+            style="flex:1;padding:9px;background:#1E3A5F;color:#fff;border:none;
+            border-radius:8px;font-size:13px;cursor:pointer">
+            🔍 Lihat Surat
+          </button>
+          <button onclick="_setujuiSuratAdmin('${s.id_surat}')"
+            style="flex:1;padding:9px;background:#16A34A;color:#fff;border:none;
+            border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">
+            ✅ Setujui
+          </button>
+        </div>
+      </div>`).join('');
+
+    el.innerHTML = `<div class="card" style="border-left:4px solid #16A34A">
+      <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;color:#15803D">
+        ✅ Surat Tugas Siap Disetujui (${pending.length})</h3>
+      ${cards}
+    </div>`;
+  } catch(e) { /* senyap */ }
+}
+
+// Tombol Setujui langsung dari dashboard admin
+async function _setujuiSuratAdmin(idSurat) {
+  if (!confirm('Setujui surat tugas ini?\nPengajuan dinas luar akan otomatis disetujui.')) return;
+  try {
+    showToast('Memproses...', 'info', 2000);
+    const res = await callAPI('setujuiSuratTugas', { id_surat: idSurat });
+    showToast('✅ ' + res.message, 'success', 4000);
+    _loadSuratTugasAdminApproval();
+    if (typeof _loadListSuratTugasAdmin === 'function') _loadListSuratTugasAdmin();
+  } catch(e) {
+    showToast('Gagal: ' + e.message, 'error');
+  }
 }
