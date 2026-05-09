@@ -883,15 +883,77 @@ async function loadPengajuanAdminV4() {
   if(!el) return;
   el.innerHTML=skeletonCard(3);
   try {
-    const raw=(await callAPI('getPengajuanSemua',{status:st,jenis:jn})||[])
-      .filter(p=>p.jenis!=='lembur');
-    const data = raw;
-    console.log('[DEBUG pengajuan] total:', data.length, 'contoh[0]:', JSON.stringify(data[0]));
+    // Load pengajuan + data surat tugas sekaligus
+    const [raw, suratList] = await Promise.allSettled([
+      callAPI('getPengajuanSemua',{status:st,jenis:jn}),
+      callAPI('getSuratTugas', {})
+    ]);
+    const data = (raw.value||[]).filter(p=>p.jenis!=='lembur');
+
+    // Buat map id_pengajuan → surat tugas untuk cek cepat
+    const suratMap = {};
+    (suratList.value||[]).forEach(s => {
+      if (s.id_pengajuan) suratMap[String(s.id_pengajuan)] = s;
+    });
+
     const stat=document.getElementById('pgj-stat');
     if(stat)stat.textContent=(data?.length||0)+' pengajuan';
     if(!data||data.length===0){showEmpty('pgj-admin-list','Tidak ada pengajuan');return;}
     const LBL={izin:'📝 Izin',sakit:'🏥 Sakit',cuti:'🏖️ Cuti',dinas_luar:'🚗 Dinas Luar',lembur:'⏰ Lembur'};
-    el.innerHTML=data.map(p=>`
+
+    // Label & warna status surat tugas
+    const ST_LABEL = {
+      menunggu_karyawan : '⏳ Menunggu TTD Karyawan',
+      menunggu_atasan   : '⏳ Menunggu TTD Atasan',
+      menunggu_pimpinan : '⏳ Menunggu TTD Pimpinan',
+      menunggu_admin    : '✅ Siap Disetujui Admin',
+      selesai           : '✅ Selesai'
+    };
+    const ST_COLOR = {
+      menunggu_karyawan : '#D97706',
+      menunggu_atasan   : '#2D6CDF',
+      menunggu_pimpinan : '#7C3AED',
+      menunggu_admin    : '#16A34A',
+      selesai           : '#64748B'
+    };
+
+    el.innerHTML=data.map(p=>{
+      const surat = suratMap[String(p.id_pengajuan)] || null;
+      const sudahAdaSurat = !!surat;
+
+      // Tombol aksi untuk dinas luar pending
+      let tombolAksi = '';
+      if (p.status === 'pending') {
+        if (p.jenis === 'dinas_luar') {
+          if (!sudahAdaSurat) {
+            // Belum ada surat — tampil Buat Surat Tugas
+            tombolAksi = `<button class="btn" style="padding:9px 16px;font-size:13px;
+              background:#1E3A5F;color:#fff;border:none;border-radius:8px;cursor:pointer"
+              onclick="_buatSuratDariPengajuan('${p.id_pengajuan}','${p.id_karyawan}',
+                '${p.tanggal_mulai||p.tanggal}','${p.tanggal_selesai||p.tanggal}',
+                '${(p.keterangan||'').replace(/'/g,'')}')"
+            >📋 Buat Surat Tugas</button>`;
+          } else if (surat.status_surat === 'menunggu_admin') {
+            // Semua TTD lengkap — tampil tombol Setujui
+            tombolAksi = `<button class="btn" style="padding:9px 16px;font-size:13px;
+              background:#16A34A;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700"
+              onclick="_setujuiSuratAdmin('${surat.id_surat}')">✅ Setujui</button>`;
+          } else {
+            // Surat sedang berjalan (proses TTD) — tampil status surat, tidak ada tombol approve
+            tombolAksi = `<div style="font-size:12px;font-weight:600;padding:8px 12px;
+              border-radius:8px;background:#F1F5F9;color:${ST_COLOR[surat.status_surat]||'#64748B'};
+              text-align:center">${ST_LABEL[surat.status_surat]||surat.status_surat}</div>
+              <button class="btn btn--ghost" style="padding:6px 12px;font-size:12px;margin-top:2px"
+                onclick="_lihatSuratTugas('${surat.id_surat}')">🔍 Lihat Surat</button>`;
+          }
+        } else {
+          // Bukan dinas luar — tombol Setujui biasa
+          tombolAksi = `<button class="btn btn--secondary" style="padding:9px 16px;font-size:13px"
+            onclick="approvePGJ('${p.id_pengajuan}','${p.nama_karyawan}')">✅ Setujui</button>`;
+        }
+      }
+
+      return `
       <div class="card" style="border-left:4px solid ${
         p.status==='pending'?'#D97706':p.status==='disetujui'?'#1A9E74':'#E53E3E'}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">
@@ -920,22 +982,13 @@ async function loadPengajuanAdminV4() {
           </div>
           ${p.status==='pending'?`
           <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
-            ${p.jenis==='dinas_luar' && p.status==='pending' ? `
-              <button class="btn" style="padding:9px 16px;font-size:13px;
-                background:#1E3A5F;color:#fff;border:none;border-radius:8px;cursor:pointer"
-                onclick="_buatSuratDariPengajuan('${p.id_pengajuan}','${p.id_karyawan}',
-                  '${p.tanggal_mulai||p.tanggal}','${p.tanggal_selesai||p.tanggal}',
-                  '${(p.keterangan||'').replace(/'/g,'')}')"
-              >📋 Buat Surat Tugas</button>
-            ` : `
-              <button class="btn btn--secondary" style="padding:9px 16px;font-size:13px"
-                onclick="approvePGJ('${p.id_pengajuan}','${p.nama_karyawan}')">✅ Setujui</button>
-            `}
+            ${tombolAksi}
             <button class="btn btn--danger" style="padding:9px 16px;font-size:13px"
               onclick="tolakPGJ('${p.id_pengajuan}','${p.nama_karyawan}')">❌ Tolak</button>
           </div>`:''}
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   }catch(e){showError('pgj-admin-list',e.message);}
 }
 
