@@ -366,11 +366,16 @@ async function _lihatSuratTugas(idSurat) {
     <!-- Isi surat -->
     <div style="padding:20px;font-size:13px;color:#0F172A">
 
-      <!-- Pemberi tugas -->
+      <!-- Pemberi tugas: bila ada pimpinan → pimpinan, bila PM dinas luar → PM sendiri -->
       <div style="font-size:11px;color:#64748B;margin-bottom:4px">Yang bertanda tangan di bawah ini:</div>
       <div style="background:#F8FAFC;border-radius:8px;padding:10px;margin-bottom:14px">
-        <div><span style="color:#64748B;width:100px;display:inline-block">Nama</span>: <strong>${s.nama_pembuat||'-'}</strong></div>
-        <div><span style="color:#64748B;width:100px;display:inline-block">Jabatan</span>: ${s.jabatan_pembuat||'-'}</div>
+        <div><span style="color:#64748B;width:100px;display:inline-block">Nama</span>: <strong>${
+          s.nama_pimpinan && s.nama_pimpinan.trim() ? s.nama_pimpinan : s.nama_pembuat||'-'
+        }</strong></div>
+        <div><span style="color:#64748B;width:100px;display:inline-block">Jabatan</span>: ${
+          s.nama_pimpinan && s.nama_pimpinan.trim() ? 'Project Manager' : (s.jabatan_pembuat||'-')
+        }</div>
+        <div><span style="color:#64748B;width:100px;display:inline-block">Instansi</span>: ${s.instansi||'PT. HUTAKALO MINATANI PRIMA'}</div>
       </div>
 
       <div style="font-size:11px;color:#64748B;margin-bottom:4px">Dengan ini menugaskan karyawan:</div>
@@ -388,13 +393,26 @@ async function _lihatSuratTugas(idSurat) {
         <div><span style="color:#64748B">Periode</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; : ${_fmtTglST(s.tanggal_mulai)} s/d ${_fmtTglST(s.tanggal_selesai)} (${s.total_hari||'-'} hari)</div>
       </div>
 
-      <!-- Tanda tangan -->
-      <div style="border-top:1px solid #E2E8F0;padding-top:14px;
-        display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
-        ${renderTTDBox('Karyawan penerima',s.nama_karyawan,s.jabatan,s.ttd_karyawan,s.ttd_karyawan_at)}
-        ${renderTTDBox('Atasan langsung',s.nama_atasan,'',s.ttd_atasan,s.ttd_atasan_at)}
-        ${renderTTDBox('Mengetahui',s.nama_pimpinan,'Project Manager',s.ttd_pimpinan,s.ttd_pimpinan_at)}
-      </div>
+      <!-- Tanda tangan — kolom dinamis sesuai pihak yang terlibat -->
+      ${(()=>{
+        // Bangun slot TTD sesuai data surat
+        const slots = [];
+        slots.push({label:'Karyawan penerima', nama:s.nama_karyawan||'-', jab:s.jabatan||'', img:s.ttd_karyawan, at:s.ttd_karyawan_at});
+        if (s.nama_atasan && String(s.nama_atasan).trim()!=='') {
+          slots.push({label:'Atasan langsung', nama:s.nama_atasan, jab:'', img:s.ttd_atasan, at:s.ttd_atasan_at});
+        }
+        if (s.nama_pimpinan && String(s.nama_pimpinan).trim()!=='') {
+          slots.push({label:'Mengetahui', nama:s.nama_pimpinan, jab:'Project Manager', img:s.ttd_pimpinan, at:s.ttd_pimpinan_at});
+        }
+        // PM dinas luar: hanya 1 slot karyawan → tambah slot Admin/Mengetahui
+        if (slots.length === 1) {
+          slots.push({label:'Mengetahui', nama:s.nama_pembuat||'Admin', jab:s.jabatan_pembuat||'Admin', img:'', at:''});
+        }
+        const cols = slots.length === 2 ? 'repeat(2,1fr)' : 'repeat(3,1fr)';
+        return \`<div style="border-top:1px solid #E2E8F0;padding-top:14px;display:grid;grid-template-columns:\${cols};gap:10px">
+          \${slots.map(sl => renderTTDBox(sl.label, sl.nama, sl.jab, sl.img, sl.at)).join('')}
+        </div>\`;
+      })()}
 
       ${biasTTD ? `
       <!-- Canvas TTD -->
@@ -561,7 +579,12 @@ async function _cetakSuratTugasPDF(idSurat) {
     doc.setFontSize(10.5); doc.setFont('helvetica','normal');
     doc.text('Yang bertanda tangan di bawah ini:', mL, y); y+=7;
 
-    const rows1=[['Nama',s.nama_pembuat||'-'],['Jabatan',s.jabatan_pembuat||'-'],['Instansi',inst.nama_instansi||'PT. Hutakalo Minatani Prima']];
+    // Pemberi tugas di PDF: pimpinan bila ada, fallback ke admin pembuat
+    const namaPemberiTugas = (s.nama_pimpinan && String(s.nama_pimpinan).trim())
+      ? s.nama_pimpinan : (s.nama_pembuat||'-');
+    const jabPemberiTugas  = (s.nama_pimpinan && String(s.nama_pimpinan).trim())
+      ? 'Project Manager' : (s.jabatan_pembuat||'-');
+    const rows1=[['Nama',namaPemberiTugas],['Jabatan',jabPemberiTugas],['Instansi',inst.nama_instansi||'PT. Hutakalo Minatani Prima']];
     rows1.forEach(r=>{
       doc.setTextColor(100,100,100); doc.text(r[0], mL+2, y);
       doc.setTextColor(0,0,0); doc.text(': '+r[1], mL+38, y); y+=6;
@@ -810,11 +833,25 @@ async function _kirimPerpanjangan(idSurat) {
 }
 
 // ─── BUAT SURAT TUGAS DARI PENGAJUAN (admin) ─────────────────
+// Wrapper: baca data-attribute dari tombol lalu panggil fungsi utama
+function _buatSuratClick(btn) {
+  const idP = btn.dataset.pgj  || '';
+  const idK = btn.dataset.kary || '';
+  const tm  = decodeURIComponent(btn.dataset.tm  || '');
+  const ts  = decodeURIComponent(btn.dataset.ts  || '');
+  const ket = decodeURIComponent(btn.dataset.ket || '');
+  _buatSuratDariPengajuan(idP, idK, tm, ts, ket);
+}
+
 async function _buatSuratDariPengajuan(idPengajuan, idKaryawan, tglMulai, tglSelesai, keterangan) {
   document.getElementById('modal-buat-st')?.remove();
 
+  // Decode bila masih encoded
+  const ket = (typeof keterangan === 'string') ? keterangan : '';
+
   const toInputDate = (v) => {
     if (!v) return '';
+    v = decodeURIComponent(v);
     const p = v.split('/');
     return p.length >= 3
       ? p[2]+'-'+String(p[1]).padStart(2,'0')+'-'+String(p[0]).padStart(2,'0')
@@ -861,7 +898,7 @@ async function _buatSuratDariPengajuan(idPengajuan, idKaryawan, tglMulai, tglSel
         <textarea id="st-keperluan" rows="3"
           placeholder="Jelaskan keperluan tugas..."
           style="width:100%;padding:10px;border:1px solid #E2E8F0;border-radius:8px;
-          font-size:13px;box-sizing:border-box;resize:vertical">${keterangan||''}</textarea>
+          font-size:13px;box-sizing:border-box;resize:vertical">${ket||''}</textarea>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div>
@@ -891,5 +928,13 @@ async function _buatSuratDariPengajuan(idPengajuan, idKaryawan, tglMulai, tglSel
 
   modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
   document.body.appendChild(modal);
-  setTimeout(_hitungHariST, 100);
+
+  // Set nilai via JS setelah render — aman untuk semua karakter khusus
+  setTimeout(() => {
+    const elTujuan = document.getElementById('st-tujuan');
+    const elKeper  = document.getElementById('st-keperluan');
+    if (elTujuan) elTujuan.value = ket || '';
+    if (elKeper)  elKeper.value  = ket || '';
+    _hitungHariST();
+  }, 50);
 }
