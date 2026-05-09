@@ -538,11 +538,9 @@ async function _cetakSuratTugasPDF(idSurat) {
     const W=210, mL=25, mR=25;
     let y = 15;
 
-    // Kop surat
+    // Kop surat (_kopSurat sudah include garis tebal + spasi)
     y = await _kopSurat(doc, inst, W, mL, y);
-
-    // Garis bawah kop
-    doc.setLineWidth(0.5); doc.line(mL, y, W-mR, y); y+=6;
+    // y sudah setelah garis kop — tidak perlu tambah garis lagi
 
     // Judul
     doc.setFont('helvetica','bold'); doc.setFontSize(14);
@@ -551,8 +549,8 @@ async function _cetakSuratTugasPDF(idSurat) {
     doc.setFont('helvetica','normal'); doc.setFontSize(10);
     doc.setTextColor(80,80,80);
     doc.text('Nomor: '+(s.no_surat||'-'), W/2, y, {align:'center'});
-    doc.setTextColor(0,0,0); y += 4;
-    doc.setLineWidth(0.5); doc.line(mL, y, W-mR, y); y += 8;
+    doc.setTextColor(0,0,0); y += 5;
+    doc.setLineWidth(0.3); doc.line(mL, y, W-mR, y); y += 8;
 
     // Pemberi tugas
     const BLN=['','Januari','Februari','Maret','April','Mei','Juni',
@@ -578,22 +576,29 @@ async function _cetakSuratTugasPDF(idSurat) {
     });
     y+=4;
 
-    // Box tugas
+    // Box tugas — hitung tinggi dinamis dulu
+    const tugasRows=[['Tujuan Tugas',s.tujuan_tugas||'-'],['Keperluan',s.keperluan||'-'],
+      ['Periode',_fmtTglST(s.tanggal_mulai)+' s/d '+_fmtTglST(s.tanggal_selesai)+' ('+s.total_hari+' hari)']];
+    let boxH = 4;
+    tugasRows.forEach(r=>{
+      const lines=doc.splitTextToSize(': '+r[1], W-mL-mR-42);
+      boxH += lines.length * 6;
+    });
+    boxH += 4;
+
     doc.setFillColor(239,246,255);
-    doc.roundedRect(mL, y-3, W-mL-mR, 30, 3, 3, 'F');
+    doc.roundedRect(mL, y-3, W-mL-mR, boxH, 3, 3, 'F');
     doc.setDrawColor(37,99,235); doc.setLineWidth(0.8);
-    doc.line(mL, y-3, mL, y+27);
+    doc.line(mL+1, y-3, mL+1, y-3+boxH);
     doc.setDrawColor(0,0,0); doc.setLineWidth(0.2);
 
-    const tugas=[['Tujuan Tugas',s.tujuan_tugas||'-'],['Keperluan',s.keperluan||'-'],
-      ['Periode',_fmtTglST(s.tanggal_mulai)+' s/d '+_fmtTglST(s.tanggal_selesai)+' ('+s.total_hari+' hari)']];
-    tugas.forEach(r=>{
+    tugasRows.forEach(r=>{
       doc.setTextColor(100,100,100); doc.text(r[0], mL+4, y);
       doc.setTextColor(0,0,0);
       const lines=doc.splitTextToSize(': '+r[1], W-mL-mR-42);
-      doc.text(lines, mL+40, y); y+=6;
+      doc.text(lines, mL+40, y); y+=lines.length*6;
     });
-    y+=6;
+    y += 8;
 
     // Penutup
     doc.setFontSize(10.5);
@@ -663,4 +668,81 @@ function _getKotaFromAlamat(alamat) {
   if (!alamat) return '';
   const m = alamat.match(/Kab\.?\s+([^,\u2013\-]+)/i);
   return m ? m[1].trim() : alamat.split(',')[0].trim();
+}
+
+
+// ─── PERPANJANG DINAS LUAR (tanpa TTD ulang) ─────────────────
+async function _perpanjangDinasLuar(idSurat) {
+  document.getElementById('modal-perpanjang-dl')?.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-perpanjang-dl';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);' +
+    'z-index:9600;display:flex;align-items:center;justify-content:center;padding:16px';
+
+  const now = new Date();
+  const tgl = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+
+  modal.innerHTML = `
+  <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:380px">
+    <div style="font-size:16px;font-weight:700;margin-bottom:8px">📅 Perpanjang Dinas Luar</div>
+    <div style="background:#EFF6FF;border-radius:8px;padding:10px 14px;
+      margin-bottom:16px;font-size:12px;color:#1E40AF;line-height:1.6">
+      ℹ️ Perpanjangan <strong>tidak perlu tanda tangan ulang</strong>.<br>
+      Surat lama tetap tersimpan sebagai arsip.<br>
+      Admin hanya perlu menyetujui perpanjangan ini.
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#64748B;display:block;margin-bottom:6px">
+          PERPANJANG SAMPAI TANGGAL</label>
+        <input id="perp-tgl-selesai" type="date" value="${tgl}"
+          style="width:100%;padding:10px;border:1px solid #E2E8F0;border-radius:8px;
+          font-size:13px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#64748B;display:block;margin-bottom:6px">
+          ALASAN PERPANJANGAN</label>
+        <textarea id="perp-alasan" rows="2" placeholder="Contoh: Pekerjaan belum selesai..."
+          style="width:100%;padding:10px;border:1px solid #E2E8F0;border-radius:8px;
+          font-size:13px;box-sizing:border-box;resize:vertical"></textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button onclick="document.getElementById('modal-perpanjang-dl').remove()"
+        style="flex:1;padding:10px;border:1px solid #E2E8F0;border-radius:8px;
+        font-size:13px;cursor:pointer;background:#fff">Batal</button>
+      <button onclick="_kirimPerpanjangan('${idSurat}')"
+        style="flex:2;padding:10px;background:#2D6CDF;color:#fff;border:none;
+        border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">
+        📤 Ajukan Perpanjangan
+      </button>
+    </div>
+  </div>`;
+
+  modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+async function _kirimPerpanjangan(idSurat) {
+  const tglBaru = document.getElementById('perp-tgl-selesai')?.value;
+  const alasan  = document.getElementById('perp-alasan')?.value?.trim();
+
+  if (!tglBaru) { showToast('Pilih tanggal perpanjangan', 'warning'); return; }
+  if (!alasan)  { showToast('Isi alasan perpanjangan', 'warning'); return; }
+
+  const toIDDate = v => { const p=v.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; };
+
+  try {
+    showToast('Mengirim perpanjangan ke admin...', 'info', 2000);
+    await callAPI('perpanjangSuratTugas', {
+      id_surat             : idSurat,
+      tanggal_selesai_baru : toIDDate(tglBaru),
+      alasan               : alasan
+    });
+    document.getElementById('modal-perpanjang-dl')?.remove();
+    showToast('✅ Perpanjangan diajukan. Admin akan menyetujui.', 'success', 4000);
+  } catch(e) {
+    showToast('Gagal: '+e.message, 'error');
+  }
 }
