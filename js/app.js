@@ -2531,22 +2531,7 @@ function _toggleJadwalAll(btn) {
 async function _buatSuratDariPengajuan(idPengajuan, idKaryawan, tglMulai, tglSelesai, keterangan) {
   document.getElementById('modal-buat-st')?.remove();
 
-  // Ambil daftar karyawan
-  let karyList = [];
-  try { karyList = await callAPI('getKaryawanAktif', {}); } catch(e){}
-
-  const modal = document.createElement('div');
-  modal.id = 'modal-buat-st';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);' +
-    'z-index:9500;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto';
-
-  // Karyawan yang sudah dipilih
-  const karyOptions = karyList
-    .filter(k => (k.role||'karyawan')==='karyawan' && String(k.status_aktif).toLowerCase()==='true')
-    .map(k => `<option value="${k.id_karyawan}" ${k.id_karyawan===idKaryawan?'selected':''}>
-      ${k.nama_lengkap} — ${k.jabatan||''}</option>`)
-    .join('');
-
+  // id_karyawan sudah diketahui dari konteks pengajuan — tidak perlu dropdown
   // Convert dd/MM/yyyy ke yyyy-MM-dd untuk input date
   const toInputDate = (v) => {
     if (!v) return '';
@@ -2554,9 +2539,16 @@ async function _buatSuratDariPengajuan(idPengajuan, idKaryawan, tglMulai, tglSel
     return p.length>=3 ? p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0') : v;
   };
 
+  const modal = document.createElement('div');
+  modal.id = 'modal-buat-st';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);' +
+    'z-index:9500;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto';
+
+  // Simpan idKaryawan di hidden input agar _kirimSuratTugas bisa baca
   modal.innerHTML = `
   <div style="background:#fff;border-radius:16px;padding:24px;
     width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
+    <input type="hidden" id="st-id-kary" value="${idKaryawan}">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <div>
         <div style="font-size:16px;font-weight:700">📋 Buat Surat Tugas</div>
@@ -2574,14 +2566,6 @@ async function _buatSuratDariPengajuan(idPengajuan, idKaryawan, tglMulai, tglSel
     </div>
 
     <div style="display:flex;flex-direction:column;gap:14px">
-      <div>
-        <label style="font-size:12px;font-weight:600;color:#64748B;display:block;margin-bottom:6px">
-          KARYAWAN</label>
-        <select id="st-id-kary" style="width:100%;padding:10px;border:1px solid #E2E8F0;
-          border-radius:8px;font-size:13px">
-          ${karyOptions}
-        </select>
-      </div>
       <div>
         <label style="font-size:12px;font-weight:600;color:#64748B;display:block;margin-bottom:6px">
           TUJUAN TUGAS</label>
