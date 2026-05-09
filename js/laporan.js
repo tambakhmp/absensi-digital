@@ -647,8 +647,8 @@ async function exportRekapExcel(bulan, tahun, tanggalDari, tanggalKe) {
     data.forEach((k, i) => {
       const row = [i+1, k.nik, k.nama, k.jabatan, k.departemen];
       tglList.forEach(tgl => {
-        const st = k.harian?.[tgl] || '';
-        row.push(st ? (STATUS_KODE[st] || st.slice(0,2).toUpperCase()) : '');
+        const st = String(k.harian?.[tgl] || '').toLowerCase().trim();
+        row.push(st ? (STATUS_KODE[st] || '') : '');
       });
       row.push(
         k.hadir || 0, k.terlambat || 0, k.alfa || 0, k.izin || 0,
