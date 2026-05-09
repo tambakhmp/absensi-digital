@@ -808,3 +808,88 @@ async function _kirimPerpanjangan(idSurat) {
     showToast('Gagal: '+e.message, 'error');
   }
 }
+
+// ─── BUAT SURAT TUGAS DARI PENGAJUAN (admin) ─────────────────
+async function _buatSuratDariPengajuan(idPengajuan, idKaryawan, tglMulai, tglSelesai, keterangan) {
+  document.getElementById('modal-buat-st')?.remove();
+
+  const toInputDate = (v) => {
+    if (!v) return '';
+    const p = v.split('/');
+    return p.length >= 3
+      ? p[2]+'-'+String(p[1]).padStart(2,'0')+'-'+String(p[0]).padStart(2,'0')
+      : v;
+  };
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-buat-st';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);' +
+    'z-index:9500;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto';
+
+  modal.innerHTML = `
+  <div style="background:#fff;border-radius:16px;padding:24px;
+    width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
+    <input type="hidden" id="st-id-kary" value="${idKaryawan}">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div>
+        <div style="font-size:16px;font-weight:700">📋 Buat Surat Tugas</div>
+        <div style="font-size:12px;color:#64748B">Data dari pengajuan dinas luar</div>
+      </div>
+      <button onclick="document.getElementById('modal-buat-st').remove()"
+        style="background:#F1F5F9;border:none;border-radius:50%;width:32px;
+        height:32px;font-size:16px;cursor:pointer">✕</button>
+    </div>
+
+    <div style="background:#EFF6FF;border-radius:8px;padding:10px 14px;
+      margin-bottom:16px;font-size:12px;color:#1E40AF">
+      ℹ️ Surat tugas akan dikirim ke karyawan untuk ditandatangani.
+      Setelah semua tanda tangan lengkap, kamu bisa setujui pengajuan ini.
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#64748B;display:block;margin-bottom:6px">
+          TUJUAN TUGAS</label>
+        <input id="st-tujuan" type="text" placeholder="Contoh: Sukabumi, Jawa Barat"
+          value=""
+          style="width:100%;padding:10px;border:1px solid #E2E8F0;border-radius:8px;
+          font-size:13px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#64748B;display:block;margin-bottom:6px">
+          KEPERLUAN / TUGAS</label>
+        <textarea id="st-keperluan" rows="3"
+          placeholder="Jelaskan keperluan tugas..."
+          style="width:100%;padding:10px;border:1px solid #E2E8F0;border-radius:8px;
+          font-size:13px;box-sizing:border-box;resize:vertical">${keterangan||''}</textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#64748B;display:block;margin-bottom:6px">
+            TANGGAL MULAI</label>
+          <input id="st-tgl-mulai" type="date" value="${toInputDate(tglMulai)}"
+            style="width:100%;padding:10px;border:1px solid #E2E8F0;border-radius:8px;
+            font-size:13px;box-sizing:border-box" onchange="_hitungHariST()">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#64748B;display:block;margin-bottom:6px">
+            TANGGAL SELESAI</label>
+          <input id="st-tgl-selesai" type="date" value="${toInputDate(tglSelesai)}"
+            style="width:100%;padding:10px;border:1px solid #E2E8F0;border-radius:8px;
+            font-size:13px;box-sizing:border-box" onchange="_hitungHariST()">
+        </div>
+      </div>
+      <div id="st-info-hari" style="font-size:12px;color:#2D6CDF;text-align:center"></div>
+    </div>
+
+    <button onclick="_kirimSuratTugas('${idPengajuan}')"
+      style="width:100%;margin-top:20px;padding:12px;background:#1E3A5F;color:#fff;
+      border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
+      📤 Buat & Kirim ke Karyawan
+    </button>
+  </div>`;
+
+  modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+  setTimeout(_hitungHariST, 100);
+}
