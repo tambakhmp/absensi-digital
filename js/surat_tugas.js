@@ -633,49 +633,91 @@ async function _cetakSuratTugasPDF(idSurat) {
     doc.text('Tanggal          : '+tglDiterbitkan, mL, y); y+=10;
     doc.setTextColor(0,0,0);
 
-    // Tanda tangan 3 kolom
-    const ttdW = (W-mL-mR)/3;
-    const ttdLabels=['Karyawan penerima tugas','Atasan langsung','Mengetahui'];
-    const ttdNama=[s.nama_karyawan,s.nama_atasan,s.nama_pimpinan];
-    const ttdJab=[s.jabatan,'',s.jabatan_pembuat||'Project Manager'];
-    const ttdImgs=[s.ttd_karyawan,s.ttd_atasan,s.ttd_pimpinan];
-
-    doc.setFontSize(9);
-    for (let i=0;i<3;i++) {
-      const tx=mL+i*ttdW;
-      doc.setTextColor(100,100,100);
-      doc.text(ttdLabels[i], tx+ttdW/2, y, {align:'center'}); 
+    // ── Tanda tangan — kolom dinamis sesuai pihak yang terlibat ─
+    // Kumpulkan hanya kolom TTD yang relevan (nama tidak kosong)
+    const ttdSlots = [];
+    // Slot 1: Karyawan — selalu ada
+    ttdSlots.push({
+      label : 'Karyawan penerima tugas',
+      nama  : String(s.nama_karyawan || '-'),
+      jabatan: String(s.jabatan || ''),
+      img   : s.ttd_karyawan || ''
+    });
+    // Slot 2: Atasan langsung — hanya bila ada
+    if (s.nama_atasan && String(s.nama_atasan).trim() !== '') {
+      ttdSlots.push({
+        label : 'Atasan langsung',
+        nama  : String(s.nama_atasan),
+        jabatan: '',
+        img   : s.ttd_atasan || ''
+      });
     }
-    y+=4;
+    // Slot 3: Pimpinan/Mengetahui — hanya bila ada
+    if (s.nama_pimpinan && String(s.nama_pimpinan).trim() !== '') {
+      ttdSlots.push({
+        label : 'Mengetahui',
+        nama  : String(s.nama_pimpinan),
+        jabatan: String(s.jabatan_pembuat || 'Project Manager'),
+        img   : s.ttd_pimpinan || ''
+      });
+    }
+    // Bila PM dinas luar (hanya 1 slot), tambah slot Admin di kanan
+    if (ttdSlots.length === 1) {
+      ttdSlots.push({
+        label : 'Mengetahui',
+        nama  : String(s.nama_pembuat || 'Admin'),
+        jabatan: String(s.jabatan_pembuat || 'Admin'),
+        img   : ''
+      });
+    }
 
-    // Area TTD (gambar jika ada, kotak kosong jika tidak)
-    for (let i=0;i<3;i++) {
-      const tx=mL+i*ttdW;
+    const nSlot = ttdSlots.length;
+    const ttdW  = (W - mL - mR) / nSlot;
+
+    // Label atas
+    doc.setFontSize(9);
+    ttdSlots.forEach((slot, i) => {
+      const tx = mL + i * ttdW;
+      doc.setTextColor(100,100,100);
+      doc.text(slot.label, tx + ttdW/2, y, {align:'center'});
+    });
+    y += 4;
+
+    // Kotak + gambar TTD
+    ttdSlots.forEach((slot, i) => {
+      const tx = mL + i * ttdW;
       doc.setDrawColor(200,210,220); doc.setLineWidth(0.3);
       doc.roundedRect(tx+2, y, ttdW-4, 20, 2, 2);
-      if (ttdImgs[i]) {
+      if (slot.img && String(slot.img).length > 10) {
         try {
-          doc.addImage('data:image/png;base64,'+ttdImgs[i],'PNG',tx+2,y,ttdW-4,20,'','FAST');
-        } catch(eI){}
+          const imgSrc = slot.img.startsWith('data:')
+            ? slot.img
+            : 'data:image/png;base64,' + slot.img;
+          doc.addImage(imgSrc, 'PNG', tx+2, y, ttdW-4, 20, '', 'FAST');
+        } catch(eImg) { /* gambar rusak — biarkan kotak kosong */ }
       }
-    }
-    y+=22;
+    });
+    y += 22;
 
-    // Garis dan nama
-    for (let i=0;i<3;i++) {
-      const tx=mL+i*ttdW;
+    // Garis bawah kotak TTD
+    ttdSlots.forEach((slot, i) => {
+      const tx = mL + i * ttdW;
       doc.setDrawColor(150,150,150); doc.setLineWidth(0.3);
       doc.line(tx+4, y, tx+ttdW-4, y);
-    }
-    y+=5;
-    for (let i=0;i<3;i++) {
-      const tx=mL+i*ttdW;
+    });
+    y += 5;
+
+    // Nama & jabatan
+    ttdSlots.forEach((slot, i) => {
+      const tx = mL + i * ttdW;
       doc.setTextColor(0,0,0); doc.setFont('helvetica','bold'); doc.setFontSize(9);
-      const nm=doc.splitTextToSize(ttdNama[i]||'-', ttdW-4);
+      const nm = doc.splitTextToSize(slot.nama, ttdW-4);
       doc.text(nm, tx+ttdW/2, y, {align:'center'});
-      doc.setFont('helvetica','normal'); doc.setTextColor(80,80,80); doc.setFontSize(8);
-      if (ttdJab[i]) doc.text(ttdJab[i], tx+ttdW/2, y+4, {align:'center'});
-    }
+      if (slot.jabatan && slot.jabatan.trim() !== '') {
+        doc.setFont('helvetica','normal'); doc.setTextColor(80,80,80); doc.setFontSize(8);
+        doc.text(slot.jabatan, tx+ttdW/2, y + nm.length*4, {align:'center'});
+      }
+    });
 
     doc.save('SuratTugas_'+(s.no_surat||'ST').replace(/\//g,'-')+'.pdf');
     showToast('✅ PDF berhasil didownload!', 'success', 3000);
