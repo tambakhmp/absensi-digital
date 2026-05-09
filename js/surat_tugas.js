@@ -502,8 +502,10 @@ async function _simpanTTDSurat(idSurat) {
     });
     document.getElementById('modal-surat-tugas')?.remove();
     showToast('✅ '+res.message, 'success', 4000);
-    // Reload list jika ada
-    if (typeof _loadListSuratTugasAdmin === 'function') _loadListSuratTugasAdmin();
+    // Reload semua section yang terdampak
+    if (typeof _loadListSuratTugasAdmin    === 'function') _loadListSuratTugasAdmin();
+    if (typeof _loadSuratTugasPendingDashboard === 'function') _loadSuratTugasPendingDashboard();
+    if (typeof _loadSuratTugasAdminApproval   === 'function') _loadSuratTugasAdminApproval();
   } catch(e) {
     showToast('Gagal: '+e.message, 'error');
   }
@@ -662,4 +664,3 @@ function _getKotaFromAlamat(alamat) {
   const m = alamat.match(/Kab\.?\s+([^,\u2013\-]+)/i);
   return m ? m[1].trim() : alamat.split(',')[0].trim();
 }
-
