@@ -883,18 +883,23 @@ async function loadPengajuanAdminV4() {
   if(!el) return;
   el.innerHTML=skeletonCard(3);
   try {
-    // Load pengajuan + data surat tugas sekaligus
-    const [raw, suratList] = await Promise.allSettled([
-      callAPI('getPengajuanSemua',{status:st,jenis:jn}),
-      callAPI('getSuratTugas', {})
-    ]);
-    const data = (raw.value||[]).filter(p=>p.jenis!=='lembur');
+    // Load pengajuan dulu, surat tugas secara terpisah (tidak boleh block render)
+    const data = ((await callAPI('getPengajuanSemua',{status:st,jenis:jn}))||[])
+      .filter(p=>p.jenis!=='lembur');
 
-    // Buat map id_pengajuan → surat tugas untuk cek cepat
+    // Buat map id_pengajuan → surat tugas (senyap bila gagal)
     const suratMap = {};
-    (suratList.value||[]).forEach(s => {
-      if (s.id_pengajuan) suratMap[String(s.id_pengajuan)] = s;
-    });
+    try {
+      const suratArr = await callAPI('getSuratTugas', {});
+      if (Array.isArray(suratArr)) {
+        suratArr.forEach(s => {
+          if (s && s.id_pengajuan) suratMap[String(s.id_pengajuan)] = s;
+        });
+      }
+    } catch(eSurat) {
+      console.warn('[PengajuanAdmin] getSuratTugas gagal:', eSurat.message);
+      // suratMap tetap kosong → tombol Buat Surat Tugas tetap tampil
+    }
 
     const stat=document.getElementById('pgj-stat');
     if(stat)stat.textContent=(data?.length||0)+' pengajuan';
