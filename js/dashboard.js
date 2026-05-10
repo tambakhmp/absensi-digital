@@ -1380,53 +1380,83 @@ async function _loadSuratTugasPendingDashboard() {
   const el = document.getElementById('surat-tugas-pending-section');
   if (!el) return;
   try {
-    const data = await callAPI('getSuratTugasPending', {});
-    if (!data || data.length === 0) { el.innerHTML = ''; return; }
-
     const session = getSession();
     const idMe    = String(session?.id_karyawan || '');
+    const role    = String(session?.role || '').toLowerCase();
 
-    const cards = data.map(s => {
-      // Label aksi sesuai status dan siapa usernya
-      let aksiLabel = '✍️ Tanda Tangani';
-      if (s.status_surat === 'menunggu_karyawan' && idMe === String(s.id_karyawan))
-        aksiLabel = '✍️ Tanda Tangani';
-      else if (s.status_surat === 'menunggu_atasan' && idMe === String(s.id_atasan))
-        aksiLabel = '✍️ Tanda Tangani sebagai Atasan';
-      else if (s.status_surat === 'menunggu_pimpinan' && idMe === String(s.id_pimpinan))
-        aksiLabel = '✍️ Tanda Tangani sebagai Pimpinan';
+    // Load surat pending (perlu TTD) dan surat selesai milik karyawan ini
+    const [pending, semua] = await Promise.allSettled([
+      callAPI('getSuratTugasPending', {}),
+      callAPI('getSuratTugas', {})
+    ]);
 
-      return `<div style="background:#FFF7ED;border:1.5px solid #FDBA74;border-radius:12px;
-        padding:12px 14px;margin-bottom:8px">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start">
-          <div>
-            <div style="font-size:13px;font-weight:700;color:#C2410C">
-              📋 Surat Tugas Menunggu TTD</div>
-            <div style="font-size:12px;color:#64748B;margin-top:2px">
-              ${s.nama_karyawan} &nbsp;·&nbsp; ${s.no_surat||''}
-            </div>
-            <div style="font-size:12px;color:#64748B;margin-top:2px">
-              🗓️ ${s.tanggal_mulai||''} – ${s.tanggal_selesai||''}
-            </div>
-            <div style="font-size:12px;color:#64748B;margin-top:2px">
-              📍 ${s.tujuan_tugas||'-'}
-            </div>
-          </div>
-        </div>
-        <button onclick="_lihatSuratTugas('${s.id_surat}')"
-          style="margin-top:10px;width:100%;padding:9px;background:#EA580C;color:#fff;
-          border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
-          ${aksiLabel}
-        </button>
+    const dataPending = pending.value || [];
+    const dataSemua   = (semua.value || []).filter(s =>
+      s.status_surat === 'selesai' && String(s.id_karyawan) === idMe
+    );
+
+    let html = '';
+
+    // ── Bagian 1: Surat yang perlu TTD ─────────────────────────
+    if (dataPending.length > 0) {
+      const cards = dataPending.map(s => {
+        let aksiLabel = '✍️ Tanda Tangani';
+        let warna     = '#EA580C';
+        if (s.status_surat === 'menunggu_atasan'   && idMe === String(s.id_atasan))
+          aksiLabel = '✍️ Tanda Tangani sebagai Atasan';
+        else if (s.status_surat === 'menunggu_pimpinan' && idMe === String(s.id_pimpinan))
+          aksiLabel = '✍️ Tanda Tangani sebagai Pimpinan';
+        else if (s.status_surat === 'menunggu_admin')
+          { aksiLabel = '✅ Setujui'; warna = '#16A34A'; }
+
+        return `<div style="background:#FFF7ED;border:1.5px solid #FDBA74;border-radius:12px;
+          padding:12px 14px;margin-bottom:8px">
+          <div style="font-size:13px;font-weight:700;color:#C2410C;margin-bottom:4px">
+            📋 Surat Tugas — Perlu Tindakan</div>
+          <div style="font-size:12px;color:#475569">${s.nama_karyawan} · ${s.no_surat||''}</div>
+          <div style="font-size:12px;color:#475569">🗓️ ${s.tanggal_mulai||''} – ${s.tanggal_selesai||''}</div>
+          <div style="font-size:12px;color:#475569">📍 ${s.tujuan_tugas||'-'}</div>
+          <button onclick="_lihatSuratTugas('${s.id_surat}')"
+            style="margin-top:10px;width:100%;padding:9px;background:${warna};color:#fff;
+            border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+            ${aksiLabel}
+          </button>
+        </div>`;
+      }).join('');
+
+      html += `<div class="card" style="border-left:4px solid #EA580C;margin-bottom:12px">
+        <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;color:#C2410C">
+          📋 Surat Tugas Perlu TTD (${dataPending.length})</h3>
+        ${cards}
       </div>`;
-    }).join('');
+    }
 
-    el.innerHTML = `<div class="card" style="border-left:4px solid #EA580C">
-      <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;color:#C2410C">
-        📋 Surat Tugas Perlu TTD (${data.length})</h3>
-      ${cards}
-    </div>`;
-  } catch(e) { /* senyap — fitur opsional */ }
+    // ── Bagian 2: Surat selesai milik karyawan (bisa ditunjukkan) ─
+    if (dataSemua.length > 0) {
+      const cardsDone = dataSemua.map(s => `
+        <div style="background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:12px;
+          padding:12px 14px;margin-bottom:8px">
+          <div style="font-size:13px;font-weight:700;color:#15803D;margin-bottom:4px">
+            ✅ Surat Tugas Disetujui</div>
+          <div style="font-size:12px;color:#475569">${s.no_surat||''}</div>
+          <div style="font-size:12px;color:#475569">🗓️ ${s.tanggal_mulai||''} – ${s.tanggal_selesai||''}</div>
+          <div style="font-size:12px;color:#475569">📍 ${s.tujuan_tugas||'-'}</div>
+          <button onclick="_lihatSuratTugas('${s.id_surat}')"
+            style="margin-top:10px;width:100%;padding:9px;background:#15803D;color:#fff;
+            border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+            📄 Lihat / Cetak Surat
+          </button>
+        </div>`).join('');
+
+      html += `<div class="card" style="border-left:4px solid #16A34A">
+        <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;color:#15803D">
+          ✅ Surat Tugas Aktif (${dataSemua.length})</h3>
+        ${cardsDone}
+      </div>`;
+    }
+
+    el.innerHTML = html;
+  } catch(e) { console.warn('[ST Dashboard]', e.message); }
 }
 
 // ─── SURAT TUGAS MENUNGGU PERSETUJUAN ADMIN ──────────────────
