@@ -1504,8 +1504,6 @@ function renderAdminLayout() {
         </header>
         <div class="admin-content" id="admin-content">
           <div id="admin-stats-container">${skeletonCard(4)}</div>
-          <!-- 📋 SURAT TUGAS MENUNGGU PERSETUJUAN ADMIN -->
-          <div id="surat-tugas-admin-section" style="margin-top:16px"></div>
           <div id="ultah-section" style="display:none;margin-top:16px"></div>
           <div class="card" style="margin-top:16px">
             <h3 style="font-size:15px;font-weight:700;margin-bottom:16px">📊 Kehadiran 6 Bulan</h3>
