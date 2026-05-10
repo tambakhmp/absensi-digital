@@ -2387,9 +2387,13 @@ async function renderLaporanAdminV3(container){
       <p style="font-size:12px;color:#64748B;margin-bottom:12px">
         Riwayat dinas luar semua karyawan — surat tugas, tujuan, periode, status TTD</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-        <input id="rdl-cari" type="text" placeholder="🔍 Nama karyawan..."
-          style="flex:1;min-width:150px;padding:8px 10px;border:1px solid #E2E8F0;
-          border-radius:8px;font-size:13px" oninput="_filterRekapDL()">
+        <select id="rdl-kary-sel"
+          style="flex:2;min-width:180px;padding:8px 10px;border:1px solid #E2E8F0;
+          border-radius:8px;font-size:13px"
+          onchange="_onRdlKaryChange()">
+          <option value="">👥 Semua Karyawan</option>
+        </select>
+        <input id="rdl-cari" type="hidden" value="">
         <input id="rdl-dari" type="month"
           style="padding:8px 10px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px"
           onchange="_filterRekapDL()">
@@ -2622,12 +2626,33 @@ async function _loadRekapDL() {
         const db = _parseToDate(b.tanggal_mulai);
         return db - da;
       });
+    // Isi dropdown karyawan dari data yang ada
+    const karySet = {};
+    _rdlData.forEach(s => {
+      if (s.id_karyawan && s.nama_karyawan)
+        karySet[s.id_karyawan] = s.nama_karyawan + (s.jabatan ? ' — '+s.jabatan : '');
+    });
+    const sel = document.getElementById('rdl-kary-sel');
+    if (sel) {
+      sel.innerHTML = '<option value="">👥 Semua Karyawan</option>' +
+        Object.entries(karySet)
+          .sort((a,b) => a[1].localeCompare(b[1]))
+          .map(([id,nm]) => `<option value="${nm.split(' — ')[0]}">${nm}</option>`)
+          .join('');
+    }
     _filterRekapDL();
   } catch(e) {
     document.getElementById('rdl-list').innerHTML =
       `<div style="padding:20px;text-align:center;color:#E53E3E">
         Gagal memuat data: ${e.message}</div>`;
   }
+}
+
+function _onRdlKaryChange() {
+  const sel = document.getElementById('rdl-kary-sel');
+  const hidden = document.getElementById('rdl-cari');
+  if (hidden) hidden.value = sel?.value || '';
+  _filterRekapDL();
 }
 
 function _parseToDate(str) {
@@ -2639,7 +2664,7 @@ function _parseToDate(str) {
 
 function _filterRekapDL() {
   const cari = (document.getElementById('rdl-cari')?.value || '').toLowerCase().trim();
-  const dari  = document.getElementById('rdl-dari')?.value || '';  // yyyy-MM
+  const dari  = document.getElementById('rdl-dari')?.value || '';
   const ke    = document.getElementById('rdl-ke')?.value   || '';
 
   const filtered = _rdlData.filter(s => {
@@ -2673,7 +2698,27 @@ function _filterRekapDL() {
     selesai           : ['#F0FDF4','#166534','✅ Disetujui'],
   };
 
-  el.innerHTML = filtered.map((s, i) => {
+  // Ringkasan bila filter karyawan tertentu
+  let summaryHtml = '';
+  if (cari && filtered.length > 0) {
+    const totalHari  = filtered.reduce((a,s) => a + (parseInt(s.total_hari)||0), 0);
+    const disetujui  = filtered.filter(s => s.status_surat === 'selesai').length;
+    const proses     = filtered.length - disetujui;
+    summaryHtml = `
+    <div style="background:#EFF6FF;border-radius:10px;padding:12px 16px;
+      margin-bottom:12px;display:flex;gap:20px;flex-wrap:wrap">
+      <div style="font-size:12px;color:#1E40AF">
+        👤 <strong>${filtered[0].nama_karyawan}</strong> — ${filtered[0].jabatan||''}</div>
+      <div style="font-size:12px;color:#475569">
+        📋 Total: <strong>${filtered.length} surat</strong></div>
+      <div style="font-size:12px;color:#475569">
+        🗓️ Total hari: <strong>${totalHari} hari</strong></div>
+      <div style="font-size:12px;color:#15803D">✅ Disetujui: <strong>${disetujui}</strong></div>
+      ${proses > 0 ? `<div style="font-size:12px;color:#92400E">⏳ Proses: <strong>${proses}</strong></div>` : ''}
+    </div>`;
+  }
+
+  el.innerHTML = summaryHtml + filtered.map(s => {
     const badge = ST_BADGE[s.status_surat] || ['#F1F5F9','#64748B', s.status_surat];
     const ttdK  = s.ttd_karyawan  ? '✅' : '⬜';
     const ttdA  = s.nama_atasan   ? (s.ttd_atasan   ? '✅' : '⬜') : '—';
@@ -2684,7 +2729,6 @@ function _filterRekapDL() {
       <div style="display:flex;justify-content:space-between;align-items:flex-start;
         flex-wrap:wrap;gap:8px">
         <div style="flex:1;min-width:0">
-          <!-- Baris 1: nama + nomor surat + badge status -->
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
             <span style="font-weight:700;font-size:15px">${s.nama_karyawan||'-'}</span>
             <span style="font-size:12px;color:#64748B;background:#F1F5F9;
@@ -2692,7 +2736,6 @@ function _filterRekapDL() {
             <span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:12px;
               background:${badge[0]};color:${badge[1]}">${badge[2]}</span>
           </div>
-          <!-- Baris 2: nomor surat + periode -->
           <div style="font-size:12px;color:#475569;margin-bottom:4px">
             📋 <strong>${s.no_surat||'-'}</strong>
             &nbsp;·&nbsp;
@@ -2700,33 +2743,30 @@ function _filterRekapDL() {
             &nbsp;·&nbsp;
             <strong>${s.total_hari||'-'} hari</strong>
           </div>
-          <!-- Baris 3: tujuan + keperluan -->
           <div style="font-size:12px;color:#475569;margin-bottom:4px">
             📍 <strong>${s.tujuan_tugas||'-'}</strong>
           </div>
           <div style="font-size:12px;color:#64748B;margin-bottom:6px">
             📝 ${s.keperluan||'-'}
           </div>
-          <!-- Baris 4: status TTD -->
           <div style="display:flex;gap:12px;font-size:11px;color:#64748B">
             <span>TTD Karyawan: ${ttdK}</span>
             ${s.nama_atasan   ? `<span>TTD Atasan: ${ttdA}</span>`   : ''}
             ${s.nama_pimpinan ? `<span>TTD Pimpinan: ${ttdP}</span>` : ''}
           </div>
         </div>
-        <!-- Tombol aksi -->
+        <!-- Tombol aksi — Cetak PDF tersedia untuk SEMUA status -->
         <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
           <button onclick="_lihatSuratTugas('${s.id_surat}')"
             style="padding:8px 14px;background:#1E3A5F;color:#fff;border:none;
             border-radius:8px;font-size:12px;cursor:pointer">
             🔍 Lihat Surat
           </button>
-          ${s.status_surat === 'selesai' ? `
           <button onclick="_cetakSuratTugasPDF('${s.id_surat}')"
             style="padding:8px 14px;background:#0F766E;color:#fff;border:none;
             border-radius:8px;font-size:12px;cursor:pointer">
             🖨️ Cetak PDF
-          </button>` : ''}
+          </button>
         </div>
       </div>
     </div>`;
