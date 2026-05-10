@@ -999,6 +999,20 @@ async function loadPengajuanAdminV4() {
             <button class="btn btn--danger" style="padding:9px 16px;font-size:13px"
               onclick="tolakPGJ('${p.id_pengajuan}','${p.nama_karyawan}')">❌ Tolak</button>
           </div>`:''}
+          ${(()=>{
+            // Dinas luar disetujui — tampil tombol Lihat Surat & Cetak PDF
+            if (p.status !== 'disetujui' || p.jenis !== 'dinas_luar') return '';
+            const st = suratMap[String(p.id_pengajuan)];
+            if (!st) return '';
+            return `<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+              <button style="padding:9px 16px;font-size:13px;background:#1E3A5F;color:#fff;
+                border:none;border-radius:8px;cursor:pointer"
+                onclick="_lihatSuratTugas('${st.id_surat}')">📋 Lihat Surat</button>
+              <button style="padding:9px 16px;font-size:13px;background:#0F766E;color:#fff;
+                border:none;border-radius:8px;cursor:pointer"
+                onclick="_cetakSuratTugasPDF('${st.id_surat}')">🖨️ Cetak PDF</button>
+            </div>`;
+          })()}
         </div>
       </div>`;
     }).join('');
