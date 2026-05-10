@@ -891,14 +891,15 @@ async function loadPengajuanAdminV4() {
     const suratMap = {};
     try {
       const suratArr = await callAPI('getSuratTugas', {});
-      if (Array.isArray(suratArr)) {
-        suratArr.forEach(s => {
-          if (s && s.id_pengajuan) suratMap[String(s.id_pengajuan)] = s;
-        });
-      }
+      const arr = Array.isArray(suratArr) ? suratArr : (suratArr ? [suratArr] : []);
+      arr.forEach(s => {
+        if (s && s.id_pengajuan && String(s.id_pengajuan).trim() !== '')
+          suratMap[String(s.id_pengajuan)] = s;
+      });
+      console.log('[ST] suratMap loaded:', Object.keys(suratMap).length, 'surat');
     } catch(eSurat) {
-      console.warn('[PengajuanAdmin] getSuratTugas gagal:', eSurat.message);
-      // suratMap tetap kosong → tombol Buat Surat Tugas tetap tampil
+      console.warn('[PengajuanAdmin] getSuratTugas gagal (aman):', eSurat.message);
+      // suratMap kosong → tombol Buat Surat Tugas tampil untuk semua dinas luar pending
     }
 
     const stat=document.getElementById('pgj-stat');
@@ -932,11 +933,18 @@ async function loadPengajuanAdminV4() {
         if (p.jenis === 'dinas_luar') {
           if (!sudahAdaSurat) {
             // Belum ada surat — tampil Buat Surat Tugas
+            // Simpan data di attribute agar karakter khusus tidak rusak onclick
+            const _ket = encodeURIComponent(p.keterangan||'');
+            const _tm  = encodeURIComponent(p.tanggal_mulai||p.tanggal||'');
+            const _ts  = encodeURIComponent(p.tanggal_selesai||p.tanggal||'');
             tombolAksi = `<button class="btn" style="padding:9px 16px;font-size:13px;
               background:#1E3A5F;color:#fff;border:none;border-radius:8px;cursor:pointer"
-              onclick="_buatSuratDariPengajuan('${p.id_pengajuan}','${p.id_karyawan}',
-                '${p.tanggal_mulai||p.tanggal}','${p.tanggal_selesai||p.tanggal}',
-                '${(p.keterangan||'').replace(/'/g,'')}')"
+              data-pgj="${p.id_pengajuan}"
+              data-kary="${p.id_karyawan}"
+              data-tm="${_tm}"
+              data-ts="${_ts}"
+              data-ket="${_ket}"
+              onclick="_buatSuratClick(this)"
             >📋 Buat Surat Tugas</button>`;
           } else if (surat.status_surat === 'menunggu_admin') {
             // Semua TTD lengkap — tampil tombol Setujui
