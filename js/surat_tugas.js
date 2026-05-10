@@ -138,152 +138,56 @@ function _cardSuratTugas(s, isAdmin=false) {
 }
 
 // ── MODAL BUAT SURAT TUGAS ───────────────────────────────────
-async function _modalBuatSuratTugas(idPengajuan='') {
-  document.getElementById('modal-buat-st')?.remove();
-
-  // Ambil daftar karyawan
-  let karyList = [];
-  try { karyList = await callAPI('getKaryawanAktif', {}); } catch(e){}
-
-  const modal = document.createElement('div');
-  modal.id = 'modal-buat-st';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);' +
-    'z-index:9500;display:flex;align-items:center;justify-content:center;padding:16px;' +
-    'overflow-y:auto';
-
-  const karyOptions = karyList
-    .filter(k => (k.role||'karyawan')==='karyawan' && String(k.status_aktif).toLowerCase()==='true')
-    .map(k => `<option value="${k.id_karyawan}">${k.nama_lengkap} — ${k.jabatan||''}</option>`)
-    .join('');
-
-  const today = new Date();
-  const tgl   = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
-
-  modal.innerHTML = `
-  <div style="background:#fff;border-radius:16px;padding:24px;
-    width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-      <div style="font-size:16px;font-weight:700">📋 Buat Surat Tugas</div>
-      <button onclick="document.getElementById('modal-buat-st').remove()"
-        style="background:#F1F5F9;border:none;border-radius:50%;width:32px;
-        height:32px;font-size:16px;cursor:pointer">✕</button>
-    </div>
-
-    <div style="display:flex;flex-direction:column;gap:14px">
-      <div>
-        <label style="font-size:12px;font-weight:600;color:#64748B;display:block;margin-bottom:6px">
-          KARYAWAN YANG DITUGASKAN</label>
-        <select id="st-id-kary" style="width:100%;padding:10px;border:1px solid #E2E8F0;
-          border-radius:8px;font-size:13px">
-          <option value="">-- Pilih Karyawan --</option>
-          ${karyOptions}
-        </select>
-      </div>
-
-      <div>
-        <label style="font-size:12px;font-weight:600;color:#64748B;display:block;margin-bottom:6px">
-          TUJUAN TUGAS</label>
-        <input id="st-tujuan" type="text" placeholder="Contoh: Sukabumi, Jawa Barat"
-          style="width:100%;padding:10px;border:1px solid #E2E8F0;border-radius:8px;
-          font-size:13px;box-sizing:border-box">
-      </div>
-
-      <div>
-        <label style="font-size:12px;font-weight:600;color:#64748B;display:block;margin-bottom:6px">
-          KEPERLUAN / TUGAS</label>
-        <textarea id="st-keperluan" rows="3" placeholder="Jelaskan keperluan tugas..."
-          style="width:100%;padding:10px;border:1px solid #E2E8F0;border-radius:8px;
-          font-size:13px;box-sizing:border-box;resize:vertical"></textarea>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div>
-          <label style="font-size:12px;font-weight:600;color:#64748B;display:block;margin-bottom:6px">
-            TANGGAL MULAI</label>
-          <input id="st-tgl-mulai" type="date" value="${tgl}"
-            style="width:100%;padding:10px;border:1px solid #E2E8F0;border-radius:8px;
-            font-size:13px;box-sizing:border-box" onchange="_hitungHariST()">
-        </div>
-        <div>
-          <label style="font-size:12px;font-weight:600;color:#64748B;display:block;margin-bottom:6px">
-            TANGGAL SELESAI</label>
-          <input id="st-tgl-selesai" type="date" value="${tgl}"
-            style="width:100%;padding:10px;border:1px solid #E2E8F0;border-radius:8px;
-            font-size:13px;box-sizing:border-box" onchange="_hitungHariST()">
-        </div>
-      </div>
-      <div id="st-info-hari" style="font-size:12px;color:#2D6CDF;text-align:center"></div>
-    </div>
-
-    <button onclick="_kirimSuratTugas('${idPengajuan}')"
-      style="width:100%;margin-top:20px;padding:12px;background:#2D6CDF;color:#fff;
-      border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
-      📤 Buat & Kirim ke Karyawan
-    </button>
-  </div>`;
-
-  modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
-  document.body.appendChild(modal);
-  _hitungHariST();
-}
 
 function _hitungHariST() {
-  const m = document.getElementById('st-tgl-mulai')?.value;
-  const s = document.getElementById('st-tgl-selesai')?.value;
+  const m  = document.getElementById('st-tgl-mulai')?.value;
+  const s  = document.getElementById('st-tgl-selesai')?.value;
   const el = document.getElementById('st-info-hari');
   if (!m || !s || !el) return;
-  const diff = Math.round((new Date(s)-new Date(m))/(86400000))+1;
-  el.textContent = diff > 0 ? `${diff} hari kerja` : '';
+  const diff = Math.round((new Date(s) - new Date(m)) / 86400000) + 1;
+  el.textContent = diff > 0 ? diff + ' hari kerja' : '';
 }
 
-async function _kirimSuratTugas(idPengajuan='') {
-  const idK   = document.getElementById('st-id-kary')?.value;
-  const tujuan= document.getElementById('st-tujuan')?.value?.trim();
-  const keper = document.getElementById('st-keperluan')?.value?.trim();
-  const mulai = document.getElementById('st-tgl-mulai')?.value;
-  const selesai=document.getElementById('st-tgl-selesai')?.value;
+async function _kirimSuratTugas(idPengajuan) {
+  const idK    = document.getElementById('st-id-kary')?.value?.trim();
+  const tujuan = document.getElementById('st-tujuan')?.value?.trim();
+  const keper  = document.getElementById('st-keperluan')?.value?.trim();
+  const tglM   = document.getElementById('st-tgl-mulai')?.value;
+  const tglS   = document.getElementById('st-tgl-selesai')?.value;
 
-  if (!idK)     { showToast('Pilih karyawan', 'warning'); return; }
-  if (!tujuan)  { showToast('Isi tujuan tugas', 'warning'); return; }
-  if (!keper)   { showToast('Isi keperluan tugas', 'warning'); return; }
-  if (!mulai || !selesai) { showToast('Isi tanggal', 'warning'); return; }
+  if (!idK)    { showToast('Data karyawan tidak valid', 'error'); return; }
+  if (!tujuan) { showToast('Isi tujuan tugas', 'warning'); return; }
+  if (!keper)  { showToast('Isi keperluan tugas', 'warning'); return; }
+  if (!tglM)   { showToast('Pilih tanggal mulai', 'warning'); return; }
+  if (!tglS)   { showToast('Pilih tanggal selesai', 'warning'); return; }
 
-  const toIDDate = v => { const p=v.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; };
-  const diff = Math.round((new Date(selesai)-new Date(mulai))/86400000)+1;
+  const toIDDate = v => {
+    if (!v) return '';
+    const p = v.split('-');
+    return p.length >= 3 ? p[2]+'/'+p[1]+'/'+p[0] : v;
+  };
+  const diff = Math.round((new Date(tglS) - new Date(tglM)) / 86400000) + 1;
 
   try {
     showToast('Membuat surat tugas...', 'info', 2000);
-    await callAPI('buatSuratTugas', {
+    const res = await callAPI('buatSuratTugas', {
       id_karyawan   : idK,
-      id_pengajuan  : idPengajuan,
+      id_pengajuan  : idPengajuan || '',
       tujuan_tugas  : tujuan,
       keperluan     : keper,
-      tanggal_mulai : toIDDate(mulai),
-      tanggal_selesai: toIDDate(selesai),
-      total_hari    : diff
+      tanggal_mulai : toIDDate(tglM),
+      tanggal_selesai: toIDDate(tglS),
+      total_hari    : diff > 0 ? diff : 1
     });
     document.getElementById('modal-buat-st')?.remove();
-    showToast('✅ Surat tugas berhasil dikirim ke karyawan!', 'success', 4000);
-    await _loadListSuratTugasAdmin();
+    showToast('✅ ' + res.message, 'success', 4000);
+    if (typeof loadPengajuanAdminV4 === 'function') loadPengajuanAdminV4();
+    if (typeof _loadSuratTugasAdminApproval === 'function') _loadSuratTugasAdminApproval();
   } catch(e) {
-    showToast('Gagal: '+e.message, 'error');
+    showToast('Gagal: ' + e.message, 'error');
   }
 }
 
-async function _setujuiSurat(idSurat) {
-  if (!confirm('Setujui surat tugas ini? Pengajuan dinas luar akan otomatis disetujui.')) return;
-  try {
-    await callAPI('setujuiSuratTugas', { id_surat: idSurat });
-    showToast('✅ Surat tugas disetujui!', 'success', 3000);
-    await _loadListSuratTugasAdmin();
-  } catch(e) {
-    showToast('Gagal: '+e.message, 'error');
-  }
-}
-
-// ════════════════════════════════════════════════════════════
-// KARYAWAN / ATASAN / PIMPINAN — Lihat & TTD
-// ════════════════════════════════════════════════════════════
 async function loadSuratTugasPendingUser() {
   try {
     const data = await callAPI('getSuratTugasPending', {});
