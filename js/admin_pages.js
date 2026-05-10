@@ -883,90 +883,15 @@ async function loadPengajuanAdminV4() {
   if(!el) return;
   el.innerHTML=skeletonCard(3);
   try {
-    // Load pengajuan dulu, surat tugas secara terpisah (tidak boleh block render)
-    const data = ((await callAPI('getPengajuanSemua',{status:st,jenis:jn}))||[])
+    const raw=(await callAPI('getPengajuanSemua',{status:st,jenis:jn})||[])
       .filter(p=>p.jenis!=='lembur');
-
-    // Buat map id_pengajuan → surat tugas (senyap bila gagal)
-    const suratMap = {};
-    try {
-      const suratArr = await callAPI('getSuratTugas', {});
-      const arr = Array.isArray(suratArr) ? suratArr : (suratArr ? [suratArr] : []);
-      arr.forEach(s => {
-        if (s && s.id_pengajuan && String(s.id_pengajuan).trim() !== '')
-          suratMap[String(s.id_pengajuan)] = s;
-      });
-      console.log('[ST] suratMap loaded:', Object.keys(suratMap).length, 'surat');
-    } catch(eSurat) {
-      console.warn('[PengajuanAdmin] getSuratTugas gagal (aman):', eSurat.message);
-      // suratMap kosong → tombol Buat Surat Tugas tampil untuk semua dinas luar pending
-    }
-
+    const data = raw;
+    console.log('[DEBUG pengajuan] total:', data.length, 'contoh[0]:', JSON.stringify(data[0]));
     const stat=document.getElementById('pgj-stat');
     if(stat)stat.textContent=(data?.length||0)+' pengajuan';
     if(!data||data.length===0){showEmpty('pgj-admin-list','Tidak ada pengajuan');return;}
     const LBL={izin:'📝 Izin',sakit:'🏥 Sakit',cuti:'🏖️ Cuti',dinas_luar:'🚗 Dinas Luar',lembur:'⏰ Lembur'};
-
-    // Label & warna status surat tugas
-    const ST_LABEL = {
-      menunggu_karyawan : '⏳ Menunggu TTD Karyawan',
-      menunggu_atasan   : '⏳ Menunggu TTD Atasan',
-      menunggu_pimpinan : '⏳ Menunggu TTD Pimpinan',
-      menunggu_admin    : '✅ Siap Disetujui Admin',
-      selesai           : '✅ Selesai'
-    };
-    const ST_COLOR = {
-      menunggu_karyawan : '#D97706',
-      menunggu_atasan   : '#2D6CDF',
-      menunggu_pimpinan : '#7C3AED',
-      menunggu_admin    : '#16A34A',
-      selesai           : '#64748B'
-    };
-
-    el.innerHTML=data.map(p=>{
-      const surat = suratMap[String(p.id_pengajuan)] || null;
-      const sudahAdaSurat = !!surat;
-
-      // Tombol aksi untuk dinas luar pending
-      let tombolAksi = '';
-      if (p.status === 'pending') {
-        if (p.jenis === 'dinas_luar') {
-          if (!sudahAdaSurat) {
-            // Belum ada surat — tampil Buat Surat Tugas
-            // Simpan data di attribute agar karakter khusus tidak rusak onclick
-            const _ket = encodeURIComponent(p.keterangan||'');
-            const _tm  = encodeURIComponent(p.tanggal_mulai||p.tanggal||'');
-            const _ts  = encodeURIComponent(p.tanggal_selesai||p.tanggal||'');
-            tombolAksi = `<button class="btn" style="padding:9px 16px;font-size:13px;
-              background:#1E3A5F;color:#fff;border:none;border-radius:8px;cursor:pointer"
-              data-pgj="${p.id_pengajuan}"
-              data-kary="${p.id_karyawan}"
-              data-tm="${_tm}"
-              data-ts="${_ts}"
-              data-ket="${_ket}"
-              onclick="_buatSuratClick(this)"
-            >📋 Buat Surat Tugas</button>`;
-          } else if (surat.status_surat === 'menunggu_admin') {
-            // Semua TTD lengkap — tampil tombol Setujui
-            tombolAksi = `<button class="btn" style="padding:9px 16px;font-size:13px;
-              background:#16A34A;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700"
-              onclick="_setujuiSuratAdmin('${surat.id_surat}')">✅ Setujui</button>`;
-          } else {
-            // Surat sedang berjalan (proses TTD) — tampil status surat, tidak ada tombol approve
-            tombolAksi = `<div style="font-size:12px;font-weight:600;padding:8px 12px;
-              border-radius:8px;background:#F1F5F9;color:${ST_COLOR[surat.status_surat]||'#64748B'};
-              text-align:center">${ST_LABEL[surat.status_surat]||surat.status_surat}</div>
-              <button class="btn btn--ghost" style="padding:6px 12px;font-size:12px;margin-top:2px"
-                onclick="_lihatSuratTugas('${surat.id_surat}')">🔍 Lihat Surat</button>`;
-          }
-        } else {
-          // Bukan dinas luar — tombol Setujui biasa
-          tombolAksi = `<button class="btn btn--secondary" style="padding:9px 16px;font-size:13px"
-            onclick="approvePGJ('${p.id_pengajuan}','${p.nama_karyawan}')">✅ Setujui</button>`;
-        }
-      }
-
-      return `
+    el.innerHTML=data.map(p=>`
       <div class="card" style="border-left:4px solid ${
         p.status==='pending'?'#D97706':p.status==='disetujui'?'#1A9E74':'#E53E3E'}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">
@@ -995,27 +920,13 @@ async function loadPengajuanAdminV4() {
           </div>
           ${p.status==='pending'?`
           <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
-            ${tombolAksi}
+            <button class="btn btn--secondary" style="padding:9px 16px;font-size:13px"
+              onclick="approvePGJ('${p.id_pengajuan}','${p.nama_karyawan}')">✅ Setujui</button>
             <button class="btn btn--danger" style="padding:9px 16px;font-size:13px"
               onclick="tolakPGJ('${p.id_pengajuan}','${p.nama_karyawan}')">❌ Tolak</button>
           </div>`:''}
-          ${(()=>{
-            // Dinas luar disetujui — tampil tombol Lihat Surat & Cetak PDF
-            if (p.status !== 'disetujui' || p.jenis !== 'dinas_luar') return '';
-            const st = suratMap[String(p.id_pengajuan)];
-            if (!st) return '';
-            return `<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
-              <button style="padding:9px 16px;font-size:13px;background:#1E3A5F;color:#fff;
-                border:none;border-radius:8px;cursor:pointer"
-                onclick="_lihatSuratTugas('${st.id_surat}')">📋 Lihat Surat</button>
-              <button style="padding:9px 16px;font-size:13px;background:#0F766E;color:#fff;
-                border:none;border-radius:8px;cursor:pointer"
-                onclick="_cetakSuratTugasPDF('${st.id_surat}')">🖨️ Cetak PDF</button>
-            </div>`;
-          })()}
         </div>
-      </div>`;
-    }).join('');
+      </div>`).join('');
   }catch(e){showError('pgj-admin-list',e.message);}
 }
 
@@ -2468,6 +2379,30 @@ async function renderLaporanAdminV3(container){
         <button class="btn btn--primary" style="flex:1" onclick="_cetakLemburPDF()">📄 PDF</button>
         <button class="btn btn--secondary" style="flex:1" onclick="_exportLemburExcel()">📊 Excel</button>
       </div>
+    </div>
+
+    <!-- ─── REKAP DINAS LUAR ──────────────────────────────── -->
+    <div class="card">
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:14px">🚗 Rekap Dinas Luar</h3>
+      <p style="font-size:12px;color:#64748B;margin-bottom:12px">
+        Riwayat dinas luar semua karyawan — surat tugas, tujuan, periode, status TTD</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <input id="rdl-cari" type="text" placeholder="🔍 Nama karyawan..."
+          style="flex:1;min-width:150px;padding:8px 10px;border:1px solid #E2E8F0;
+          border-radius:8px;font-size:13px" oninput="_filterRekapDL()">
+        <input id="rdl-dari" type="month"
+          style="padding:8px 10px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px"
+          onchange="_filterRekapDL()">
+        <input id="rdl-ke" type="month"
+          style="padding:8px 10px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px"
+          onchange="_filterRekapDL()">
+      </div>
+      <button class="btn btn--secondary" style="margin-bottom:12px;font-size:13px"
+        onclick="_exportRekapDL()">📥 Export Excel</button>
+      <div id="rdl-list"><div style="text-align:center;padding:20px;color:#94A3B8">
+        Klik tombol di bawah untuk memuat data</div></div>
+      <button class="btn btn--ghost btn--full" style="margin-top:8px;font-size:13px"
+        onclick="_loadRekapDL()">🔄 Muat / Refresh Data</button>
     </div>`;
   setTimeout(()=>_makeSearchable('lap-k-sel'),100);
   toggleModeLap('bulan');
@@ -2672,4 +2607,173 @@ function _exportLemburExcel() {
     exportRekapLemburExcel(document.getElementById('lap-lb-bln')?.value,
                            document.getElementById('lap-lb-thn')?.value);
   }
+}
+
+// Data cache
+let _rdlData = [];
+
+async function _loadRekapDL() {
+  try {
+    const res = await callAPI('getSuratTugas', {});
+    _rdlData = (Array.isArray(res) ? res : [])
+      .filter(s => s.id_surat) // hanya yang valid
+      .sort((a,b) => {         // terbaru dulu
+        const da = _parseToDate(a.tanggal_mulai);
+        const db = _parseToDate(b.tanggal_mulai);
+        return db - da;
+      });
+    _filterRekapDL();
+  } catch(e) {
+    document.getElementById('rdl-list').innerHTML =
+      `<div style="padding:20px;text-align:center;color:#E53E3E">
+        Gagal memuat data: ${e.message}</div>`;
+  }
+}
+
+function _parseToDate(str) {
+  if (!str) return new Date(0);
+  const p = String(str).split('/');
+  if (p.length >= 3) return new Date(p[2], p[1]-1, p[0]);
+  return new Date(str);
+}
+
+function _filterRekapDL() {
+  const cari = (document.getElementById('rdl-cari')?.value || '').toLowerCase().trim();
+  const dari  = document.getElementById('rdl-dari')?.value || '';  // yyyy-MM
+  const ke    = document.getElementById('rdl-ke')?.value   || '';
+
+  const filtered = _rdlData.filter(s => {
+    if (cari && !String(s.nama_karyawan || '').toLowerCase().includes(cari)) return false;
+    const tgl = _parseToDate(s.tanggal_mulai);
+    if (dari) {
+      const [ty, tm] = dari.split('-');
+      if (tgl < new Date(ty, tm-1, 1)) return false;
+    }
+    if (ke) {
+      const [ty, tm] = ke.split('-');
+      if (tgl > new Date(ty, parseInt(tm), 0)) return false;
+    }
+    return true;
+  });
+
+  const el = document.getElementById('rdl-list');
+  if (!el) return;
+
+  if (filtered.length === 0) {
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:#94A3B8;font-size:14px">
+      Tidak ada data dinas luar</div>`;
+    return;
+  }
+
+  const ST_BADGE = {
+    menunggu_karyawan : ['#FEF3C7','#92400E','⏳ Menunggu Karyawan'],
+    menunggu_atasan   : ['#DBEAFE','#1E40AF','⏳ Menunggu Atasan'],
+    menunggu_pimpinan : ['#EDE9FE','#5B21B6','⏳ Menunggu Pimpinan'],
+    menunggu_admin    : ['#DCFCE7','#15803D','✅ Siap Disetujui'],
+    selesai           : ['#F0FDF4','#166534','✅ Disetujui'],
+  };
+
+  el.innerHTML = filtered.map((s, i) => {
+    const badge = ST_BADGE[s.status_surat] || ['#F1F5F9','#64748B', s.status_surat];
+    const ttdK  = s.ttd_karyawan  ? '✅' : '⬜';
+    const ttdA  = s.nama_atasan   ? (s.ttd_atasan   ? '✅' : '⬜') : '—';
+    const ttdP  = s.nama_pimpinan ? (s.ttd_pimpinan ? '✅' : '⬜') : '—';
+
+    return `
+    <div class="card" style="margin-bottom:10px;border-left:4px solid #1E3A5F">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;
+        flex-wrap:wrap;gap:8px">
+        <div style="flex:1;min-width:0">
+          <!-- Baris 1: nama + nomor surat + badge status -->
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+            <span style="font-weight:700;font-size:15px">${s.nama_karyawan||'-'}</span>
+            <span style="font-size:12px;color:#64748B;background:#F1F5F9;
+              padding:2px 8px;border-radius:12px">${s.jabatan||''}</span>
+            <span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:12px;
+              background:${badge[0]};color:${badge[1]}">${badge[2]}</span>
+          </div>
+          <!-- Baris 2: nomor surat + periode -->
+          <div style="font-size:12px;color:#475569;margin-bottom:4px">
+            📋 <strong>${s.no_surat||'-'}</strong>
+            &nbsp;·&nbsp;
+            🗓️ ${s.tanggal_mulai||'-'} s/d ${s.tanggal_selesai||'-'}
+            &nbsp;·&nbsp;
+            <strong>${s.total_hari||'-'} hari</strong>
+          </div>
+          <!-- Baris 3: tujuan + keperluan -->
+          <div style="font-size:12px;color:#475569;margin-bottom:4px">
+            📍 <strong>${s.tujuan_tugas||'-'}</strong>
+          </div>
+          <div style="font-size:12px;color:#64748B;margin-bottom:6px">
+            📝 ${s.keperluan||'-'}
+          </div>
+          <!-- Baris 4: status TTD -->
+          <div style="display:flex;gap:12px;font-size:11px;color:#64748B">
+            <span>TTD Karyawan: ${ttdK}</span>
+            ${s.nama_atasan   ? `<span>TTD Atasan: ${ttdA}</span>`   : ''}
+            ${s.nama_pimpinan ? `<span>TTD Pimpinan: ${ttdP}</span>` : ''}
+          </div>
+        </div>
+        <!-- Tombol aksi -->
+        <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+          <button onclick="_lihatSuratTugas('${s.id_surat}')"
+            style="padding:8px 14px;background:#1E3A5F;color:#fff;border:none;
+            border-radius:8px;font-size:12px;cursor:pointer">
+            🔍 Lihat Surat
+          </button>
+          ${s.status_surat === 'selesai' ? `
+          <button onclick="_cetakSuratTugasPDF('${s.id_surat}')"
+            style="padding:8px 14px;background:#0F766E;color:#fff;border:none;
+            border-radius:8px;font-size:12px;cursor:pointer">
+            🖨️ Cetak PDF
+          </button>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function _exportRekapDL() {
+  if (!_rdlData || _rdlData.length === 0) {
+    showToast('Tidak ada data untuk diekspor', 'warning'); return;
+  }
+  try {
+    const ok = await _ensureXLSX();
+    if (!ok) { showToast('Gagal load library Excel', 'error'); return; }
+
+    const wb  = XLSX.utils.book_new();
+    const hdr = ['No','No. Surat','Nama','NIK','Jabatan','Departemen',
+                 'Tujuan Tugas','Keperluan','Tgl Mulai','Tgl Selesai',
+                 'Hari','Atasan','Pimpinan','Status'];
+    const rows = _rdlData.map((s,i) => [
+      i+1, s.no_surat||'', s.nama_karyawan||'', s.nik||'',
+      s.jabatan||'', s.departemen||'',
+      s.tujuan_tugas||'', s.keperluan||'',
+      s.tanggal_mulai||'', s.tanggal_selesai||'',
+      s.total_hari||'',
+      s.nama_atasan||'-', s.nama_pimpinan||'-',
+      s.status_surat||''
+    ]);
+
+    const ws = XLSX.utils.aoa_to_sheet([hdr, ...rows]);
+    ws['!cols'] = [4,14,20,14,16,14,20,28,12,12,6,18,18,18]
+      .map(w => ({wch:w}));
+    XLSX.utils.book_append_sheet(wb, ws, 'Rekap Dinas Luar');
+    XLSX.writeFile(wb, 'Rekap_Dinas_Luar_' + new Date().toLocaleDateString('id').replace(/\//g,'-') + '.xlsx');
+    showToast('✅ Export berhasil', 'success');
+  } catch(e) {
+    showToast('Gagal export: ' + e.message, 'error');
+  }
+}
+
+// Pastikan SheetJS tersedia
+async function _ensureXLSX() {
+  if (typeof XLSX !== 'undefined') return true;
+  return new Promise(resolve => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload  = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.head.appendChild(s);
+  });
 }
