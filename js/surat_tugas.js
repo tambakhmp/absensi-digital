@@ -313,9 +313,9 @@ async function _lihatSuratTugas(idSurat) {
           slots.push({label:'Mengetahui', nama:s.nama_pembuat||'Admin', jab:s.jabatan_pembuat||'Admin', img:'', at:''});
         }
         const cols = slots.length === 2 ? 'repeat(2,1fr)' : 'repeat(3,1fr)';
-        return \`<div style="border-top:1px solid #E2E8F0;padding-top:14px;display:grid;grid-template-columns:\${cols};gap:10px">
-          \${slots.map(sl => renderTTDBox(sl.label, sl.nama, sl.jab, sl.img, sl.at)).join('')}
-        </div>\`;
+        return `<div style="border-top:1px solid #E2E8F0;padding-top:14px;display:grid;grid-template-columns:${cols};gap:10px">
+          ${slots.map(sl => renderTTDBox(sl.label, sl.nama, sl.jab, sl.img, sl.at)).join('')}
+        </div>`;
       })()}
 
       ${biasTTD ? `
