@@ -848,9 +848,6 @@ async function loadDashboardAdminV3() {
     }
   } catch(e) {}
 
-  // Load surat tugas menunggu persetujuan admin (non-blocking)
-  _loadSuratTugasAdminApproval().catch(()=>{});
-
   try {
     showLoading('admin-stats-container', 'Memuat statistik...');
     const s = await callAPI('getStatsDashboard', {});
