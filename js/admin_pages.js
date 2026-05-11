@@ -2621,10 +2621,10 @@ async function _loadRekapDL() {
     const res = await callAPI('getSuratTugas', {});
     _rdlData = (Array.isArray(res) ? res : [])
       .filter(s => s.id_surat) // hanya yang valid
-      .sort((a,b) => {         // terbaru dulu
-        const da = _parseToDate(a.tanggal_mulai);
-        const db = _parseToDate(b.tanggal_mulai);
-        return db - da;
+      .sort((a,b) => {         // urut nomor surat terkecil dulu
+        const na = String(a.no_surat || '');
+        const nb = String(b.no_surat || '');
+        return na.localeCompare(nb, undefined, {numeric:true, sensitivity:'base'});
       });
     // Isi dropdown karyawan dari data yang ada
     const karySet = {};
