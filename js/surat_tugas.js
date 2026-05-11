@@ -434,6 +434,23 @@ async function _simpanTTDSurat(idSurat) {
 }
 
 // ── CETAK PDF ────────────────────────────────────────────────
+
+async function _setujuiSurat(idSurat) {
+  if (!confirm('Setujui surat tugas ini? Pengajuan dinas luar akan otomatis disetujui.')) return;
+  try {
+    showToast('Memproses...', 'info', 2000);
+    const res = await callAPI('setujuiSuratTugas', { id_surat: idSurat });
+    showToast('✅ ' + res.message, 'success', 4000);
+    document.getElementById('modal-surat-tugas')?.remove();
+    if (typeof _loadSuratTugasPendingDashboard  === 'function') _loadSuratTugasPendingDashboard();
+    if (typeof _loadSuratTugasAdminApproval     === 'function') _loadSuratTugasAdminApproval();
+    if (typeof loadPengajuanAdminV4             === 'function') loadPengajuanAdminV4();
+    if (typeof _loadRekapDL                     === 'function') _loadRekapDL();
+  } catch(e) {
+    showToast('Gagal: ' + e.message, 'error');
+  }
+}
+
 async function _cetakSuratTugasPDF(idSurat) {
   showToast('Menyiapkan PDF...', 'info', 2000);
   const pdfOk = await _ensureJsPDF();
