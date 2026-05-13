@@ -884,34 +884,48 @@ async function loadPengajuanAdminV4() {
   el.innerHTML=skeletonCard(3);
   try {
     // Load pengajuan + surat izin sekaligus untuk cek status tombol
-    const [rawPgj, rawSI] = await Promise.allSettled([
+    const [rawPgj, rawSI, rawST] = await Promise.allSettled([
       callAPI('getPengajuanSemua',{status:st,jenis:jn}),
-      callAPI('getSuratIzin', {})
+      callAPI('getSuratIzin', {}),
+      callAPI('getSuratTugas', {})
     ]);
     const raw=(rawPgj.value||[]).filter(p=>p.jenis!=='lembur');
     const data = raw;
-    // Map id_pengajuan → surat izin (cek apakah sudah punya surat)
+    // Map id_pengajuan → surat izin
     const siMap = {};
     (rawSI.value||[]).forEach(s=>{ if(s.id_pengajuan) siMap[String(s.id_pengajuan)]=s; });
+    // Map id_pengajuan → surat tugas
+    const stMap = {};
+    (rawST.value||[]).forEach(s=>{ if(s.id_pengajuan) stMap[String(s.id_pengajuan)]=s; });
     const stat=document.getElementById('pgj-stat');
     if(stat)stat.textContent=(data?.length||0)+' pengajuan';
     if(!data||data.length===0){showEmpty('pgj-admin-list','Tidak ada pengajuan');return;}
     const LBL={izin:'📝 Izin',sakit:'🏥 Sakit',cuti:'🏖️ Cuti',dinas_luar:'🚗 Dinas Luar',lembur:'⏰ Lembur'};
     el.innerHTML=data.map(p=>{
-      const si = p.jenis==='izin' ? (siMap[String(p.id_pengajuan)]||null) : null;
-      const siStatus = si ? String(si.status_surat||'') : '';
-      const siLbl = {
+      const si     = p.jenis==='izin'       ? (siMap[String(p.id_pengajuan)]||null) : null;
+      const stAdm  = p.jenis==='dinas_luar' ? (stMap[String(p.id_pengajuan)]||null) : null;
+
+      const siStatus    = si    ? String(si.status_surat||'')    : '';
+      const stAdmStatus = stAdm ? String(stAdm.status_surat||'') : '';
+
+      const suratAdmLbl = {
         menunggu_karyawan:'✍️ Menunggu TTD Karyawan',
         menunggu_atasan  :'✍️ Menunggu TTD Atasan',
         menunggu_pimpinan:'✍️ Menunggu TTD Pimpinan',
         menunggu_admin   :'✅ Semua TTD Selesai',
         selesai          :'✅ Surat Disetujui'
       };
-      const siStatusLabel = si ? (siLbl[siStatus]||siStatus) : '';
-      const siBadgeBg  = siStatus==='menunggu_admin'||siStatus==='selesai' ? '#DCFCE7' : '#FEF3C7';
-      const siBadgeClr = siStatus==='menunggu_admin'||siStatus==='selesai' ? '#15803D' : '#92400E';
-      // Tombol Setujui hanya muncul jika: bukan izin, atau izin tanpa surat, atau surat sudah menunggu_admin
-      const bolehSetujui = p.jenis!=='izin' || !si || siStatus==='menunggu_admin';
+      const siLabel    = si    ? (suratAdmLbl[siStatus]   ||siStatus)    : '';
+      const stAdmLabel = stAdm ? (suratAdmLbl[stAdmStatus]||stAdmStatus) : '';
+
+      const siBadgeBg  = siStatus==='menunggu_admin'||siStatus==='selesai'       ? '#DCFCE7' : '#FEF3C7';
+      const siBadgeClr = siStatus==='menunggu_admin'||siStatus==='selesai'       ? '#15803D' : '#92400E';
+      const stBadgeBg  = stAdmStatus==='menunggu_admin'||stAdmStatus==='selesai' ? '#DCFCE7' : '#FEF3C7';
+      const stBadgeClr = stAdmStatus==='menunggu_admin'||stAdmStatus==='selesai' ? '#15803D' : '#92400E';
+      const bolehSetujui = (
+        (p.jenis!=='izin'       || !si    || siStatus==='menunggu_admin') &&
+        (p.jenis!=='dinas_luar' || !stAdm || stAdmStatus==='menunggu_admin')
+      );
       return `
       <div class="card" style="border-left:4px solid ${
         p.status==='pending'?'#D97706':p.status==='disetujui'?'#1A9E74':'#E53E3E'}">
@@ -922,7 +936,8 @@ async function loadPengajuanAdminV4() {
               <span style="background:#F1F5F9;color:#475569;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600">
                 ${LBL[p.jenis]||p.jenis}</span>
               ${badgeStatus(p.status)}
-              ${siStatusLabel?`<span style="background:${siBadgeBg};color:${siBadgeClr};padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap">${siStatusLabel}</span>`:''}
+              ${siLabel?`<span style="background:${siBadgeBg};color:${siBadgeClr};padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap">${siLabel}</span>`:''}
+              ${stAdmLabel?`<span style="background:${stBadgeBg};color:${stBadgeClr};padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap">${stAdmLabel}</span>`:''}
             </div>
             <div style="font-size:13px;color:#64748B;margin-bottom:4px">
               📅 ${formatTanggal(p.tanggal_mulai)}
@@ -954,6 +969,20 @@ async function loadPengajuanAdminV4() {
               data-ts="${encodeURIComponent(p.tanggal_selesai||'')}"
               data-ket="${encodeURIComponent(p.keterangan||'')}"
               onclick="_buatSuratIzinClick(this)">📝 Buat Surat Izin</button>
+            `}
+            `:''}
+            ${p.jenis==='dinas_luar'?`
+            ${stAdm?`
+            <button class="btn" style="padding:9px 16px;font-size:13px;background:#EA580C;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600"
+              onclick="_lihatSuratTugas('${stAdm.id_surat}')">👁 Lihat Surat Tugas</button>
+            `:`
+            <button class="btn" style="padding:9px 16px;font-size:13px;background:#EA580C;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600"
+              data-pgj="${p.id_pengajuan}"
+              data-kary="${p.id_karyawan}"
+              data-tm="${encodeURIComponent(p.tanggal_mulai||'')}"
+              data-ts="${encodeURIComponent(p.tanggal_selesai||'')}"
+              data-ket="${encodeURIComponent(p.keterangan||'')}"
+              onclick="_buatSuratClick(this)">📋 Buat Surat Tugas</button>
             `}
             `:''}
             ${bolehSetujui?`
