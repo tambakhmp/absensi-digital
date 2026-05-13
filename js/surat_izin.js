@@ -490,6 +490,7 @@ async function _setujuiSuratIzin(idSurat) {
     if (typeof _loadListSuratIzinAdmin      === 'function') _loadListSuratIzinAdmin(_siFilterAktif);
     if (typeof _loadSuratIzinPendingDashboard === 'function') _loadSuratIzinPendingDashboard();
     if (typeof loadPengajuanAdminV4         === 'function') loadPengajuanAdminV4();
+    if (typeof loadArsipDokumen             === 'function') loadArsipDokumen();
   } catch(e) {
     showToast('Gagal: ' + e.message, 'error');
   }
