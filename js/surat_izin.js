@@ -305,7 +305,7 @@ async function _lihatSuratIzin(idSurat) {
     slots.push({ label: 'Atasan langsung', nama: s.nama_atasan, jab: '', img: s.ttd_atasan, at: s.ttd_atasan_at });
   }
   if (s.nama_pimpinan && String(s.nama_pimpinan).trim() !== '') {
-    slots.push({ label: 'Mengetahui', nama: s.nama_pimpinan, jab: 'Project Manager', img: s.ttd_pimpinan, at: s.ttd_pimpinan_at });
+    slots.push({ label: 'Mengetahui', nama: s.nama_pimpinan, jab: s.jabatan_pembuat||'Project Manager', img: s.ttd_pimpinan, at: s.ttd_pimpinan_at });
   }
   if (slots.length === 1) {
     slots.push({ label: 'Mengetahui', nama: s.nama_pembuat || 'Admin', jab: s.jabatan_pembuat || 'Admin', img: '', at: '' });
@@ -776,7 +776,7 @@ async function _cetakSuratIzinPDF(idSurat) {
       ttdSlots.push({ label: 'Atasan langsung', nama: s.nama_atasan, jabatan: '', img: s.ttd_atasan || '' });
     }
     if (s.nama_pimpinan && String(s.nama_pimpinan).trim() !== '') {
-      ttdSlots.push({ label: 'Mengetahui', nama: s.nama_pimpinan, jabatan: s.jabatan_pembuat || 'Project Manager', img: s.ttd_pimpinan || '' });
+      ttdSlots.push({ label: 'Mengetahui', nama: s.nama_pimpinan, jabatan: s.jabatan_pembuat || 'Admin / HRD', img: s.ttd_pimpinan || '' });
     }
     if (ttdSlots.length === 1) {
       ttdSlots.push({ label: 'Mengetahui', nama: s.nama_pembuat || 'Admin', jabatan: s.jabatan_pembuat || 'Admin', img: '' });
