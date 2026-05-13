@@ -2414,7 +2414,7 @@ ${map['ucapan_ulang_tahun_template']||''}</textarea>
         <div class="form-group">
           <label class="form-label">Nomor WA Pimpinan (Notif Absen)</label>
           <input class="form-control" id="set-nomor_wa_pimpinan" type="text"
-            value="${map['nomor_wa_pimpinan']||''}" placeholder="Contoh: 081234567890">
+            value="${map['nomor_wa_pimpinan']||''}" placeholder="Contoh: 081234567890 atau 081234,085678 (pisah koma)">
           <p class="form-hint">Notif absen masuk & keluar karyawan dikirim ke nomor ini</p>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
