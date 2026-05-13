@@ -1101,9 +1101,10 @@ function switchTab(tab) {
   } catch(e) {}
   if(tab==='dashboard') {
     renderPageDashboard(main);
-    // Reload surat izin pending setiap buka dashboard (bukan hanya saat login)
+    // Reload surat pending setiap buka dashboard
     setTimeout(() => {
-      if (typeof _loadSuratIzinPendingDashboard === 'function') _loadSuratIzinPendingDashboard();
+      if (typeof _loadSuratIzinPendingDashboard  === 'function') _loadSuratIzinPendingDashboard();
+      if (typeof _loadSuratTugasPendingDashboard === 'function') _loadSuratTugasPendingDashboard();
     }, 800);
   }
   else if(tab==='absensi')    renderPageAbsensi(main);
