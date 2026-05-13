@@ -277,7 +277,7 @@ async function _lihatSuratTugas(idSurat) {
           s.nama_pimpinan && s.nama_pimpinan.trim() ? s.nama_pimpinan : s.nama_pembuat||'-'
         }</strong></div>
         <div><span style="color:#64748B;width:100px;display:inline-block">Jabatan</span>: ${
-          s.nama_pimpinan && s.nama_pimpinan.trim() ? 'Project Manager' : (s.jabatan_pembuat||'-')
+          s.jabatan_pembuat || (s.nama_pimpinan && s.nama_pimpinan.trim() ? 'Project Manager' : '-')
         }</div>
         <div><span style="color:#64748B;width:100px;display:inline-block">Instansi</span>: ${s.instansi||'PT. HUTAKALO MINATANI PRIMA'}</div>
       </div>
@@ -306,7 +306,7 @@ async function _lihatSuratTugas(idSurat) {
           slots.push({label:'Atasan langsung', nama:s.nama_atasan, jab:'', img:s.ttd_atasan, at:s.ttd_atasan_at});
         }
         if (s.nama_pimpinan && String(s.nama_pimpinan).trim()!=='') {
-          slots.push({label:'Mengetahui', nama:s.nama_pimpinan, jab:'Project Manager', img:s.ttd_pimpinan, at:s.ttd_pimpinan_at});
+          slots.push({label:'Mengetahui', nama:s.nama_pimpinan, jab:s.jabatan_pembuat||'Project Manager', img:s.ttd_pimpinan, at:s.ttd_pimpinan_at});
         }
         // PM dinas luar: hanya 1 slot karyawan → tambah slot Admin/Mengetahui
         if (slots.length === 1) {
@@ -503,8 +503,7 @@ async function _cetakSuratTugasPDF(idSurat) {
     // Pemberi tugas di PDF: pimpinan bila ada, fallback ke admin pembuat
     const namaPemberiTugas = (s.nama_pimpinan && String(s.nama_pimpinan).trim())
       ? s.nama_pimpinan : (s.nama_pembuat||'-');
-    const jabPemberiTugas  = (s.nama_pimpinan && String(s.nama_pimpinan).trim())
-      ? 'Project Manager' : (s.jabatan_pembuat||'-');
+    const jabPemberiTugas  = s.jabatan_pembuat || '-';
     const rows1=[['Nama',namaPemberiTugas],['Jabatan',jabPemberiTugas],['Instansi',inst.nama_instansi||'PT. Hutakalo Minatani Prima']];
     rows1.forEach(r=>{
       doc.setTextColor(100,100,100); doc.text(r[0], mL+2, y);
@@ -601,7 +600,7 @@ async function _cetakSuratTugasPDF(idSurat) {
       ttdSlots.push({
         label : 'Mengetahui',
         nama  : String(s.nama_pimpinan),
-        jabatan: String(s.jabatan_pembuat || 'Project Manager'),
+        jabatan: String(s.jabatan_pembuat || 'Admin / HRD'),
         img   : s.ttd_pimpinan || ''
       });
     }
