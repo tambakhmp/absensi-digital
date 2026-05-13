@@ -897,13 +897,24 @@ async function loadPengajuanAdminV4() {
     // Map id_pengajuan → surat tugas
     const stMap = {};
     (rawST.value||[]).forEach(s=>{ if(s.id_pengajuan) stMap[String(s.id_pengajuan)]=s; });
+    // Map no_surat → surat tugas (untuk perpanjangan — cari surat dari Ref surat di keterangan)
+    const stByNoSurat = {};
+    (rawST.value||[]).forEach(s=>{ if(s.no_surat) stByNoSurat[String(s.no_surat).trim()]=s; });
     const stat=document.getElementById('pgj-stat');
     if(stat)stat.textContent=(data?.length||0)+' pengajuan';
     if(!data||data.length===0){showEmpty('pgj-admin-list','Tidak ada pengajuan');return;}
     const LBL={izin:'📝 Izin',sakit:'🏥 Sakit',cuti:'🏖️ Cuti',dinas_luar:'🚗 Dinas Luar',lembur:'⏰ Lembur'};
     el.innerHTML=data.map(p=>{
       const si     = p.jenis==='izin'       ? (siMap[String(p.id_pengajuan)]||null) : null;
-      const stAdm  = p.jenis==='dinas_luar' ? (stMap[String(p.id_pengajuan)]||null) : null;
+      // Perpanjangan terdeteksi dari keterangan — tidak perlu surat tugas baru
+      const isPerpanjangan = p.jenis==='dinas_luar' &&
+        String(p.keterangan||'').toLowerCase().includes('ref surat:');
+      const stAdm  = (!isPerpanjangan && p.jenis==='dinas_luar')
+        ? (stMap[String(p.id_pengajuan)]||null) : null;
+      // Untuk perpanjangan: ambil surat tugas asli via no_surat dari keterangan
+      const _pRefMatch = isPerpanjangan
+        ? String(p.keterangan||'').match(/[Rr]ef surat:\s*([^\s|]+)/) : null;
+      const stRef = _pRefMatch ? (stByNoSurat[_pRefMatch[1].trim()]||null) : null;
 
       const siStatus    = si    ? String(si.status_surat||'')    : '';
       const stAdmStatus = stAdm ? String(stAdm.status_surat||'') : '';
@@ -922,7 +933,8 @@ async function loadPengajuanAdminV4() {
       const siBadgeClr = siStatus==='menunggu_admin'||siStatus==='selesai'       ? '#15803D' : '#92400E';
       const stBadgeBg  = stAdmStatus==='menunggu_admin'||stAdmStatus==='selesai' ? '#DCFCE7' : '#FEF3C7';
       const stBadgeClr = stAdmStatus==='menunggu_admin'||stAdmStatus==='selesai' ? '#15803D' : '#92400E';
-      const bolehSetujui = (
+      // Perpanjangan: langsung boleh setujui tanpa cek surat
+      const bolehSetujui = isPerpanjangan || (
         (p.jenis!=='izin'       || !si    || siStatus==='menunggu_admin') &&
         (p.jenis!=='dinas_luar' || !stAdm || stAdmStatus==='menunggu_admin')
       );
@@ -938,6 +950,7 @@ async function loadPengajuanAdminV4() {
               ${badgeStatus(p.status)}
               ${siLabel?`<span style="background:${siBadgeBg};color:${siBadgeClr};padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap">${siLabel}</span>`:''}
               ${stAdmLabel?`<span style="background:${stBadgeBg};color:${stBadgeClr};padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap">${stAdmLabel}</span>`:''}
+              ${isPerpanjangan?`<span style="background:#FEF3C7;color:#92400E;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600">📅 Perpanjangan</span>`:''}
             </div>
             <div style="font-size:13px;color:#64748B;margin-bottom:4px">
               📅 ${formatTanggal(p.tanggal_mulai)}
@@ -955,6 +968,14 @@ async function loadPengajuanAdminV4() {
             ${p.catatan_admin?`<div style="font-size:12px;color:#D97706;margin-top:4px">
               💬 ${p.catatan_admin}</div>`:''}
           </div>
+          ${stRef ? `
+          <div style="margin-top:8px">
+            <button onclick="_lihatSuratTugas('${stRef.id_surat}')"
+              style="padding:8px 16px;background:#EA580C;color:#fff;border:none;
+              border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">
+              👁 Lihat Surat Tugas${p.status==='disetujui' ? ' (Tanggal Diperbarui)' : ''}
+            </button>
+          </div>` : ''}
           ${p.status==='pending'?`
           <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
             ${p.jenis==='izin'?`
