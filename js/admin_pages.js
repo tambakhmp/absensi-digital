@@ -2399,22 +2399,22 @@ ${map['ucapan_ulang_tahun_template']||''}</textarea>
         <div class="form-group">
           <label class="form-label">Aktifkan Notifikasi WA</label>
           <select class="form-control" id="set-aktif_wa_notif">
-            <option value="true" \${String(map['aktif_wa_notif']).toLowerCase()==='true'?'selected':''}>
+            <option value="true" ${String(map['aktif_wa_notif']).toLowerCase()==='true'?'selected':''}>
               ✅ Aktif — Kirim WA ke karyawan & pimpinan</option>
-            <option value="false" \${String(map['aktif_wa_notif']).toLowerCase()!=='true'?'selected':''}>
+            <option value="false" ${String(map['aktif_wa_notif']).toLowerCase()!=='true'?'selected':''}>
               ❌ Nonaktif</option>
           </select>
         </div>
         <div class="form-group">
           <label class="form-label">Token Fonnte API</label>
           <input class="form-control" id="set-fonnte_token" type="text"
-            value="\${map['fonnte_token']||''}" placeholder="Paste token dari dashboard Fonnte">
+            value="${map['fonnte_token']||''}" placeholder="Paste token dari dashboard Fonnte">
           <p class="form-hint">Dapatkan token di <strong>app.fonnte.com</strong> → Device → Token</p>
         </div>
         <div class="form-group">
           <label class="form-label">Nomor WA Pimpinan (Notif Absen)</label>
           <input class="form-control" id="set-nomor_wa_pimpinan" type="text"
-            value="\${map['nomor_wa_pimpinan']||''}" placeholder="Contoh: 081234567890">
+            value="${map['nomor_wa_pimpinan']||''}" placeholder="Contoh: 081234567890">
           <p class="form-hint">Notif absen masuk & keluar karyawan dikirim ke nomor ini</p>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
