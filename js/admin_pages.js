@@ -2392,6 +2392,42 @@ ${map['ucapan_ulang_tahun_template']||''}</textarea>
         </div>
       </div>
 
+      <!-- WhatsApp Notifikasi via Fonnte -->
+      <div class="card">
+        <h3 style="font-size:14px;font-weight:700;color:#64748B;text-transform:uppercase;
+          letter-spacing:.6px;margin-bottom:8px">💬 Notifikasi WhatsApp (Fonnte)</h3>
+        <div class="form-group">
+          <label class="form-label">Aktifkan Notifikasi WA</label>
+          <select class="form-control" id="set-aktif_wa_notif">
+            <option value="true" \${String(map['aktif_wa_notif']).toLowerCase()==='true'?'selected':''}>
+              ✅ Aktif — Kirim WA ke karyawan & pimpinan</option>
+            <option value="false" \${String(map['aktif_wa_notif']).toLowerCase()!=='true'?'selected':''}>
+              ❌ Nonaktif</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Token Fonnte API</label>
+          <input class="form-control" id="set-fonnte_token" type="text"
+            value="\${map['fonnte_token']||''}" placeholder="Paste token dari dashboard Fonnte">
+          <p class="form-hint">Dapatkan token di <strong>app.fonnte.com</strong> → Device → Token</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nomor WA Pimpinan (Notif Absen)</label>
+          <input class="form-control" id="set-nomor_wa_pimpinan" type="text"
+            value="\${map['nomor_wa_pimpinan']||''}" placeholder="Contoh: 081234567890">
+          <p class="form-hint">Notif absen masuk & keluar karyawan dikirim ke nomor ini</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+          <button onclick="_testKirimWA()"
+            style="flex:1;padding:10px;background:#F0FDF4;color:#15803D;
+            border:1.5px solid #86EFAC;border-radius:8px;font-size:13px;
+            font-weight:600;cursor:pointer;min-width:140px">
+            📤 Test Kirim WA
+          </button>
+        </div>
+        <div id="wa-notif-result" style="margin-top:10px;font-size:12px"></div>
+      </div>
+
       <!-- Archive Absensi Otomatis -->
       ${(getSession()?.role==='superadmin') ? `
       <div class="card" style="border-left:4px solid #0369A1;margin-top:4px">
@@ -2583,6 +2619,19 @@ async function _setupEmailTrigger() {
   }
 }
 
+async function _testKirimWA() {
+  const el = document.getElementById('wa-notif-result');
+  if (el) el.innerHTML = '<span style="color:#15803D">Mengirim test WA...</span>';
+  try {
+    const res = await callAPI('testKirimWA', {});
+    showToast('✅ ' + res.message, 'success', 5000);
+    if (el) el.innerHTML = '<span style="color:#15803D">✅ ' + res.message + '</span>';
+  } catch(e) {
+    showToast('Gagal: ' + e.message, 'error');
+    if (el) el.innerHTML = '<span style="color:#E53E3E">❌ ' + e.message + '</span>';
+  }
+}
+
 async function _testKirimEmail() {
   const el = document.getElementById('email-notif-result');
   if (el) el.innerHTML = '<span style="color:#0369A1">Mengirim test email...</span>';
@@ -2618,7 +2667,7 @@ async function simpanPengaturanAdmin(){
       'jam_masuk_default','jam_keluar_default',
       'batas_awal_absen_menit','toleransi_terlambat_menit','batas_absen_masuk_menit',
       'max_radius_meter','sisa_cuti_default_per_tahun',
-      'ucapan_ulang_tahun_template','aktif_one_device_login','aktif_email_notif',
+      'ucapan_ulang_tahun_template','aktif_one_device_login','aktif_email_notif','aktif_wa_notif','fonnte_token','nomor_wa_pimpinan',
       'favicon_url','icon_512_url','bg_login_url','login_subtitle',
       'periode_mulai_tgl'];
     const settings={};
