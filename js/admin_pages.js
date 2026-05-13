@@ -2178,6 +2178,7 @@ async function _setujuiSuratTugasAdmin(idSurat) {
     showToast('✅ ' + res.message, 'success', 4000);
     loadPengajuanAdminV4();
     if (typeof _loadListSuratTugasAdmin === 'function') _loadListSuratTugasAdmin();
+    if (typeof loadArsipDokumen         === 'function') loadArsipDokumen();
   } catch(e) { showToast('Gagal: ' + e.message, 'error'); }
 }
 
@@ -2189,6 +2190,7 @@ async function _setujuiSuratIzinAdmin(idSurat) {
     showToast('✅ ' + res.message, 'success', 4000);
     loadPengajuanAdminV4();
     if (typeof _loadListSuratIzinAdmin === 'function') _loadListSuratIzinAdmin('');
+    if (typeof loadArsipDokumen        === 'function') loadArsipDokumen();
   } catch(e) { showToast('Gagal: ' + e.message, 'error'); }
 }
 
