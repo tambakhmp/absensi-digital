@@ -941,7 +941,7 @@ async function loadPengajuanAdminV4() {
       const bolehSetujui = (
         isPerpanjangan ||
         (p.jenis !== 'izin' && p.jenis !== 'dinas_luar') ||
-        (p.jenis === 'izin'       && (!si    || siStatus    === 'menunggu_admin')) ||
+        (p.jenis === 'izin'       && !!si   && siStatus    === 'menunggu_admin') ||
         (p.jenis === 'dinas_luar' && !isPerpanjangan && !!stAdm && stAdmStatus === 'menunggu_admin')
       );
       return `
