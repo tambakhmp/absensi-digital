@@ -362,53 +362,34 @@ async function _arsipCetakSP(idSP) {
   }
 }
 
-// ── EXPORT EXCEL ─────────────────────────────────────────────
+// ── EXPORT EXCEL PROFESIONAL (server-side, format identik Rekap DL) ─
 async function _arsipExportExcel() {
   if (!_arsipFiltered.length) { showToast('Tidak ada data untuk diexport', 'warning'); return; }
-
-  showToast('Menyiapkan Excel...', 'info', 2000);
-
+  showToast('Menyiapkan Excel profesional...', 'info', 3000);
   try {
-    const XLSX = window.XLSX;
-    if (!XLSX) { showToast('Library Excel tidak tersedia', 'error'); return; }
+    const res = await callAPI('exportArsipDokumen', { data: _arsipFiltered });
+    if (!res || !res.base64) throw new Error('Tidak ada data dari server');
 
-    const wb = XLSX.utils.book_new();
-
-    // Sheet 1: Semua dokumen (filtered)
-    const allRows = [
-      ['No', 'No. Dokumen', 'Jenis', 'Nama Karyawan', 'Jabatan', 'Departemen',
-       'Perihal', 'Tanggal Mulai', 'Tanggal Selesai', 'Status']
-    ];
-    _arsipFiltered.forEach((d, i) => {
-      allRows.push([
-        i+1, d.no_dokumen, d.jenis, d.nama_karyawan, d.jabatan, d.departemen,
-        d.perihal, d.tanggal_mulai, d.tanggal_selesai, d.status
-      ]);
+    const byteStr = atob(res.base64);
+    const ab      = new ArrayBuffer(byteStr.length);
+    const ia      = new Uint8Array(ab);
+    for (let i = 0; i < byteStr.length; i++) ia[i] = byteStr.charCodeAt(i);
+    const blob = new Blob([ab], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     });
-    const wsAll = XLSX.utils.aoa_to_sheet(allRows);
-    wsAll['!cols'] = [4,15,15,25,20,15,35,12,12,15].map(w=>({wch:w}));
-    XLSX.utils.book_append_sheet(wb, wsAll, 'Semua Dokumen');
-
-    // Sheet 2: Per jenis
-    ['SI','ST','SP'].forEach(kode => {
-      const jenisData = _arsipFiltered.filter(d=>d.kode_jenis===kode);
-      if (!jenisData.length) return;
-      const rows = [allRows[0].slice()];
-      jenisData.forEach((d,i)=>{
-        rows.push([i+1,d.no_dokumen,d.jenis,d.nama_karyawan,d.jabatan,
-          d.departemen,d.perihal,d.tanggal_mulai,d.tanggal_selesai,d.status]);
-      });
-      const ws = XLSX.utils.aoa_to_sheet(rows);
-      ws['!cols'] = [4,15,15,25,20,15,35,12,12,15].map(w=>({wch:w}));
-      const nama = kode==='SI'?'Surat Izin':kode==='ST'?'Surat Tugas':'Surat Peringatan';
-      XLSX.utils.book_append_sheet(wb, ws, nama);
-    });
-
-    // Nama file dengan tanggal
-    const now = new Date();
-    const tgl = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
-    XLSX.writeFile(wb, `Arsip_Dokumen_${tgl}.xlsx`);
-    showToast('✅ Excel berhasil didownload!', 'success', 3000);
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const now  = new Date();
+    const tgl  = now.getFullYear() +
+      String(now.getMonth()+1).padStart(2,'0') +
+      String(now.getDate()).padStart(2,'0');
+    a.href     = url;
+    a.download = `Arsip_Dokumen_${tgl}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('✅ Excel berhasil didownload!', 'success', 4000);
   } catch(e) {
     showToast('Gagal export: ' + e.message, 'error');
   }
