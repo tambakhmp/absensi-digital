@@ -933,10 +933,16 @@ async function loadPengajuanAdminV4() {
       const siBadgeClr = siStatus==='menunggu_admin'||siStatus==='selesai'       ? '#15803D' : '#92400E';
       const stBadgeBg  = stAdmStatus==='menunggu_admin'||stAdmStatus==='selesai' ? '#DCFCE7' : '#FEF3C7';
       const stBadgeClr = stAdmStatus==='menunggu_admin'||stAdmStatus==='selesai' ? '#15803D' : '#92400E';
-      // Perpanjangan: langsung boleh setujui tanpa cek surat
-      const bolehSetujui = isPerpanjangan || (
-        (p.jenis!=='izin'       || !si    || siStatus==='menunggu_admin') &&
-        (p.jenis!=='dinas_luar' || !stAdm || stAdmStatus==='menunggu_admin')
+      // Setujui muncul berdasarkan jenis:
+      // - perpanjangan dinas luar : langsung boleh (tidak perlu surat baru)
+      // - sakit / cuti            : selalu boleh
+      // - izin                    : boleh jika tidak ada surat ATAU surat sudah menunggu_admin
+      // - dinas luar              : WAJIB ada surat DAN sudah menunggu_admin (semua TTD selesai)
+      const bolehSetujui = (
+        isPerpanjangan ||
+        (p.jenis !== 'izin' && p.jenis !== 'dinas_luar') ||
+        (p.jenis === 'izin'       && (!si    || siStatus    === 'menunggu_admin')) ||
+        (p.jenis === 'dinas_luar' && !isPerpanjangan && !!stAdm && stAdmStatus === 'menunggu_admin')
       );
       return `
       <div class="card" style="border-left:4px solid ${
@@ -1008,7 +1014,10 @@ async function loadPengajuanAdminV4() {
             `:''}
             ${bolehSetujui?`
             <button class="btn btn--secondary" style="padding:9px 16px;font-size:13px"
-              onclick="approvePGJ('${p.id_pengajuan}','${p.nama_karyawan}')">✅ Setujui</button>
+              onclick="${p.jenis==='dinas_luar' && stAdm && stAdmStatus==='menunggu_admin'
+                ? '_setujuiSuratTugasAdmin('+JSON.stringify(stAdm.id_surat)+')'
+                : 'approvePGJ('+JSON.stringify(p.id_pengajuan)+','+JSON.stringify(p.nama_karyawan)+')'}">
+              ✅ Setujui</button>
             `:''}
             <button class="btn btn--danger" style="padding:9px 16px;font-size:13px"
               onclick="tolakPGJ('${p.id_pengajuan}','${p.nama_karyawan}')">❌ Tolak</button>
@@ -2134,6 +2143,18 @@ async function resetDeviceAdmin(id,nama){
     async()=>{
       const r=await callAPI('resetDevice',{id_karyawan:id});showToast(r.message,'success');loadDeviceListAdmin();
     },'🔄 Reset');
+}
+
+// Setujui surat tugas dari halaman pengajuan (panggil setujuiSuratTugas bukan approvePGJ)
+async function _setujuiSuratTugasAdmin(idSurat) {
+  if (!confirm('Setujui surat tugas ini? Pengajuan dinas luar akan otomatis disetujui.')) return;
+  try {
+    showToast('Memproses...', 'info', 2000);
+    const res = await callAPI('setujuiSuratTugas', { id_surat: idSurat });
+    showToast('✅ ' + res.message, 'success', 4000);
+    loadPengajuanAdminV4();
+    if (typeof _loadListSuratTugasAdmin === 'function') _loadListSuratTugasAdmin();
+  } catch(e) { showToast('Gagal: ' + e.message, 'error'); }
 }
 
 async function unlockAkunAdmin(username, nama) {
