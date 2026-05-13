@@ -982,6 +982,22 @@ async function loadPengajuanAdminV4() {
               👁 Lihat Surat Tugas${p.status==='disetujui' ? ' (Tanggal Diperbarui)' : ''}
             </button>
           </div>` : ''}
+          ${p.status==='disetujui' && p.jenis==='dinas_luar' && stAdm ? `
+          <div style="margin-top:8px">
+            <button onclick="_lihatSuratTugas('${stAdm.id_surat}')"
+              style="padding:8px 16px;background:#EA580C;color:#fff;border:none;
+              border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">
+              📄 Lihat Surat Tugas
+            </button>
+          </div>` : ''}
+          ${p.status==='disetujui' && p.jenis==='izin' && si ? `
+          <div style="margin-top:8px">
+            <button onclick="_lihatSuratIzin('${si.id_surat}')"
+              style="padding:8px 16px;background:#15803D;color:#fff;border:none;
+              border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">
+              📄 Lihat Surat Izin
+            </button>
+          </div>` : ''}
           ${p.status==='pending'?`
           <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
             ${p.jenis==='izin'?`
@@ -2408,6 +2424,22 @@ ${map['ucapan_ulang_tahun_template']||''}</textarea>
         <div id="archive-result" style="margin-top:10px;font-size:12px"></div>
       </div>` : ''}
 
+      <!-- Sinkronisasi Status Surat -->
+      <div class="card" style="border-left:4px solid #7C3AED;margin-top:4px">
+        <h3 style="font-size:14px;font-weight:700;color:#7C3AED;text-transform:uppercase;
+          letter-spacing:.6px;margin-bottom:8px">🔄 Sinkronisasi Status Surat Izin</h3>
+        <p style="font-size:12px;color:#64748B;margin-bottom:12px;line-height:1.6">
+          Perbaiki surat izin yang pengajuannya sudah <strong>Disetujui</strong>
+          tapi status surat masih <strong>Menunggu Persetujuan</strong> (data lama).
+        </p>
+        <button onclick="_sinkronStatusSuratIzin()"
+          style="width:100%;padding:10px;background:#7C3AED;color:#fff;border:none;
+          border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+          🔄 Sinkronisasi Sekarang
+        </button>
+        <div id="sinkron-si-result" style="margin-top:10px;font-size:12px"></div>
+      </div>
+
       <!-- Log Aktivitas — kosongkan manual (superadmin) -->
       ${(getSession()?.role==='superadmin') ? `
       <div class="card" style="border-left:4px solid #E53E3E;margin-top:4px">
@@ -2512,6 +2544,21 @@ async function _uploadAsset(input, key) {
 }
 
 // ── Archive Absensi ─────────────────────────────────────────
+async function _sinkronStatusSuratIzin() {
+  const el = document.getElementById('sinkron-si-result');
+  if (el) el.innerHTML = '<span style="color:#7C3AED">Memeriksa data...</span>';
+  try {
+    showToast('Memeriksa data lama...', 'info', 2000);
+    const res = await callAPI('sinkronStatusSuratIzin', {});
+    showToast('✅ ' + res.message, 'success', 5000);
+    if (el) el.innerHTML = '<span style="color:#15803D">✅ ' + res.message + '</span>';
+    if (typeof loadArsipDokumen === 'function') loadArsipDokumen();
+  } catch(e) {
+    showToast('Gagal: ' + e.message, 'error');
+    if (el) el.innerHTML = '<span style="color:#E53E3E">❌ ' + e.message + '</span>';
+  }
+}
+
 async function _setupArchiveTrigger() {
   const el = document.getElementById('archive-result');
   if (el) el.innerHTML = '<span style="color:#0369A1">Mengaktifkan trigger...</span>';
