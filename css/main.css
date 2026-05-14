@@ -53,7 +53,14 @@ html { background: var(--color-bg); } /* fallback jika #app-bg kosong */
   position: fixed;
   inset: 0;
   z-index: -2;
-  background-color: var(--color-bg); /* default, bisa di-override oleh image */
+  /* Gradient default — diganti otomatis bila ada gambar dari Pengaturan */
+  background: linear-gradient(145deg,
+    #C8E6FF 0%, #DBEAFE 25%,
+    #EFF6FF 55%, #F0F9FF 80%,
+    #E8F4FD 100%);
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center;
 }
 
 #app-overlay {
@@ -854,14 +861,8 @@ button:disabled { opacity: 0.55 !important; pointer-events: none; }
   }
 }
 
-/* Background gradient full halaman */
-html, body {
-  background: linear-gradient(145deg,
-    #C8E6FF 0%, #DBEAFE 25%,
-    #EFF6FF 55%, #F0F9FF 80%,
-    #E8F4FD 100%) !important;
-  background-attachment: fixed !important;
-}
+/* Background ditangani oleh #app-bg */
+html, body { background: transparent; }
 
 /* Bottom nav HARUS selalu fixed dan di paling atas */
 .bottom-nav {
