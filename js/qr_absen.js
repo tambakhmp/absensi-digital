@@ -149,8 +149,16 @@ async function _tampilkanKonfirmasi() {
     </div>`;
 
   let karyawan = {};
+  let shiftInfo = null;
   try {
     karyawan = await callAPI('getKaryawanById', { id_karyawan: _qrScannedData.id_karyawan });
+    // Ambil info shift jika karyawan punya shift
+    if (karyawan.id_shift) {
+      try {
+        const shiftList = await callAPI('getShiftList', {});
+        shiftInfo = (shiftList || []).find(s => String(s.id_shift) === String(karyawan.id_shift)) || null;
+      } catch(eS) { shiftInfo = null; }
+    }
   } catch(e) {
     container.innerHTML = `
       <div style="padding:40px 20px;text-align:center;color:#FCA5A5;background:#0F172A;height:100%">
@@ -188,6 +196,13 @@ async function _tampilkanKonfirmasi() {
           <div style="font-size:16px;font-weight:700;margin-bottom:2px">${karyawan.nama_lengkap || '-'}</div>
           <div style="font-size:12px;color:#94A3B8">NIK: ${karyawan.nik || '-'}</div>
           <div style="font-size:12px;color:#94A3B8">${karyawan.jabatan || '-'} · ${karyawan.departemen || '-'}</div>
+          <div style="margin-top:6px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;display:inline-block;
+            background:${shiftInfo ? 'rgba(245,158,11,.2)' : 'rgba(16,185,129,.2)'};
+            color:${shiftInfo ? '#FCD34D' : '#6EE7B7'}">
+            ${shiftInfo
+              ? '🌙 ' + shiftInfo.nama_shift + ' (' + shiftInfo.jam_masuk + '–' + shiftInfo.jam_keluar + ')'
+              : '☀️ Karyawan Biasa (jam ' + (typeof getSetting === 'function' ? '08:00' : '08:00') + ')'}
+          </div>
         </div>
       </div>
 
