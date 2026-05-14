@@ -1,4 +1,3 @@
-
 function absSetMode(mode) {
   const btnB = document.getElementById('abs-tab-bln');
   const btnR = document.getElementById('abs-tab-rng');
@@ -177,7 +176,17 @@ async function _dapatkanGPS(tipe) {
         if (!navigator.geolocation) { rej(new Error('Browser tidak mendukung GPS')); return; }
         navigator.geolocation.getCurrentPosition(res, rej, opts[i]);
       });
+      const acc = pos.coords.accuracy || 9999;
+      // HP lama: accuracy buruk (>300m) → coba percobaan berikutnya dulu
+      // Pada percobaan terakhir (i=3), tetap pakai walau accuracy buruk
+      if (acc > 300 && i < opts.length - 1) {
+        _showGPSPill(`⚠️ GPS tidak akurat (${Math.round(acc)}m), mencoba ulang...`);
+        await new Promise(r => setTimeout(r, 1500));
+        continue;
+      }
       _hideGPSPill();
+      // Simpan info accuracy untuk dikirim ke GAS (log saja, tidak blokir)
+      pos._accuracy = acc;
       _lastGPSPos = pos;
       return pos;
     } catch(e) {
