@@ -137,7 +137,17 @@ async function _loadInfoHariLibur() {
     const now    = new Date();
     const tglStr = String(now.getDate()).padStart(2,'0') + '/' +
                    String(now.getMonth()+1).padStart(2,'0') + '/' + now.getFullYear();
-    const data   = await callAPI('getHariLibur', { tahun: now.getFullYear() });
+    // Cache hari libur di sessionStorage — tidak perlu fetch ulang setiap buka
+    const cacheKey = 'hariLibur_' + now.getFullYear();
+    let data = null;
+    try {
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) data = JSON.parse(cached);
+    } catch(eC){}
+    if (!data) {
+      data = await callAPI('getHariLibur', { tahun: now.getFullYear() });
+      try { if (data && data.length) sessionStorage.setItem(cacheKey, JSON.stringify(data)); } catch(eC){}
+    }
     if (!data || !data.length) return;
 
     const HARI  = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
@@ -238,13 +248,14 @@ async function loadDashboardKaryawan() {
   _setEl('dash-jabatan',  (user.jabatan||'')+(user.departemen?' · '+user.departemen:''));
   _setEl('dash-tanggal',  tanggalHariIni());
 
-  // Cek ulang tahun hari ini — tampil sebelum dashboard
-  await _cekUltahHariIni();
-
   // Jam realtime - mulai segera
   _startJamRealtime();
 
+  // Cek ulang tahun — tidak perlu tunggu (fire and forget)
+  _cekUltahHariIni().catch(()=>{});
+
   // Phase 1: kritis — profil, absen, statistik, pengumuman
+  // Preload periode bersamaan agar tidak sequential saat dibutuhkan
   await Promise.allSettled([
     _loadProfilFoto(user),
     loadStatusAbsenHariIni(),
@@ -252,6 +263,7 @@ async function loadDashboardKaryawan() {
     _loadPengumuman(),
     _loadUltahRekan(),
     _loadInfoHariLibur(),
+    _getPeriode(),
   ]);
 
   // Phase 2: tidak kritis — ranking, SP, jadwal, surat tugas & izin pending
@@ -851,7 +863,18 @@ async function loadDashboardAdminV3() {
 
   try {
     showLoading('admin-stats-container', 'Memuat statistik...');
-    const s = await callAPI('getStatsDashboard', {});
+    // Cache stats selama 2 menit di sessionStorage
+    let s = null;
+    try {
+      const sc = sessionStorage.getItem('_statsAdminDash');
+      const st = sessionStorage.getItem('_statsAdminDashTime');
+      if (sc && st && (Date.now()-parseInt(st)) < 120000) s = JSON.parse(sc);
+    } catch(eC){}
+    if (!s) {
+      s = await callAPI('getStatsDashboard', {});
+      try { sessionStorage.setItem('_statsAdminDash', JSON.stringify(s));
+            sessionStorage.setItem('_statsAdminDashTime', Date.now()); } catch(eC){}
+    }
     if (!s) return;
 
     const tglHariIni = tanggalHariIni();
@@ -1563,46 +1586,54 @@ async function _setujuiSuratAdmin(idSurat) {
 async function _loadSuratIzinPendingDashboard() {
   const el = document.getElementById('surat-izin-pending-section');
   if (!el) return;
+
   try {
     const session = getSession();
     const idMe    = String(session?.id_karyawan || '');
+    const role    = String(session?.role || '').toLowerCase();
 
-    const [pending, semua] = await Promise.allSettled([
+    // ── 1. Surat yang PERLU TTD saat ini (pakai endpoint khusus) ─
+    const [resPending, resSemua] = await Promise.allSettled([
       callAPI('getSuratIzinPending', {}),
       callAPI('getSuratIzin', {})
     ]);
 
-    const dataPending = pending.value || [];
-    const dataSemua   = (semua.value || []).filter(s =>
-      s.status_surat === 'selesai' && String(s.id_karyawan) === idMe
+    const dataTTD   = resPending.value || [];
+    const semuaSI   = resSemua.value   || [];
+
+    // Surat milik karyawan ini yang sudah melewati tahap TTD-nya
+    // (sedang di atasan/PM/admin, atau sudah selesai) — untuk arsip/lihat
+    const idTTDSet  = new Set(dataTTD.map(s => s.id_surat));
+    const dataMilik = semuaSI.filter(s =>
+      String(s.id_karyawan) === idMe && !idTTDSet.has(s.id_surat)
     );
 
     let html = '';
 
-    // ── Surat izin yang perlu TTD ──────────────────────────────
-    if (dataPending.length > 0) {
-      const cards = dataPending.map(s => {
-        let aksiLabel = '✍️ Tanda Tangani';
+    // ── 2. Card TTD — hanya saat giliran user ini ─────────────────
+    if (dataTTD.length > 0) {
+      const cards = dataTTD.map(s => {
+        const st = s.status_surat;
+        let aksiLabel = '✍️ Tanda Tangani Surat Izin';
         let warna     = '#1E5F3A';
-        if (s.status_surat === 'menunggu_atasan' && idMe === String(s.id_atasan))
-          aksiLabel = '✍️ Tanda Tangani sebagai Atasan';
-        else if (s.status_surat === 'menunggu_pimpinan' && idMe === String(s.id_pimpinan))
-          aksiLabel = '✍️ Tanda Tangani sebagai Pimpinan';
-        else if (s.status_surat === 'menunggu_admin')
-          { aksiLabel = '✅ Setujui Surat Izin'; warna = '#16A34A'; }
+        if (st === 'menunggu_atasan')   { aksiLabel = '✍️ Tanda Tangani sebagai Atasan'; }
+        if (st === 'menunggu_pimpinan') { aksiLabel = '✍️ Tanda Tangani sebagai Pimpinan'; }
+        if (st === 'menunggu_admin')    { aksiLabel = '✅ Setujui Surat Izin'; warna = '#16A34A'; }
 
-        // Progress stepper inline (pakai fungsi dari surat_izin.js)
+        const stLbl = {
+          menunggu_karyawan:'Menunggu TTD Karyawan', menunggu_atasan:'Menunggu TTD Atasan',
+          menunggu_pimpinan:'Menunggu TTD Pimpinan', menunggu_admin:'Semua TTD Selesai'
+        };
         const progHtml = typeof _progressBarSI === 'function' ? _progressBarSI(s) : '';
+
         return `<div style="background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:12px;
           padding:12px 14px;margin-bottom:8px">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
-            <div style="font-size:13px;font-weight:700;color:#15803D">📝 Surat Izin</div>
-            <span style="background:${warna==='#16A34A'?'#DCFCE7':'#FEF3C7'};color:${warna==='#16A34A'?'#15803D':'#92400E'};
-              font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap">
-              ${aksiLabel.replace('✍️ ','').replace('✅ ','')}
-            </span>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+            <span style="font-size:13px;font-weight:700;color:#15803D">📝 Surat Izin</span>
+            <span style="background:#FEF3C7;color:#92400E;font-size:11px;font-weight:600;
+              padding:2px 8px;border-radius:20px">${stLbl[st]||st}</span>
           </div>
-          <div style="font-size:12px;color:#475569">${s.nama_karyawan} · ${s.no_surat||''}</div>
+          <div style="font-size:12px;color:#475569">${s.no_surat||''} · ${s.nama_karyawan||''}</div>
           <div style="font-size:12px;color:#475569">🗓️ ${s.tanggal_mulai||''} – ${s.tanggal_selesai||''}</div>
           <div style="font-size:12px;color:#475569">📋 ${s.alasan_izin||'-'}</div>
           ${progHtml}
@@ -1614,36 +1645,53 @@ async function _loadSuratIzinPendingDashboard() {
         </div>`;
       }).join('');
 
-      html += `<div class="card" style="border-left:4px solid #16A34A;margin-bottom:12px">
-        <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;color:#15803D">
-          📝 Surat Izin Perlu TTD (${dataPending.length})</h3>
+      html += `<div class="card" style="border-left:4px solid #D97706;margin-bottom:12px">
+        <h3 style="font-size:14px;font-weight:700;margin-bottom:10px;color:#92400E">
+          📝 Surat Izin Perlu TTD (${dataTTD.length})</h3>
         ${cards}
       </div>`;
     }
 
-    // ── Surat izin selesai milik karyawan ini ──────────────────
-    if (dataSemua.length > 0) {
-      const cardsDone = dataSemua.slice(0, 3).map(s => `
-        <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;
+    // ── 3. Card arsip — surat milik karyawan yang sudah diproses ──
+    if (dataMilik.length > 0) {
+      const stLblArsip = {
+        menunggu_atasan  :{ label:'Menunggu TTD Atasan',   bg:'#EDE9FE', clr:'#5B21B6' },
+        menunggu_pimpinan:{ label:'Menunggu TTD Pimpinan', bg:'#DBEAFE', clr:'#1E40AF' },
+        menunggu_admin   :{ label:'Menunggu Persetujuan',  bg:'#CFFAFE', clr:'#0E7490' },
+        selesai          :{ label:'Disetujui',             bg:'#D1FAE5', clr:'#065F46' }
+      };
+      const cards = dataMilik.slice(0, 5).map(s => {
+        const info = stLblArsip[s.status_surat] || { label:s.status_surat, bg:'#F1F5F9', clr:'#475569' };
+        const progHtml = typeof _progressBarSI === 'function' ? _progressBarSI(s) : '';
+        return `<div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;
           padding:12px 14px;margin-bottom:8px">
-          <div style="font-size:13px;font-weight:700;color:#15803D;margin-bottom:4px">
-            ✅ Surat Izin Disetujui</div>
-          <div style="font-size:12px;color:#475569">${s.no_surat||''}</div>
-          <div style="font-size:12px;color:#475569">🗓️ ${s.tanggal_mulai||''} – ${s.tanggal_selesai||''}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:4px">
+            <span style="font-size:13px;font-weight:700;color:#0F172A">📝 ${s.no_surat||'-'}</span>
+            <span style="background:${info.bg};color:${info.clr};font-size:11px;font-weight:600;
+              padding:2px 8px;border-radius:20px;white-space:nowrap">${info.label}</span>
+          </div>
+          <div style="font-size:12px;color:#475569">🗓️ ${s.tanggal_mulai||''} – ${s.tanggal_selesai||''} · ${s.total_hari||'-'} hari</div>
+          <div style="font-size:12px;color:#475569;margin-top:2px">📋 ${s.alasan_izin||'-'}</div>
+          ${progHtml}
           <button onclick="_lihatSuratIzin('${s.id_surat}')"
-            style="margin-top:10px;width:100%;padding:9px;background:#15803D;color:#fff;
+            style="margin-top:8px;width:100%;padding:9px;
+            background:${s.status_surat==='selesai'?'#15803D':'#475569'};color:#fff;
             border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
-            📄 Lihat / Cetak Surat
+            ${s.status_surat==='selesai'?'📄 Lihat / Cetak Surat':'👁 Lihat Status Surat'}
           </button>
-        </div>`).join('');
+        </div>`;
+      }).join('');
 
-      html += `<div class="card" style="border-left:4px solid #16A34A">
-        <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;color:#15803D">
-          📝 Surat Izin Saya (${dataSemua.length})</h3>
-        ${cardsDone}
+      html += `<div class="card" style="border-left:4px solid #1E5F3A">
+        <h3 style="font-size:14px;font-weight:700;margin-bottom:10px;color:#1E5F3A">
+          📝 Surat Izin Saya (${dataMilik.length})</h3>
+        ${cards}
       </div>`;
     }
 
     el.innerHTML = html;
-  } catch(e) { console.warn('[SI Dashboard]', e.message); }
+  } catch(e) {
+    console.warn('[SI Dashboard]', e.message);
+    // Jangan tampilkan error ke user — section cukup kosong
+  }
 }
