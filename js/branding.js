@@ -105,6 +105,23 @@ async function loadBranding(role = 'karyawan') {
     const metaTheme = document.querySelector('meta[name="theme-color"]');
     if (metaTheme) metaTheme.setAttribute('content', primer);
 
+    // Background login page (saat belum login)
+    const isLoginPage = !localStorage.getItem('session_token');
+    if (isLoginPage && s.bg_login_url) {
+      const rawLoginBg = s.bg_login_url || '';
+      const loginBgUrl = typeof normalizeDriveUrlFrontend === 'function'
+        ? normalizeDriveUrlFrontend(rawLoginBg) : rawLoginBg;
+      const appBgLogin = document.getElementById('app-bg');
+      if (appBgLogin && loginBgUrl && loginBgUrl.startsWith('http')) {
+        appBgLogin.style.backgroundImage    = `url('${loginBgUrl}')`;
+        appBgLogin.style.backgroundSize     = 'cover';
+        appBgLogin.style.backgroundPosition = 'center';
+        appBgLogin.style.backgroundAttachment = 'fixed';
+        const overlayLogin = document.getElementById('app-overlay');
+        if (overlayLogin) overlayLogin.style.background = 'rgba(255,255,255,0.82)';
+      }
+    }
+
     // Background dashboard
     const bgKey = `bg_dashboard_${role}_url`;
     const rawBg = s[bgKey] || '';
