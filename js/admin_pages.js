@@ -220,12 +220,12 @@ async function loadAbsensiAdminV4() {
       <td style="text-align:center;white-space:nowrap">
         <button class="btn btn--ghost" style="padding:4px 8px;font-size:11px;margin:1px"
           title="Edit jam masuk/keluar"
-          onclick="modalEditJamAbsen('${a.id_absensi||a.id||''}','${a.id_karyawan}','${a.nama_karyawan||''}','${a.tanggal}','${a.jam_masuk||''}','${a.jam_keluar||''}','${a.status||''}')">
-          ⏰</button>
-        <button class="btn btn--ghost" style="padding:4px 8px;font-size:11px;margin:1px"
-          title="Edit status absensi"
-          onclick="editAbsensiAdmin('${a.id_karyawan}','${a.status}','${a.tanggal}')">
-          ✏️</button>
+          onclick="editAbsensiAdmin('${a.id_karyawan}','${a.status}','${a.tanggal}','${a.id_absensi||a.id||''}','${a.jam_masuk||''}','${a.jam_keluar||''}','${(a.keterangan||'').replace(/'/g,'')}')">
+          ✏️ Edit</button>
+        <button class="btn btn--ghost" style="padding:4px 8px;font-size:11px;margin:1px;color:#DC2626;border-color:#FECACA"
+          title="Hapus absensi ini"
+          onclick="hapusAbsensiAdmin('${a.id_absensi||a.id||''}','${a.nama_karyawan||''}','${a.tanggal}')">
+          🗑️</button>
       </td>
     </tr>`;
     }).join('');
@@ -736,25 +736,54 @@ async function _simpanEditJamAbsen(idAbsen, idKaryawan, tanggal, status) {
   }
 }
 
-async function editAbsensiAdmin(idK,status,tanggal) {
+async function editAbsensiAdmin(idK, status, tanggal, idAbsen, jamMasuk, jamKeluar, keterangan) {
   showModal('✏️ Edit Absensi',
-    `<div class="form-group" style="margin-top:8px"><label class="form-label">Status Baru</label>
-    <select class="form-control" id="edit-st-abs">
-      ${['hadir','terlambat','alfa','izin','sakit','cuti','dinas_luar'].map(s=>
-        `<option value="${s}" ${s===status?'selected':''}>${s}</option>`).join('')}
-    </select></div>
-    <div class="form-group"><label class="form-label">Keterangan</label>
-      <input type="text" class="form-control" id="edit-ket-abs" placeholder="Opsional"></div>`,
-    async()=>{
-      try{
-        const r=await callAPI('absensiManual',{
-          id_karyawan:idK, tanggal:tanggal,
-          status:document.getElementById('edit-st-abs')?.value,
-          keterangan:document.getElementById('edit-ket-abs')?.value||'Diubah admin'
+    `<div class="form-group" style="margin-top:8px">
+      <label class="form-label">Status</label>
+      <select class="form-control" id="edit-st-abs">
+        ${['hadir','terlambat','alfa','izin','sakit','cuti','dinas_luar','libur'].map(s=>
+          `<option value="${s}" ${s===status?'selected':''}>${s}</option>`).join('')}
+      </select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group">
+        <label class="form-label">Jam Masuk</label>
+        <input type="time" class="form-control" id="edit-jm-abs" value="${jamMasuk||''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Jam Keluar</label>
+        <input type="time" class="form-control" id="edit-jk-abs" value="${jamKeluar||''}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Keterangan</label>
+      <input type="text" class="form-control" id="edit-ket-abs"
+        value="${keterangan||''}" placeholder="Opsional">
+    </div>`,
+    async () => {
+      try {
+        const r = await callAPI('editJamAbsensi', {
+          id_absen   : idAbsen || '',
+          id_karyawan: idK,
+          tanggal    : tanggal,
+          jam_masuk  : document.getElementById('edit-jm-abs')?.value || '',
+          jam_keluar : document.getElementById('edit-jk-abs')?.value || '',
+          status     : document.getElementById('edit-st-abs')?.value,
+          keterangan : document.getElementById('edit-ket-abs')?.value || 'Diubah admin'
         });
-        showToast(r.message,'success'); loadAbsensiAdminV4();
-      }catch(e){showToast(e.message,'error');}
-    },'💾 Simpan');
+        showToast(r.message || '✅ Absensi diperbarui', 'success');
+        loadAbsensiAdminV4();
+      } catch(e) { showToast(e.message, 'error'); }
+    }, '💾 Simpan');
+}
+
+async function hapusAbsensiAdmin(idAbsen, namaKaryawan, tanggal) {
+  if (!confirm('Hapus absensi ' + namaKaryawan + ' tanggal ' + tanggal + '? Data tidak bisa dikembalikan.')) return;
+  try {
+    const r = await callAPI('hapusAbsensi', { id_absen: idAbsen });
+    showToast('✅ ' + (r.message || 'Absensi dihapus'), 'success');
+    loadAbsensiAdminV4();
+  } catch(e) { showToast(e.message, 'error'); }
 }
 
 // ─── CETAK PDF ABSENSI HARIAN ────────────────────────────────
