@@ -105,38 +105,34 @@ async function loadBranding(role = 'karyawan') {
     const metaTheme = document.querySelector('meta[name="theme-color"]');
     if (metaTheme) metaTheme.setAttribute('content', primer);
 
-    // Background login page (saat belum login)
+    // Background — login page pakai bg_login_url, dashboard pakai bg_dashboard_role_url
     const isLoginPage = !localStorage.getItem('session_token');
-    if (isLoginPage && s.bg_login_url) {
-      const rawLoginBg = s.bg_login_url || '';
-      const loginBgUrl = typeof normalizeDriveUrlFrontend === 'function'
-        ? normalizeDriveUrlFrontend(rawLoginBg) : rawLoginBg;
-      const appBgLogin = document.getElementById('app-bg');
-      if (appBgLogin && loginBgUrl && loginBgUrl.startsWith('http')) {
-        appBgLogin.style.backgroundImage    = `url('${loginBgUrl}')`;
-        appBgLogin.style.backgroundSize     = 'cover';
-        appBgLogin.style.backgroundPosition = 'center';
-        appBgLogin.style.backgroundAttachment = 'fixed';
-        const overlayLogin = document.getElementById('app-overlay');
-        if (overlayLogin) overlayLogin.style.background = 'rgba(255,255,255,0.82)';
-      }
+    const appBg = document.getElementById('app-bg');
+
+    // Tentukan URL yang akan dipakai
+    let activeBgRaw = '';
+    let overlayOpacity = 'rgba(255,255,255,0.88)';
+    if (isLoginPage) {
+      // Halaman login: pakai bg_login_url
+      activeBgRaw    = s.bg_login_url || '';
+      overlayOpacity = 'rgba(255,255,255,0.82)';
+    } else {
+      // Dashboard: pakai bg_dashboard_role_url
+      const bgKey = `bg_dashboard_${role}_url`;
+      activeBgRaw = s[bgKey] || '';
     }
 
-    // Background dashboard
-    const bgKey = `bg_dashboard_${role}_url`;
-    const rawBg = s[bgKey] || '';
-    const bgUrl = typeof normalizeDriveUrlFrontend === 'function'
-      ? normalizeDriveUrlFrontend(rawBg) : rawBg;
-    const appBg = document.getElementById('app-bg');
-    if (appBg && bgUrl && bgUrl.startsWith('http')) {
-      appBg.style.backgroundImage = `url('${bgUrl}')`;
+    const activeBgUrl = typeof normalizeDriveUrlFrontend === 'function'
+      ? normalizeDriveUrlFrontend(activeBgRaw) : activeBgRaw;
+
+    if (appBg && activeBgUrl && activeBgUrl.startsWith('http')) {
+      appBg.style.backgroundImage    = `url('${activeBgUrl}')`;
       appBg.style.backgroundSize     = 'cover';
       appBg.style.backgroundPosition = 'center';
       appBg.style.backgroundAttachment = 'fixed';
       const overlay = document.getElementById('app-overlay');
-      if (overlay) overlay.style.background = 'rgba(255,255,255,0.88)';
-      console.log('[branding] BG applied for role=' + role + ':', bgUrl);
-    } else if (appBg && rawBg) {
+      if (overlay) overlay.style.background = overlayOpacity;
+    } else if (appBg && activeBgRaw) {
       // Ada URL tapi gagal normalize atau tidak http
       console.warn('[branding] BG URL invalid for role=' + role + ':', rawBg);
     } else if (!appBg) {
