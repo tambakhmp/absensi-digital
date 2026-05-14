@@ -571,12 +571,9 @@ function _injectGlobalStyles() {
       overflow-x: hidden;
     }
     body {
-      background: linear-gradient(145deg,
-        #C8E6FF 0%, #DBEAFE 25%,
-        #EFF6FF 55%, #F0F9FF 80%,
-        #E8F4FD 100%) fixed !important;
-      background-attachment: fixed !important;
+      background: transparent !important;
     }
+    /* #app-bg yang menampilkan gambar atau gradient background */
 
     /* ── Fix 2: Admin layout full width ── */
     /* Sudah dihandle di main.css langsung */
