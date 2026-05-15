@@ -30,7 +30,7 @@ function _applyBrandingToDOM(s, role) {
         appBg.style.backgroundAttachment = 'fixed';
         const overlay = document.getElementById('app-overlay');
         if (overlay) overlay.style.background = isLoginPage
-          ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.40)';
+          ? 'rgba(255,255,255,0.20)' : 'rgba(255,255,255,0.25)';
       }
     }
   } catch(e) {}
