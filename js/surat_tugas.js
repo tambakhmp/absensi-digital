@@ -28,6 +28,78 @@ function _statusST(s) {
 // ════════════════════════════════════════════════════════════
 // HALAMAN ADMIN — Buat & Kelola Surat Tugas
 // ════════════════════════════════════════════════════════════
+// Buka modal buat surat tugas baru (admin inisiasi langsung)
+async function _modalBuatSuratTugas() {
+  document.getElementById('modal-buat-st')?.remove();
+
+  // Ambil daftar karyawan aktif
+  let karyawanList = [];
+  try {
+    karyawanList = await callAPI('getKaryawanAktif', {});
+  } catch(e) {}
+
+  const optKaryawan = (karyawanList || []).map(k =>
+    `<option value="${k.id_karyawan}">${k.nama_lengkap} — ${k.jabatan||''}</option>`
+  ).join('');
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-buat-st';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);' +
+    'z-index:9500;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto';
+
+  modal.innerHTML = `
+  <div style="background:#fff;border-radius:16px;padding:24px;
+    width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div>
+        <div style="font-size:16px;font-weight:700">📋 Buat Surat Tugas</div>
+        <div style="font-size:12px;color:#64748B">Tanpa pengajuan — inisiasi langsung admin</div>
+      </div>
+      <button onclick="document.getElementById('modal-buat-st').remove()"
+        style="background:#F1F5F9;border:none;border-radius:50%;width:32px;
+        height:32px;font-size:16px;cursor:pointer">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Karyawan</label>
+      <select class="form-control" id="st-id-kary-sel"
+        onchange="document.getElementById('st-id-kary').value=this.value">
+        <option value="">-- Pilih Karyawan --</option>
+        ${optKaryawan}
+      </select>
+      <input type="hidden" id="st-id-kary">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tujuan</label>
+      <input type="text" class="form-control" id="st-tujuan" placeholder="Kota/lokasi tujuan">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Keperluan</label>
+      <textarea class="form-control" id="st-keperluan" rows="2"
+        placeholder="Keperluan dinas luar"></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group">
+        <label class="form-label">Tanggal Mulai</label>
+        <input type="date" class="form-control" id="st-tgl-mulai"
+          oninput="_hitungHariST()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tanggal Selesai</label>
+        <input type="date" class="form-control" id="st-tgl-selesai"
+          oninput="_hitungHariST()">
+      </div>
+    </div>
+    <div id="st-info-hari" style="font-size:12px;color:#64748B;margin-bottom:12px"></div>
+    <button onclick="_kirimSuratTugas('')"
+      style="width:100%;padding:12px;background:#2D6CDF;color:#fff;border:none;
+      border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">
+      📋 Buat Surat Tugas
+    </button>
+  </div>`;
+
+  document.body.appendChild(modal);
+}
+
 async function loadSuratTugasAdmin() {
   const c = document.getElementById('admin-content');
   if (!c) return;
