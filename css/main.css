@@ -67,7 +67,7 @@ html { background: var(--color-bg); } /* fallback jika #app-bg kosong */
   position: fixed;
   inset: 0;
   z-index: -1;
-  background: rgba(255,255,255,0.25); /* default overlay — JS bisa update */
+  background: transparent; /* tidak ada overlay — card glassmorphism cukup */
 }
 
 #app { min-height: 100vh; }
