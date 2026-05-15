@@ -2489,6 +2489,70 @@ ${map['ucapan_ulang_tahun_template']||''}</textarea>
             ⏹ Hentikan Trigger
           </button>
         </div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <div style="font-size:14px;font-weight:700;margin-bottom:6px">🌙 Auto-Fill Jam Keluar Security Shift Malam</div>
+        <p style="font-size:12px;color:#64748B;margin-bottom:10px">
+          Berjalan setiap hari jam <strong>08:00 WITA</strong>. Otomatis mengisi jam keluar
+          security shift malam yang lupa absen keluar, sesuai jam keluar di data shift.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button onclick="_setupTriggerShiftKeluar()"
+            style="flex:1;padding:10px;background:#7C3AED;color:#fff;border:none;
+            border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;min-width:140px">
+            ⚙️ Aktifkan Trigger
+          </button>
+          <button onclick="_testFillKeluarShift()"
+            style="flex:1;padding:10px;background:#F5F3FF;color:#7C3AED;
+            border:1.5px solid #DDD6FE;border-radius:8px;font-size:13px;
+            font-weight:600;cursor:pointer;min-width:140px">
+            🧪 Test Sekarang
+          </button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <div style="font-size:14px;font-weight:700;margin-bottom:6px">☀️ Auto-Fill Jam Keluar Security Shift Pagi</div>
+        <p style="font-size:12px;color:#64748B;margin-bottom:10px">
+          Berjalan setiap hari jam <strong>16:00 WITA</strong>. Otomatis mengisi jam keluar
+          security shift pagi (jam keluar 13:00–17:00) yang lupa absen keluar hari ini.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button onclick="_setupTriggerShiftPagi()"
+            style="flex:1;padding:10px;background:#D97706;color:#fff;border:none;
+            border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;min-width:140px">
+            ⚙️ Aktifkan Trigger
+          </button>
+          <button onclick="_testFillKeluarShiftPagi()"
+            style="flex:1;padding:10px;background:#FFFBEB;color:#D97706;
+            border:1.5px solid #FDE68A;border-radius:8px;font-size:13px;
+            font-weight:600;cursor:pointer;min-width:140px">
+            🧪 Test Sekarang
+          </button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <div style="font-size:14px;font-weight:700;margin-bottom:6px">🌆 Auto-Fill Jam Keluar Security Shift Sore</div>
+        <p style="font-size:12px;color:#64748B;margin-bottom:10px">
+          Berjalan setiap hari jam <strong>23:xx WITA</strong>. Otomatis mengisi jam keluar
+          security shift sore (jam keluar 21:00–01:59) yang lupa absen keluar hari ini.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button onclick="_setupTriggerShiftSore()"
+            style="flex:1;padding:10px;background:#0891B2;color:#fff;border:none;
+            border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;min-width:140px">
+            ⚙️ Aktifkan Trigger
+          </button>
+          <button onclick="_testFillKeluarShiftSore()"
+            style="flex:1;padding:10px;background:#ECFEFF;color:#0891B2;
+            border:1.5px solid #A5F3FC;border-radius:8px;font-size:13px;
+            font-weight:600;cursor:pointer;min-width:140px">
+            🧪 Test Sekarang
+          </button>
+        </div>
+        </div>
         <div id="archive-result" style="margin-top:10px;font-size:12px"></div>
       </div>` : ''}
 
@@ -2596,6 +2660,48 @@ async function _uploadAsset(input, key) {
 }
 
 // ── Archive Absensi ─────────────────────────────────────────
+async function _setupTriggerShiftKeluar() {
+  try {
+    const r = await callAPI('setupTriggerFillKeluarShift', {});
+    showToast(r.message || '✅ Trigger berhasil diaktifkan', 'success');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function _testFillKeluarShift() {
+  try {
+    showToast('🔄 Menjalankan auto-fill...', 'info');
+    const r = await callAPI('testAutoFillKeluarShift', {});
+    showToast('✅ Selesai: ' + (r.diproses||0) + ' diproses, ' + (r.dilewati||0) + ' tidak perlu', 'success');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function _setupTriggerShiftPagi() {
+  try {
+    const r = await callAPI('setupTriggerFillKeluarShiftPagi', {});
+    showToast(r.message || '✅ Trigger shift pagi berhasil diaktifkan', 'success');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+async function _testFillKeluarShiftPagi() {
+  try {
+    showToast('🔄 Menjalankan auto-fill shift pagi...', 'info');
+    const r = await callAPI('testAutoFillKeluarShiftPagi', {});
+    showToast('✅ Selesai: ' + (r.diproses||0) + ' diproses, ' + (r.dilewati||0) + ' tidak perlu', 'success');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+async function _setupTriggerShiftSore() {
+  try {
+    const r = await callAPI('setupTriggerFillKeluarShiftSore', {});
+    showToast(r.message || '✅ Trigger shift sore berhasil diaktifkan', 'success');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+async function _testFillKeluarShiftSore() {
+  try {
+    showToast('🔄 Menjalankan auto-fill shift sore...', 'info');
+    const r = await callAPI('testAutoFillKeluarShiftSore', {});
+    showToast('✅ Selesai: ' + (r.diproses||0) + ' diproses, ' + (r.dilewati||0) + ' tidak perlu', 'success');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
 async function _setupArchiveTrigger() {
   const el = document.getElementById('archive-result');
   if (el) el.innerHTML = '<span style="color:#0369A1">Mengaktifkan trigger...</span>';
