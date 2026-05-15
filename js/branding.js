@@ -4,24 +4,67 @@
 
 let _brandingLoaded = false;
 
-async function loadBranding(role = 'karyawan') {
-  // Selalu load ulang karena bg mungkin beda per role
+// Apply branding data ke DOM — dipanggil dari cache (seketika) atau fresh data
+function _applyBrandingToDOM(s, role) {
+  if (!s) return;
   try {
+    // Warna
+    const primer = s.warna_primer || '#2D6CDF';
+    const sekund = s.warna_sekunder || '#1A9E74';
+    document.documentElement.style.setProperty('--color-primer', primer);
+    document.documentElement.style.setProperty('--color-sekunder', sekund);
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) metaTheme.setAttribute('content', primer);
+
+    // Background
+    const isLoginPage = !localStorage.getItem('session_token');
+    const appBg = document.getElementById('app-bg');
+    let activeBgRaw = isLoginPage ? (s.bg_login_url || '') : (s[`bg_dashboard_${role}_url`] || '');
+    if (activeBgRaw && appBg) {
+      const bgUrl = typeof normalizeDriveUrlFrontend === 'function'
+        ? normalizeDriveUrlFrontend(activeBgRaw) : activeBgRaw;
+      if (bgUrl && bgUrl.startsWith('http')) {
+        appBg.style.backgroundImage     = `url('${bgUrl}')`;
+        appBg.style.backgroundSize      = 'cover';
+        appBg.style.backgroundPosition  = 'center';
+        appBg.style.backgroundAttachment = 'fixed';
+        const overlay = document.getElementById('app-overlay');
+        if (overlay) overlay.style.background = isLoginPage
+          ? 'rgba(255,255,255,0.82)' : 'rgba(255,255,255,0.88)';
+      }
+    }
+  } catch(e) {}
+}
+
+async function loadBranding(role = 'karyawan') {
+  const cacheKey = 'branding_cache_' + role;
+  try {
+    // ── Langkah 1: Tampilkan dari cache SEKETIKA (tidak tunggu API) ──
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const cs = JSON.parse(cached);
+        _applyBrandingToDOM(cs, role);
+      }
+    } catch(eC) {}
+
+    // ── Langkah 2: Fetch fresh dari GAS di background ──
     let s;
     const token = localStorage.getItem('session_token');
     if (token) {
-      // Sudah login: ambil via callAPI normal
       const keys = [
         'nama_instansi','singkatan_instansi','logo_url','warna_primer',
         'warna_sekunder','footer_text','ucapan_ulang_tahun_template',
-        `bg_dashboard_${role}_url`,'favicon_url','login_subtitle','icon_512_url'
+        `bg_dashboard_${role}_url`,'favicon_url','login_subtitle','icon_512_url',
+        'bg_login_url'
       ];
       s = await callAPI('getMultipleSetting', { keys: keys.join(',') });
     } else {
-      // Belum login: ambil via endpoint publik (getBranding tidak butuh token)
       s = await _loadBrandingPublic();
     }
     if (!s) return;
+    // Simpan ke cache untuk kunjungan berikutnya (langsung tampil)
+    try { localStorage.setItem(cacheKey, JSON.stringify(s)); } catch(eC) {}
 
     // Nama instansi
     const namaInstansi = s.nama_instansi || 'Sistem Absensi';
