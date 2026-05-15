@@ -32,13 +32,14 @@
     );
 
     if (bgRaw) {
-      // Normalize Drive URL
       let bgUrl = bgRaw;
       const m = bgRaw.match(/(?:\/d\/|id=)([\w-]{25,})/);
       if (m) bgUrl = 'https://lh3.googleusercontent.com/d/' + m[1];
-
       if (bgUrl.startsWith('http')) {
-        css += `#app-bg{background-image:url('${bgUrl}') !important;background-size:cover !important;background-position:center !important;background-attachment:fixed !important;}`;
+        // Apply langsung ke html — tidak ada z-index issue
+        css += `html{background-image:url('${bgUrl}') !important;background-size:cover !important;background-position:center !important;background-attachment:fixed !important;}`;
+        css += `body{background:transparent !important;}`;
+        css += `#app-bg,#app-overlay{display:none !important;}`;
       }
     }
 
@@ -71,21 +72,22 @@ function _applyBrandingToDOM(s, role) {
     const metaTheme = document.querySelector('meta[name="theme-color"]');
     if (metaTheme) metaTheme.setAttribute('content', primer);
 
-    // Background
+    // Background — apply ke html langsung
     const isLoginPage = !localStorage.getItem('session_token');
-    const appBg = document.getElementById('app-bg');
     let activeBgRaw = isLoginPage ? (s.bg_login_url || '') : (s[`bg_dashboard_${role}_url`] || '');
-    if (activeBgRaw && appBg) {
+    if (activeBgRaw) {
       const bgUrl = typeof normalizeDriveUrlFrontend === 'function'
         ? normalizeDriveUrlFrontend(activeBgRaw) : activeBgRaw;
       if (bgUrl && bgUrl.startsWith('http')) {
-        appBg.style.backgroundImage     = `url('${bgUrl}')`;
-        appBg.style.backgroundSize      = 'cover';
-        appBg.style.backgroundPosition  = 'center';
-        appBg.style.backgroundAttachment = 'fixed';
-        const overlay = document.getElementById('app-overlay');
-        if (overlay) overlay.style.background = isLoginPage
-          ? 'rgba(255,255,255,0.20)' : 'rgba(255,255,255,0.25)';
+        document.documentElement.style.backgroundImage    = `url('${bgUrl}')`;
+        document.documentElement.style.backgroundSize     = 'cover';
+        document.documentElement.style.backgroundPosition = 'center';
+        document.documentElement.style.backgroundAttachment = 'fixed';
+        document.body.style.background = 'transparent';
+        ['app-bg','app-overlay'].forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el) el.style.display = 'none';
+        });
       }
     }
   } catch(e) {}
