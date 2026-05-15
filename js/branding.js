@@ -1,4 +1,59 @@
 // ============================================================
+// EARLY BRANDING INJECT — jalan synchronous saat file di-load
+// Tidak ada await, tidak ada delay, background muncul di first paint
+// ============================================================
+(function _earlyBrandingInject() {
+  try {
+    // Cari cache dengan versi apapun (karyawan, admin, superadmin)
+    const roles = ['karyawan','admin','superadmin'];
+    const CACHE_VER = 'v3';
+    let s = null;
+    for (const role of roles) {
+      try {
+        const raw = localStorage.getItem('branding_cache_' + role + '_' + CACHE_VER);
+        if (raw) { s = JSON.parse(raw); break; }
+      } catch(e) {}
+    }
+    if (!s) return;
+
+    // Inject style tag sebelum DOM render
+    const style = document.createElement('style');
+    style.id = 'branding-early';
+
+    // Warna primer/sekunder
+    const primer = s.warna_primer || '#2D6CDF';
+    const sekund = s.warna_sekunder || '#1A9E74';
+    let css = `:root{--color-primer:${primer};--color-sekunder:${sekund};}`;
+
+    // Background — cek login atau dashboard
+    const isLogin = !localStorage.getItem('session_token');
+    const bgRaw = isLogin ? (s.bg_login_url || '') : (
+      s.bg_dashboard_karyawan_url || s.bg_dashboard_admin_url || s.bg_dashboard_superadmin_url || ''
+    );
+
+    if (bgRaw) {
+      // Normalize Drive URL
+      let bgUrl = bgRaw;
+      const m = bgRaw.match(/(?:\/d\/|id=)([\w-]{25,})/);
+      if (m) bgUrl = 'https://lh3.googleusercontent.com/d/' + m[1];
+
+      if (bgUrl.startsWith('http')) {
+        css += `#app-bg{background-image:url('${bgUrl}') !important;background-size:cover !important;background-position:center !important;background-attachment:fixed !important;}`;
+      }
+    }
+
+    style.textContent = css;
+    // Inject ke <head> sebelum stylesheet lain
+    const head = document.head || document.getElementsByTagName('head')[0];
+    if (head.firstChild) {
+      head.insertBefore(style, head.firstChild);
+    } else {
+      head.appendChild(style);
+    }
+  } catch(e) {}
+})();
+
+// ============================================================
 // branding.js — Load branding dinamis dari pengaturan GAS
 // ============================================================
 
