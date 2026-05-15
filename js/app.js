@@ -958,10 +958,10 @@ function renderLoginPage() {
             style="width:88px;height:88px;margin:0 auto 14px;
             display:flex;align-items:center;justify-content:center">
             <img class="logo-instansi" id="login-logo-img"
-              src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
-              alt="" style="width:88px;height:88px;object-fit:contain;border-radius:14px;display:none"
+              src="${(()=>{try{const CACHE_VER='v3';for(const r of['karyawan','admin','superadmin']){const raw=localStorage.getItem('branding_cache_'+r+'_'+CACHE_VER);if(raw){const s=JSON.parse(raw);const u=s.logo_url||'';if(u){const m=u.match(/(?:\/d\/|id=)([\w-]{25,})/);return m?'https://lh3.googleusercontent.com/d/'+m[1]:u;}}}return '';}catch(e){return '';}})()}"
+              alt="" style="width:88px;height:88px;object-fit:contain;border-radius:14px;display:${(()=>{try{const CACHE_VER='v3';for(const r of['karyawan','admin','superadmin']){const raw=localStorage.getItem('branding_cache_'+r+'_'+CACHE_VER);if(raw){const s=JSON.parse(raw);if(s.logo_url)return 'block';}}return 'none';}catch(e){return 'none';}})()}"
               onload="this.style.display='block';document.getElementById('login-logo-placeholder').style.display='none'">
-            <span id="login-logo-placeholder" style="font-size:52px">📋</span>
+            <span id="login-logo-placeholder" style="font-size:52px;display:${(()=>{try{const CACHE_VER='v3';for(const r of['karyawan','admin','superadmin']){const raw=localStorage.getItem('branding_cache_'+r+'_'+CACHE_VER);if(raw){const s=JSON.parse(raw);if(s.logo_url)return 'none';}}return 'block';}catch(e){return 'block';}})()}">📋</span>
           </div>
           <h1 class="nama-instansi" id="login-nama-instansi">Sistem Absensi</h1>
           <p class="login-subtitle" id="login-subtitle">Masuk dengan akun karyawan Anda</p>
