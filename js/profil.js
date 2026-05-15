@@ -209,6 +209,41 @@ function tampilPadTTD() {
 }
 
 
+// ─── Tanda Tangan — fungsi tombol ─────────────────────────────
+function clearTTD() {
+  if (typeof _signaturePad !== 'undefined' && _signaturePad) {
+    _signaturePad.clear();
+  } else {
+    const canvas = document.getElementById('ttd-pad');
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }
+}
+
+async function simpanTTD() {
+  try {
+    let base64 = null;
+    if (typeof _signaturePad !== 'undefined' && _signaturePad) {
+      if (_signaturePad.isEmpty()) {
+        showToast('Tanda tangan masih kosong', 'warning'); return;
+      }
+      base64 = _signaturePad.toDataURL('image/png');
+    } else {
+      const canvas = document.getElementById('ttd-pad');
+      if (!canvas) { showToast('Canvas tidak ditemukan', 'error'); return; }
+      base64 = canvas.toDataURL('image/png');
+    }
+    showToast('Menyimpan tanda tangan...', 'info', 2000);
+    const r = await callAPI('simpanTTDProfil', { base64: base64 });
+    showToast('✅ ' + (r.message || 'Tanda tangan disimpan'), 'success');
+    document.getElementById('modal-ttd-profil')?.remove();
+    // Refresh profil untuk tampilkan TTD baru
+    if (typeof loadProfilSaya === 'function') loadProfilSaya();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
 // ─── Ganti Password ───────────────────────────────────────────
 async function tampilGantiPassword() {
   showModal('🔑 Ganti Password',
