@@ -938,9 +938,12 @@ async function loadPengajuanAdminV4() {
       // Perpanjangan terdeteksi dari keterangan — tidak perlu surat tugas baru
       const isPerpanjangan = p.jenis==='dinas_luar' &&
         String(p.keterangan||'').toLowerCase().includes('ref surat:');
-      const stAdm  = (!isPerpanjangan && p.jenis==='dinas_luar')
+      // stAdm: untuk dinas luar reguler DAN perpanjangan → lookup surat baru via id_pengajuan
+      // Perpanjangan yang baru diajukan: stAdm=null (belum buat surat) → tampil tombol Buat Surat
+      // Perpanjangan yang sudah dibuat suratnya: stAdm ada → tampil status TTD + Setujui
+      const stAdm = p.jenis==='dinas_luar'
         ? (stMap[String(p.id_pengajuan)]||null) : null;
-      // Untuk perpanjangan: ambil surat tugas asli via no_surat dari keterangan
+      // Untuk perpanjangan: simpan juga referensi surat asli (untuk display info)
       const _pRefMatch = isPerpanjangan
         ? String(p.keterangan||'').match(/[Rr]ef surat:\s*([^\s|]+)/) : null;
       const stRef = _pRefMatch ? (stByNoSurat[_pRefMatch[1].trim()]||null) : null;
@@ -967,11 +970,11 @@ async function loadPengajuanAdminV4() {
       // - sakit / cuti            : selalu boleh
       // - izin                    : boleh jika tidak ada surat ATAU surat sudah menunggu_admin
       // - dinas luar              : WAJIB ada surat DAN sudah menunggu_admin (semua TTD selesai)
+      // Perpanjangan dinas luar sekarang wajib buat surat + TTD dulu (sama seperti dinas luar biasa)
       const bolehSetujui = (
-        isPerpanjangan ||
         (p.jenis !== 'izin' && p.jenis !== 'dinas_luar') ||
         (p.jenis === 'izin'       && !!si   && siStatus    === 'menunggu_admin') ||
-        (p.jenis === 'dinas_luar' && !isPerpanjangan && !!stAdm && stAdmStatus === 'menunggu_admin')
+        (p.jenis === 'dinas_luar' && !!stAdm && stAdmStatus === 'menunggu_admin')
       );
       return `
       <div class="card" style="border-left:4px solid ${
@@ -1054,7 +1057,7 @@ async function loadPengajuanAdminV4() {
               data-tm="${encodeURIComponent(p.tanggal_mulai||'')}"
               data-ts="${encodeURIComponent(p.tanggal_selesai||'')}"
               data-ket="${encodeURIComponent(p.keterangan||'')}"
-              onclick="_buatSuratClick(this)">📋 Buat Surat Tugas</button>
+              onclick="_buatSuratClick(this)">📋 ${isPerpanjangan?'Buat Surat Perpanjangan':'Buat Surat Tugas'}</button>
             `}
             `:''}
             ${bolehSetujui?`
@@ -2798,6 +2801,60 @@ async function renderLaporanAdminV3(container){
       </div>
     </div>
 
+    <!-- ─── REKAP IZIN ──────────────────────────────────────── -->
+    <div class="card">
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:14px">📝 Rekap Surat Izin</h3>
+      <p style="font-size:12px;color:#64748B;margin-bottom:12px">
+        Riwayat surat izin semua karyawan — nomor surat, periode, alasan, status TTD</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <select id="riz-kary-sel"
+          style="flex:2;min-width:180px;padding:8px 10px;border:1px solid #E2E8F0;
+          border-radius:8px;font-size:13px" onchange="_onRizKaryChange()">
+          <option value="">👥 Semua Karyawan</option>
+        </select>
+        <input id="riz-cari" type="hidden" value="">
+        <input id="riz-dari" type="month"
+          style="padding:8px 10px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px"
+          onchange="_filterRekapIzin()">
+        <input id="riz-ke" type="month"
+          style="padding:8px 10px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px"
+          onchange="_filterRekapIzin()">
+      </div>
+      <button class="btn btn--secondary" style="margin-bottom:12px;font-size:13px"
+        onclick="_exportRekapIzin()">📥 Export Excel</button>
+      <div id="riz-list"><div style="text-align:center;padding:20px;color:#94A3B8">
+        Klik tombol di bawah untuk memuat data</div></div>
+      <button class="btn btn--ghost btn--full" style="margin-top:8px;font-size:13px"
+        onclick="_loadRekapIzin()">🔄 Muat / Refresh Data</button>
+    </div>
+
+    <!-- ─── REKAP SAKIT ───────────────────────────────────────── -->
+    <div class="card">
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:14px">🏥 Rekap Karyawan Sakit</h3>
+      <p style="font-size:12px;color:#64748B;margin-bottom:12px">
+        Riwayat pengajuan sakit semua karyawan — periode, keluhan, surat dokter, status</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <select id="rsk-kary-sel"
+          style="flex:2;min-width:180px;padding:8px 10px;border:1px solid #E2E8F0;
+          border-radius:8px;font-size:13px" onchange="_onRskKaryChange()">
+          <option value="">👥 Semua Karyawan</option>
+        </select>
+        <input id="rsk-cari" type="hidden" value="">
+        <input id="rsk-dari" type="month"
+          style="padding:8px 10px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px"
+          onchange="_filterRekapSakit()">
+        <input id="rsk-ke" type="month"
+          style="padding:8px 10px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px"
+          onchange="_filterRekapSakit()">
+      </div>
+      <button class="btn btn--secondary" style="margin-bottom:12px;font-size:13px"
+        onclick="_exportRekapSakit()">📥 Export Excel</button>
+      <div id="rsk-list"><div style="text-align:center;padding:20px;color:#94A3B8">
+        Klik tombol di bawah untuk memuat data</div></div>
+      <button class="btn btn--ghost btn--full" style="margin-top:8px;font-size:13px"
+        onclick="_loadRekapSakit()">🔄 Muat / Refresh Data</button>
+    </div>
+
     <!-- ─── REKAP DINAS LUAR ──────────────────────────────── -->
     <div class="card">
       <h3 style="font-size:15px;font-weight:700;margin-bottom:14px">🚗 Rekap Dinas Luar</h3>
@@ -3032,6 +3089,277 @@ function _exportLemburExcel() {
 
 // Data cache
 let _rdlData = [];
+
+// ═══════════════════════════════════════════════════════════
+// REKAP IZIN
+// ═══════════════════════════════════════════════════════════
+let _rizData = [], _rizDataFiltered = [];
+
+async function _loadRekapIzin() {
+  const el = document.getElementById('riz-list');
+  if (el) el.innerHTML = `<div style="text-align:center;padding:20px;color:#94A3B8">
+    ⏳ Memuat data...</div>`;
+  try {
+    const res = await callAPI('getRekapIzin', {});
+    _rizData = (Array.isArray(res) ? res : [])
+      .sort((a,b) => String(a.no_surat||'').localeCompare(String(b.no_surat||''), undefined, {numeric:true}));
+
+    const karySet = {};
+    _rizData.forEach(s => {
+      if (s.id_karyawan && s.nama_karyawan)
+        karySet[s.id_karyawan] = s.nama_karyawan + (s.jabatan ? ' — '+s.jabatan : '');
+    });
+    const sel = document.getElementById('riz-kary-sel');
+    if (sel) sel.innerHTML = '<option value="">👥 Semua Karyawan</option>' +
+      Object.entries(karySet).sort((a,b)=>a[1].localeCompare(b[1]))
+        .map(([id,nm]) => `<option value="${nm.split(' — ')[0]}">${nm}</option>`).join('');
+    _filterRekapIzin();
+  } catch(e) {
+    if (el) el.innerHTML = `<div style="padding:20px;text-align:center;color:#E53E3E">
+      Gagal memuat: ${e.message}</div>`;
+  }
+}
+
+function _onRizKaryChange() {
+  const sel = document.getElementById('riz-kary-sel');
+  const hid = document.getElementById('riz-cari');
+  if (hid) hid.value = sel?.value || '';
+  _filterRekapIzin();
+}
+
+function _filterRekapIzin() {
+  const cari = (document.getElementById('riz-cari')?.value || '').toLowerCase().trim();
+  const dari = document.getElementById('riz-dari')?.value || '';
+  const ke   = document.getElementById('riz-ke')?.value   || '';
+
+  _rizDataFiltered = _rizData.filter(s => {
+    if (cari && !String(s.nama_karyawan||'').toLowerCase().includes(cari)) return false;
+    const tgl = _parseToDate(s.tanggal_mulai);
+    if (dari) { const [y,m]=dari.split('-'); if (tgl < new Date(y,m-1,1)) return false; }
+    if (ke)   { const [y,m]=ke.split('-');   if (tgl > new Date(y,parseInt(m),0)) return false; }
+    return true;
+  });
+
+  const el = document.getElementById('riz-list');
+  if (!el) return;
+  if (_rizDataFiltered.length === 0) {
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:#94A3B8">
+      Tidak ada data surat izin</div>`;
+    return;
+  }
+
+  const ST_BADGE = {
+    menunggu_karyawan: ['#FEF3C7','#92400E','⏳ Menunggu Karyawan'],
+    menunggu_atasan  : ['#DBEAFE','#1E40AF','⏳ Menunggu Atasan'],
+    menunggu_pimpinan: ['#EDE9FE','#5B21B6','⏳ Menunggu Pimpinan'],
+    menunggu_admin   : ['#DCFCE7','#15803D','✅ Siap Disetujui'],
+    selesai          : ['#F0FDF4','#166534','✅ Disetujui'],
+  };
+
+  let summaryHtml = '';
+  if (cari && _rizDataFiltered.length > 0) {
+    const totalHari = _rizDataFiltered.reduce((a,s)=>a+(parseInt(s.total_hari)||0),0);
+    const disetujui = _rizDataFiltered.filter(s=>s.status_surat==='selesai').length;
+    summaryHtml = `
+    <div style="background:#EFF6FF;border-radius:10px;padding:12px 16px;
+      margin-bottom:12px;display:flex;gap:20px;flex-wrap:wrap">
+      <div style="font-size:12px;color:#1E40AF">
+        👤 <strong>${_rizDataFiltered[0].nama_karyawan}</strong> — ${_rizDataFiltered[0].jabatan||''}</div>
+      <div style="font-size:12px;color:#475569">📋 Total: <strong>${_rizDataFiltered.length} surat izin</strong></div>
+      <div style="font-size:12px;color:#475569">🗓️ Total hari izin: <strong>${totalHari} hari</strong></div>
+      <div style="font-size:12px;color:#15803D">✅ Disetujui: <strong>${disetujui}</strong></div>
+      ${_rizDataFiltered.length-disetujui>0?`<div style="font-size:12px;color:#92400E">⏳ Proses: <strong>${_rizDataFiltered.length-disetujui}</strong></div>`:''}
+    </div>`;
+  }
+
+  el.innerHTML = summaryHtml + _rizDataFiltered.map(s => {
+    const badge = ST_BADGE[s.status_surat] || ['#F1F5F9','#64748B', s.status_surat||'-'];
+    const ttdK = s.ttd_karyawan  ? '✅' : '⬜';
+    const ttdA = s.nama_atasan   ? (s.ttd_atasan   ? '✅' : '⬜') : '—';
+    const ttdP = s.nama_pimpinan ? (s.ttd_pimpinan ? '✅' : '⬜') : '—';
+    return `
+    <div class="card" style="margin-bottom:10px;border-left:4px solid #2D6CDF">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+            <span style="font-weight:700;font-size:15px">${s.nama_karyawan||'-'}</span>
+            <span style="font-size:12px;color:#64748B;background:#F1F5F9;padding:2px 8px;border-radius:12px">${s.jabatan||''}</span>
+            <span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:12px;
+              background:${badge[0]};color:${badge[1]}">${badge[2]}</span>
+          </div>
+          <div style="font-size:12px;color:#475569;margin-bottom:4px">
+            📋 <strong>${s.no_surat||'-'}</strong>
+            &nbsp;·&nbsp;🗓️ ${s.tanggal_mulai||'-'} s/d ${s.tanggal_selesai||'-'}
+            &nbsp;·&nbsp;<strong>${s.total_hari||'-'} hari</strong>
+          </div>
+          <div style="font-size:12px;color:#475569;margin-bottom:6px">
+            📝 <strong>Alasan:</strong> ${s.alasan_izin||'-'}
+          </div>
+          <div style="display:flex;gap:12px;font-size:11px;color:#64748B">
+            <span>TTD Karyawan: ${ttdK}</span>
+            ${s.nama_atasan   ? `<span>TTD Atasan (${s.nama_atasan}): ${ttdA}</span>` : ''}
+            ${s.nama_pimpinan ? `<span>TTD Mengetahui (${s.nama_pimpinan}): ${ttdP}</span>` : ''}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+          <button onclick="_lihatSuratIzin('${s.id_surat}')"
+            style="padding:8px 14px;background:#2D6CDF;color:#fff;border:none;
+            border-radius:8px;font-size:12px;cursor:pointer">🔍 Lihat Surat</button>
+          <button onclick="_cetakSuratIzinPDF && _cetakSuratIzinPDF('${s.id_surat}')"
+            style="padding:8px 14px;background:#0F766E;color:#fff;border:none;
+            border-radius:8px;font-size:12px;cursor:pointer">🖨️ Cetak PDF</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function _exportRekapIzin() {
+  const data = _rizDataFiltered.length ? _rizDataFiltered : _rizData;
+  if (!data.length) { showToast('Tidak ada data untuk diekspor','warning'); return; }
+  try {
+    showToast('Membuat file Excel...','info',3000);
+    const res = await callAPI('exportRekapIzin', { data });
+    if (!res?.base64) throw new Error('Tidak ada data dari server');
+    const byteStr=atob(res.base64),ab=new ArrayBuffer(byteStr.length),ia=new Uint8Array(ab);
+    for(let i=0;i<byteStr.length;i++) ia[i]=byteStr.charCodeAt(i);
+    const blob=new Blob([ab],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url; a.download=`Rekap_Izin_${new Date().toLocaleDateString('id').replace(/\//g,'-')}.xlsx`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    showToast('✅ Export berhasil','success');
+  } catch(e) { showToast('Gagal export: '+e.message,'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// REKAP SAKIT
+// ═══════════════════════════════════════════════════════════
+let _rskData = [], _rskDataFiltered = [];
+
+async function _loadRekapSakit() {
+  const el = document.getElementById('rsk-list');
+  if (el) el.innerHTML = `<div style="text-align:center;padding:20px;color:#94A3B8">⏳ Memuat data...</div>`;
+  try {
+    const res = await callAPI('getRekapSakit', {});
+    _rskData = Array.isArray(res) ? res : [];
+    const karySet = {};
+    _rskData.forEach(s => {
+      if (s.id_karyawan && s.nama_karyawan)
+        karySet[s.id_karyawan] = s.nama_karyawan + (s.jabatan ? ' — '+s.jabatan : '');
+    });
+    const sel = document.getElementById('rsk-kary-sel');
+    if (sel) sel.innerHTML = '<option value="">👥 Semua Karyawan</option>' +
+      Object.entries(karySet).sort((a,b)=>a[1].localeCompare(b[1]))
+        .map(([id,nm]) => `<option value="${nm.split(' — ')[0]}">${nm}</option>`).join('');
+    _filterRekapSakit();
+  } catch(e) {
+    if (el) el.innerHTML = `<div style="padding:20px;text-align:center;color:#E53E3E">
+      Gagal memuat: ${e.message}</div>`;
+  }
+}
+
+function _onRskKaryChange() {
+  const sel = document.getElementById('rsk-kary-sel');
+  const hid = document.getElementById('rsk-cari');
+  if (hid) hid.value = sel?.value || '';
+  _filterRekapSakit();
+}
+
+function _filterRekapSakit() {
+  const cari = (document.getElementById('rsk-cari')?.value || '').toLowerCase().trim();
+  const dari = document.getElementById('rsk-dari')?.value || '';
+  const ke   = document.getElementById('rsk-ke')?.value   || '';
+
+  _rskDataFiltered = _rskData.filter(s => {
+    if (cari && !String(s.nama_karyawan||'').toLowerCase().includes(cari)) return false;
+    const tgl = _parseToDate(s.tanggal_mulai);
+    if (dari) { const [y,m]=dari.split('-'); if (tgl < new Date(y,m-1,1)) return false; }
+    if (ke)   { const [y,m]=ke.split('-');   if (tgl > new Date(y,parseInt(m),0)) return false; }
+    return true;
+  });
+
+  const el = document.getElementById('rsk-list');
+  if (!el) return;
+  if (_rskDataFiltered.length === 0) {
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:#94A3B8">
+      Tidak ada data karyawan sakit</div>`;
+    return;
+  }
+
+  const ST_BADGE = {
+    pending   : ['#FEF3C7','#92400E','⏳ Pending'],
+    disetujui : ['#F0FDF4','#166534','✅ Disetujui'],
+    ditolak   : ['#FEF2F2','#991B1B','❌ Ditolak'],
+  };
+
+  let summaryHtml = '';
+  if (cari && _rskDataFiltered.length > 0) {
+    const totalHari = _rskDataFiltered.reduce((a,s)=>a+(parseInt(s.total_hari)||0),0);
+    const disetujui = _rskDataFiltered.filter(s=>s.status==='disetujui').length;
+    summaryHtml = `
+    <div style="background:#F5F3FF;border-radius:10px;padding:12px 16px;
+      margin-bottom:12px;display:flex;gap:20px;flex-wrap:wrap">
+      <div style="font-size:12px;color:#5B21B6">
+        👤 <strong>${_rskDataFiltered[0].nama_karyawan}</strong> — ${_rskDataFiltered[0].jabatan||''}</div>
+      <div style="font-size:12px;color:#475569">📋 Total: <strong>${_rskDataFiltered.length} pengajuan</strong></div>
+      <div style="font-size:12px;color:#475569">🗓️ Total hari sakit: <strong>${totalHari} hari</strong></div>
+      <div style="font-size:12px;color:#15803D">✅ Disetujui: <strong>${disetujui}</strong></div>
+    </div>`;
+  }
+
+  el.innerHTML = summaryHtml + _rskDataFiltered.map(s => {
+    const badge = ST_BADGE[s.status] || ['#F1F5F9','#64748B', s.status||'-'];
+    const hasSuratDokter = s.file_pendukung && s.file_pendukung.startsWith('http');
+    return `
+    <div class="card" style="margin-bottom:10px;border-left:4px solid #7C3AED">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+            <span style="font-weight:700;font-size:15px">${s.nama_karyawan||'-'}</span>
+            <span style="font-size:12px;color:#64748B;background:#F1F5F9;padding:2px 8px;border-radius:12px">${s.jabatan||''}</span>
+            <span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:12px;
+              background:${badge[0]};color:${badge[1]}">${badge[2]}</span>
+            ${hasSuratDokter ? `<span style="font-size:11px;background:#DCFCE7;color:#166534;
+              padding:2px 8px;border-radius:12px">📄 Ada Surat Dokter</span>` : ''}
+          </div>
+          <div style="font-size:12px;color:#475569;margin-bottom:4px">
+            🗓️ ${s.tanggal_mulai||'-'} s/d ${s.tanggal_selesai||'-'}
+            &nbsp;·&nbsp;<strong>${s.total_hari||'-'} hari</strong>
+          </div>
+          <div style="font-size:12px;color:#475569;margin-bottom:4px">
+            🏥 <strong>Keluhan:</strong> ${s.keterangan||'-'}
+          </div>
+          ${s.catatan_admin ? `<div style="font-size:12px;color:#64748B">
+            💬 Catatan admin: ${s.catatan_admin}</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+          ${hasSuratDokter ? `<a href="${normalizeDriveUrlFrontend ? normalizeDriveUrlFrontend(s.file_pendukung) : s.file_pendukung}"
+            target="_blank"
+            style="padding:8px 14px;background:#7C3AED;color:#fff;border:none;
+            border-radius:8px;font-size:12px;cursor:pointer;text-decoration:none;
+            text-align:center;display:block">📄 Surat Dokter</a>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function _exportRekapSakit() {
+  const data = _rskDataFiltered.length ? _rskDataFiltered : _rskData;
+  if (!data.length) { showToast('Tidak ada data untuk diekspor','warning'); return; }
+  try {
+    showToast('Membuat file Excel...','info',3000);
+    const res = await callAPI('exportRekapSakit', { data });
+    if (!res?.base64) throw new Error('Tidak ada data dari server');
+    const byteStr=atob(res.base64),ab=new ArrayBuffer(byteStr.length),ia=new Uint8Array(ab);
+    for(let i=0;i<byteStr.length;i++) ia[i]=byteStr.charCodeAt(i);
+    const blob=new Blob([ab],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url; a.download=`Rekap_Sakit_${new Date().toLocaleDateString('id').replace(/\//g,'-')}.xlsx`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    showToast('✅ Export berhasil','success');
+  } catch(e) { showToast('Gagal export: '+e.message,'error'); }
+}
 
 async function _loadRekapDL() {
   try {
