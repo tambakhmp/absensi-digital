@@ -30,14 +30,23 @@ function _applyBrandingToDOM(s, role) {
         appBg.style.backgroundAttachment = 'fixed';
         const overlay = document.getElementById('app-overlay');
         if (overlay) overlay.style.background = isLoginPage
-          ? 'rgba(255,255,255,0.82)' : 'rgba(255,255,255,0.88)';
+          ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.72)';
       }
     }
   } catch(e) {}
 }
 
 async function loadBranding(role = 'karyawan') {
-  const cacheKey = 'branding_cache_' + role;
+  const CACHE_VER = 'v3'; // Naikkan versi ini jika struktur data berubah
+  const cacheKey  = 'branding_cache_' + role + '_' + CACHE_VER;
+  // Hapus cache versi lama
+  try {
+    ['v1','v2'].forEach(oldV => {
+      localStorage.removeItem('branding_cache_' + role + '_' + oldV);
+      localStorage.removeItem('branding_cache_' + role); // tanpa versi
+    });
+  } catch(eC) {}
+
   try {
     // ── Langkah 1: Tampilkan dari cache SEKETIKA (tidak tunggu API) ──
     try {
