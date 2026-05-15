@@ -36,12 +36,13 @@
       const m = bgRaw.match(/(?:\/d\/|id=)([\w-]{25,})/);
       if (m) bgUrl = 'https://lh3.googleusercontent.com/d/' + m[1];
       if (bgUrl.startsWith('http')) {
-        // Apply langsung ke html — tidak ada z-index issue
         css += `html{background-image:url('${bgUrl}') !important;background-size:cover !important;background-position:center !important;background-attachment:fixed !important;}`;
         css += `body{background:transparent !important;}`;
         css += `#app-bg,#app-overlay{display:none !important;}`;
       }
     }
+
+
 
     style.textContent = css;
     // Inject ke <head> sebelum stylesheet lain
