@@ -360,7 +360,7 @@ textarea.form-control { min-height: 80px; resize: vertical; }
   align-items: center;
   justify-content: center;
   padding: 24px 16px;
-  background: linear-gradient(135deg, var(--color-primer) 0%, #1a4aab 100%);
+  background: transparent; /* #app-bg yang tampilkan bg login */
 }
 
 .login-card {
