@@ -517,7 +517,11 @@ function _toggleRiwayatCK(id) {
 }
 
 async function _exportStatusCutiKhusus() {
-  if (!window.XLSX) { showToast('Library Excel belum siap','error'); return; }
+  showToast('Mempersiapkan Excel...','info',2000);
+  const ok = typeof _ensureXLSX === 'function' ? await _ensureXLSX() : !!window.XLSX;
+  if (!ok || typeof XLSX === 'undefined') {
+    showToast('Library Excel tidak tersedia.','error',5000); return;
+  }
   showToast('Menyiapkan export...','info',2000);
   try {
     const res  = await callAPI('getStatusCutiKhususSemua', {});
@@ -533,27 +537,112 @@ async function _exportStatusCutiKhusus() {
     const tglCetak     = new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
     const wb           = XLSX.utils.book_new();
 
-    // Helper buat worksheet profesional dari AOA
-    const _buatWs = (judul, headers, rows, summaryRows) => {
-      const aoa = [];
-      aoa.push([namaInstansi]);
-      aoa.push([judul]);
-      aoa.push(['Dicetak: ' + tglCetak]);
-      aoa.push([]);
-      aoa.push(headers);
-      rows.forEach(r => aoa.push(r));
-      aoa.push([]);
-      if (summaryRows) summaryRows.forEach(s => aoa.push(s));
+    // ── Constants styling ──────────────────────────────────────
+    const enc     = (r,c) => XLSX.utils.encode_cell({r,c});
+    const BIRU    = '1E3A5F';
+    const BIRU2   = '2D6CDF';
+    const PUTIH   = 'FFFFFF';
+    const ABU     = 'F1F5F9';
+    const ABU2    = 'E2E8F0';
+    const KUNING  = 'FEF3C7';
+    const HIJAU   = 'DCFCE7';
+    const MERAH   = 'FEE2E2';
 
-      const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const thin   = c => ({style:'thin',  color:{rgb:c||ABU2}});
+    const brdAll = c => ({top:thin(c),bottom:thin(c),left:thin(c),right:thin(c)});
+    const brdBot = c => ({bottom:{style:'medium',color:{rgb:c||BIRU}}});
 
-      // Merge cells judul (kolom 0 sampai jumlah header-1)
+    // Cell maker dengan styling
+    const C = (v, bg, fg, bold, border, numFmt, sz) => ({
+      v, t: typeof v === 'number' ? 'n' : 's',
+      s: {
+        fill  : bg    ? {patternType:'solid',fgColor:{rgb:bg}} : {},
+        font  : {bold:!!bold, color:{rgb:fg||'1E293B'}, sz: sz||9,
+                 name:'Calibri'},
+        alignment: {horizontal: typeof v==='number'?'right':'left',
+                    vertical:'center', wrapText:false},
+        border: border || brdAll(),
+        numFmt: numFmt || (typeof v==='number' ? '#,##0' : ''),
+      }
+    });
+
+    // Row header tabel
+    const Hdr = (v) => C(v, BIRU, PUTIH, true,
+      {top:thin(BIRU),bottom:thin(BIRU),left:thin(BIRU),right:thin(BIRU)}, '', 9);
+
+    // Row judul instansi
+    const Title  = (v,sz) => C(v,BIRU2,PUTIH,true,{},  '',sz||13);
+    const Title2 = (v)    => C(v,BIRU, PUTIH,true,{},  '',10);
+    const Sub    = (v)    => C(v,ABU,  '475569',false,{},'',8.5);
+
+    // Helper buat worksheet dengan styling profesional
+    const _buatWs = (judul, headers, rows, summaryRows, statusColIdx) => {
+      const ws    = {};
+      const range = {s:{r:0,c:0}, e:{r:0,c:headers.length-1}};
+      let rIdx = 0;
+
+      // Row 0: Nama instansi
+      ws[enc(rIdx,0)] = Title(namaInstansi, 13);
+      for (let c=1;c<headers.length;c++) ws[enc(rIdx,c)] = Title('',13);
+      rIdx++;
+
+      // Row 1: Judul laporan
+      ws[enc(rIdx,0)] = Title2(judul);
+      for (let c=1;c<headers.length;c++) ws[enc(rIdx,c)] = Title2('');
+      rIdx++;
+
+      // Row 2: Tanggal cetak
+      ws[enc(rIdx,0)] = Sub('Dicetak: '+tglCetak);
+      for (let c=1;c<headers.length;c++) ws[enc(rIdx,c)] = Sub('');
+      rIdx++;
+
+      // Row 3: Kosong
+      for (let c=0;c<headers.length;c++) ws[enc(rIdx,c)] = C('',ABU,'',false,{});
+      rIdx++;
+
+      // Row 4: Header kolom
+      headers.forEach((h,c) => { ws[enc(rIdx,c)] = Hdr(h); });
+      const hdrRow = rIdx;
+      rIdx++;
+
+      // Rows data
+      rows.forEach((row, ri) => {
+        const altBg = ri%2===0 ? PUTIH : ABU;
+        row.forEach((val, ci) => {
+          let bg = altBg;
+          if (statusColIdx !== undefined && ci === statusColIdx) {
+            bg = val === 'Sudah Ambil' ? HIJAU : val === 'Belum Ambil' ? MERAH : altBg;
+          }
+          ws[enc(rIdx, ci)] = C(val, bg, null, false, brdAll(ABU2));
+        });
+        rIdx++;
+      });
+
+      // Row kosong sebelum summary
+      for (let c=0;c<headers.length;c++) ws[enc(rIdx,c)] = C('',ABU,'',false,{});
+      rIdx++;
+
+      // Summary rows
+      if (summaryRows) {
+        summaryRows.forEach(row => {
+          row.forEach((val,ci) => {
+            ws[enc(rIdx,ci)] = C(val, KUNING, BIRU, ci===0||ci===1, brdAll(ABU2));
+          });
+          rIdx++;
+        });
+      }
+
+      range.e = {r:rIdx-1, c:headers.length-1};
+      ws['!ref'] = XLSX.utils.encode_range(range);
       ws['!merges'] = [
-        {s:{r:0,c:0}, e:{r:0,c:headers.length-1}},
-        {s:{r:1,c:0}, e:{r:1,c:headers.length-1}},
-        {s:{r:2,c:0}, e:{r:2,c:headers.length-1}},
+        {s:{r:0,c:0},e:{r:0,c:headers.length-1}},
+        {s:{r:1,c:0},e:{r:1,c:headers.length-1}},
+        {s:{r:2,c:0},e:{r:2,c:headers.length-1}},
+        {s:{r:3,c:0},e:{r:3,c:headers.length-1}},
       ];
-
+      ws['!autofilter'] = {ref: enc(hdrRow,0)+':'+enc(hdrRow,headers.length-1)};
+      ws['!freeze']     = {xSplit:0, ySplit:hdrRow+1};
+      ws['!sheetView']  = [{showGridLines:true}];
       return ws;
     };
 
