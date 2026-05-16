@@ -524,54 +524,123 @@ async function _exportStatusCutiKhusus() {
     const data = res.data || [];
     if (!data.length) { showToast('Tidak ada data','warning'); return; }
 
-    const wb = XLSX.utils.book_new();
+    // Ambil info instansi
+    let instansi = {};
+    try { instansi = await callAPI('getBranding', {}); } catch(e){}
 
-    // Sheet 1: Ringkasan status periode ini
-    const rows1 = data.map((k,i) => ({
-      'No'            : i+1,
-      'Nama Karyawan' : k.nama_lengkap,
-      'Departemen'    : k.departemen,
-      'Jabatan'       : k.jabatan,
-      'Nominal'       : k.nominal_tunjangan,
-      'Periode Aktif' : k.periode_aktif,
-      'Status Periode Ini': k.sudah_ambil_periode_ini ? 'Sudah Ambil' : 'Belum Ambil',
-      'Tgl Cuti'      : k.tgl_cuti_periode_ini || '-',
-      'Status Bayar'  : k.status_bayar_periode_ini || '-',
-      'Total Diambil' : k.total_diambil + 'x',
-    }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows1), 'Status Periode Ini');
+    const namaInstansi = instansi.nama_instansi || 'PT. HUTAKALO MINATANI PRIMA';
+    const tahun        = new Date().getFullYear();
+    const tglCetak     = new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
+    const wb           = XLSX.utils.book_new();
 
-    // Sheet 2: Yang belum ambil
-    const belum = data.filter(k => !k.sudah_ambil_periode_ini);
+    // Helper buat worksheet profesional dari AOA
+    const _buatWs = (judul, headers, rows, summaryRows) => {
+      const aoa = [];
+      aoa.push([namaInstansi]);
+      aoa.push([judul]);
+      aoa.push(['Dicetak: ' + tglCetak]);
+      aoa.push([]);
+      aoa.push(headers);
+      rows.forEach(r => aoa.push(r));
+      aoa.push([]);
+      if (summaryRows) summaryRows.forEach(s => aoa.push(s));
+
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+      // Merge cells judul (kolom 0 sampai jumlah header-1)
+      ws['!merges'] = [
+        {s:{r:0,c:0}, e:{r:0,c:headers.length-1}},
+        {s:{r:1,c:0}, e:{r:1,c:headers.length-1}},
+        {s:{r:2,c:0}, e:{r:2,c:headers.length-1}},
+      ];
+
+      return ws;
+    };
+
+    // ── SHEET 1: STATUS PERIODE INI ─────────────────────────────
+    const belum    = data.filter(k => !k.sudah_ambil_periode_ini);
+    const sudah    = data.filter(k =>  k.sudah_ambil_periode_ini);
+    const totNom   = data.reduce((s,k) => s + parseFloat(k.nominal_tunjangan||0), 0);
+    const totBelum = belum.reduce((s,k) => s + parseFloat(k.nominal_tunjangan||0), 0);
+    const totSudah = sudah.reduce((s,k) => s + parseFloat(k.nominal_tunjangan||0), 0);
+
+    const h1 = ['No','Nama Karyawan','Departemen','Jabatan',
+                 'Nominal (Rp)','Periode Aktif','Status Periode Ini',
+                 'Tanggal Cuti','Status Bayar','Total Diambil'];
+    const r1 = data.map((k,i) => [
+      i+1, k.nama_lengkap, k.departemen||'-', k.jabatan||'-',
+      parseFloat(k.nominal_tunjangan||0),
+      k.periode_aktif||'-',
+      k.sudah_ambil_periode_ini ? 'Sudah Ambil' : 'Belum Ambil',
+      k.tgl_cuti_periode_ini||'-',
+      k.status_bayar_periode_ini||'-',
+      (k.total_diambil||0) + 'x'
+    ]);
+    const sum1 = [
+      ['','TOTAL',data.length+' karyawan','','Rp '+totNom.toLocaleString('id-ID'),'','','','Sudah: '+sudah.length+' | Belum: '+belum.length,''],
+      ['','','','','Tunjangan Sudah Dibayar','','','','Rp '+totSudah.toLocaleString('id-ID'),''],
+      ['','','','','Tunjangan Belum Dibayar (Hutang)','','','','Rp '+totBelum.toLocaleString('id-ID'),''],
+    ];
+    const ws1 = _buatWs('REKAP STATUS CUTI KHUSUS '+tahun, h1, r1, sum1);
+    ws1['!cols'] = [{wch:4},{wch:22},{wch:14},{wch:18},{wch:16},{wch:13},
+                   {wch:17},{wch:14},{wch:13},{wch:13}];
+    ws1['!autofilter'] = {ref:'A5:J5'};
+    XLSX.utils.book_append_sheet(wb, ws1, 'Status Periode Ini');
+
+    // ── SHEET 2: BELUM AMBIL ─────────────────────────────────────
     if (belum.length > 0) {
-      const rows2 = belum.map((k,i) => ({
-        'No':''+i+1, 'Nama':k.nama_lengkap,
-        'Departemen':k.departemen, 'Nominal':k.nominal_tunjangan
-      }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows2), 'Belum Ambil');
+      const h2 = ['No','Nama Karyawan','Departemen','Jabatan','Nominal (Rp)','Periode Aktif'];
+      const r2 = belum.map((k,i) => [
+        i+1, k.nama_lengkap, k.departemen||'-', k.jabatan||'-',
+        parseFloat(k.nominal_tunjangan||0), k.periode_aktif||'-'
+      ]);
+      const ws2 = _buatWs('KARYAWAN BELUM AMBIL CUTI KHUSUS '+tahun, h2, r2,
+        [['','TOTAL: '+belum.length+' karyawan','','','Rp '+totBelum.toLocaleString('id-ID'),'']]);
+      ws2['!cols'] = [{wch:4},{wch:22},{wch:14},{wch:18},{wch:16},{wch:13}];
+      XLSX.utils.book_append_sheet(wb, ws2, 'Belum Ambil');
     }
 
-    // Sheet 3: Riwayat lengkap semua periode
-    const rows3 = [];
+    // ── SHEET 3: SUDAH AMBIL ─────────────────────────────────────
+    if (sudah.length > 0) {
+      const h3 = ['No','Nama Karyawan','Departemen','Jabatan',
+                  'Nominal (Rp)','Tanggal Cuti','Status Bayar','Total Diambil'];
+      const r3 = sudah.map((k,i) => [
+        i+1, k.nama_lengkap, k.departemen||'-', k.jabatan||'-',
+        parseFloat(k.nominal_tunjangan||0),
+        k.tgl_cuti_periode_ini||'-',
+        k.status_bayar_periode_ini||'-',
+        (k.total_diambil||0)+'x'
+      ]);
+      const ws3 = _buatWs('KARYAWAN SUDAH AMBIL CUTI KHUSUS '+tahun, h3, r3,
+        [['','TOTAL: '+sudah.length+' karyawan','','','Rp '+totSudah.toLocaleString('id-ID'),'','','']]);
+      ws3['!cols'] = [{wch:4},{wch:22},{wch:14},{wch:18},{wch:16},{wch:14},{wch:15},{wch:12}];
+      XLSX.utils.book_append_sheet(wb, ws3, 'Sudah Ambil');
+    }
+
+    // ── SHEET 4: RIWAYAT SEMUA PERIODE ──────────────────────────
+    const rows4 = [];
     data.forEach(k => {
-      k.riwayat.forEach(r => {
-        rows3.push({
-          'Nama'       : k.nama_lengkap,
-          'Departemen' : k.departemen,
-          'Periode'    : r.periode,
-          'Tgl Mulai'  : r.tanggal_mulai,
-          'Tgl Selesai': r.tanggal_selesai,
-          'Hari'       : r.total_hari,
-          'Nominal'    : r.nominal,
-          'Status Bayar': r.status_bayar==='sudah'?'Sudah Dibayar':'Belum Dibayar',
-          'Tgl Bayar'  : r.tanggal_bayar||'-'
-        });
+      (k.riwayat||[]).forEach(r => {
+        rows4.push([
+          k.nama_lengkap, k.departemen||'-', r.periode||'-',
+          r.tanggal_mulai||'-', r.tanggal_selesai||'-',
+          r.total_hari||0, parseFloat(r.nominal||0),
+          r.status_bayar==='sudah'?'Sudah Dibayar':'Belum Dibayar',
+          r.tanggal_bayar||'-'
+        ]);
       });
     });
-    if (rows3.length > 0)
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows3), 'Riwayat Semua Periode');
+    if (rows4.length > 0) {
+      const h4 = ['Nama Karyawan','Departemen','Periode',
+                  'Tgl Mulai','Tgl Selesai','Hari','Nominal (Rp)','Status Bayar','Tgl Bayar'];
+      const ws4 = _buatWs('RIWAYAT CUTI KHUSUS SEMUA PERIODE', h4, rows4, null);
+      ws4['!cols'] = [{wch:22},{wch:14},{wch:10},{wch:12},{wch:12},
+                     {wch:6},{wch:16},{wch:15},{wch:12}];
+      ws4['!autofilter'] = {ref:'A5:I5'};
+      XLSX.utils.book_append_sheet(wb, ws4, 'Riwayat Semua Periode');
+    }
 
-    XLSX.writeFile(wb, 'Status_Cuti_Khusus_'+new Date().getFullYear()+'.xlsx');
-    showToast('Export berhasil! 📊','success');
+    XLSX.writeFile(wb, 'Rekap_Cuti_Khusus_'+tahun+'.xlsx');
+    showToast('✅ Export berhasil! Rekap_Cuti_Khusus_'+tahun+'.xlsx','success');
   } catch(e) { showToast('Gagal: '+e.message,'error'); }
 }
