@@ -502,7 +502,10 @@ async function exportCutiPDF() {
   try {
     const { jsPDF } = window.jspdf;
     const doc   = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
-    const W=297, mL=15, mR=15;
+    const W     = doc.internal.pageSize.getWidth();   // 297mm landscape
+    const H     = doc.internal.pageSize.getHeight();  // 210mm landscape
+    const mL = 12, mR = 12; // margin kiri kanan
+    // W, H, mL, mR sudah dideklarasikan dari jsPDF di atas
     const jatah = _cutiSummary.default_jatah || 12;
     const tahun = _cutiSummary.tahun || new Date().getFullYear();
 
@@ -631,7 +634,7 @@ async function exportCutiPDF() {
       const rowH    = Math.max(6.5, nLines * lineH + 3.5);
 
       // Page break
-      if (y + rowH > 270) { doc.addPage(); y=15; _drawHeader(); }
+      if (y + rowH > H - 20) { doc.addPage(); y=15; _drawHeader(); }
 
       // Background alternating
       if (i%2===0) {
@@ -735,7 +738,7 @@ async function exportCutiPDF() {
     doc.setTextColor(0,0,0); y += 12;
 
     // ── Tanda tangan (3 kolom: Mengetahui, HRD/Admin, Pimpinan) ──
-    if (y + 40 > 275) { doc.addPage(); y = 20; }
+    if (y + 35 > H - 10) { doc.addPage(); y = 20; }
     const kota = instansi.alamat_instansi
       ? instansi.alamat_instansi.split(',')[0].replace(/^.*Kab\.?\s*/i,'').trim()
       : '';
@@ -775,7 +778,7 @@ async function exportCutiPDF() {
       doc.setPage(pg);
       doc.setFont('helvetica','normal'); doc.setFontSize(8);
       doc.setTextColor(150,150,150);
-      doc.text('Hal '+pg+'/'+nPages, W/2, 289, {align:'center'});
+      doc.text('Hal '+pg+'/'+nPages, W/2, H-6, {align:'center'});
     }
 
     const fname = 'Rekap_Cuti_'+tahun+'_'+new Date().toLocaleDateString('id-ID').replace(/\//g,'-')+'.pdf';
