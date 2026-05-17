@@ -1,6 +1,6 @@
 // api.js — Komunikasi ke Google Apps Script
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxEZZEYMkmlEc04atKCxTNzA64XAAcLJZQ4mEzYRUaStGQmucWtGR7tbW_QxFSd9TpcCw/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbyMiKqcoj-DLHea0yAXOaTGAEEjrC9KbrAKgkTbaCoht397e24ccfcNR7lrM3cDSMIYtg/exec'
 };
 
 // Daftar action yang TIDAK boleh auto-logout meskipun error mengandung "Sesi tidak valid"
