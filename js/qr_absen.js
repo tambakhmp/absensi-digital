@@ -153,10 +153,11 @@ async function _tampilkanKonfirmasi() {
   try {
     karyawan = await callAPI('getKaryawanById', { id_karyawan: _qrScannedData.id_karyawan });
     // Ambil info shift jika karyawan punya shift
-    if (karyawan.id_shift) {
+    const idShiftKary = String(karyawan.id_shift || '').trim();
+    if (idShiftKary) {
       try {
         const shiftList = await callAPI('getShiftList', {});
-        shiftInfo = (shiftList || []).find(s => String(s.id_shift) === String(karyawan.id_shift)) || null;
+        shiftInfo = (shiftList || []).find(s => String(s.id_shift).trim() === idShiftKary) || null;
       } catch(eS) { shiftInfo = null; }
     }
   } catch(e) {
