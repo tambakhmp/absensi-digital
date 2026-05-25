@@ -1786,16 +1786,61 @@ async function loadJadwalMingguSaya() {
     const KC   = {'P':'#1A9E74','S':'#D97706','M':'#6C63FF','L':'#94A3B8'};
     const KN   = {'P':'Pagi 07-15','S':'Sore 15-23','M':'Malam 23-07','L':'Libur'};
 
-    // Isi hari libur yang tidak tersimpan di jadwal
-    // Ambil rentang tanggal dari jadwal, isi hari yang kosong sebagai Libur
-    if (data.length > 0) {
-      const toD = s => { const p=String(s||'').split('/'); return p.length===3?new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0])):null; };
-      const toS = d => String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
-      const existing = new Set(data.map(j=>j.tanggal));
-      const dates = data.map(j=>toD(j.tanggal)).filter(Boolean);
-      let minD = new Date(Math.min(...dates)), maxD = new Date(Math.max(...dates));
-      // Tambah hari ini jika dalam range
-      if (now >= minD && now <= maxD) {}
+    // Helper: parse tanggal dari berbagai format ke Date object
+    // Support: 'dd/mm/yyyy', 'yyyy-mm-dd', 'dd-mm-yyyy'
+    const toD = s => {
+      const str = String(s||'').trim();
+      if (!str) return null;
+      // Format dd/mm/yyyy
+      if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) {
+        const p = str.split('/');
+        return new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0]));
+      }
+      // Format yyyy-mm-dd
+      if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+        const p = str.split('-');
+        return new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2]));
+      }
+      // Format dd-mm-yyyy
+      if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(str)) {
+        const p = str.split('-');
+        return new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0]));
+      }
+      return null;
+    };
+    // Helper: format Date ke string dd/mm/yyyy (canonical)
+    const toS = d => String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+
+    // Normalisasi semua tanggal ke format dd/mm/yyyy
+    data = data.map(j => {
+      const d = toD(j.tanggal);
+      return d ? { ...j, tanggal: toS(d) } : j;
+    });
+
+    // Normalkan kode: jika ada nama_shift 'Libur' atau tidak ada shift, set kode = 'L'
+    data = data.map(j => {
+      let kode = String(j.kode || '').toUpperCase().trim();
+      // Jika kode kosong atau 'LIBUR' atau shift bernama libur → kode 'L'
+      if (!kode || kode === 'LIBUR' || (j.shift && String(j.shift.nama_shift||'').toLowerCase() === 'libur')) {
+        kode = 'L';
+      }
+      // Jika kode tidak dikenal, coba deteksi dari nama_shift
+      if (!['P','S','M','L'].includes(kode) && j.shift) {
+        const nm = String(j.shift.nama_shift||'').toLowerCase();
+        if (nm.includes('pagi'))  kode = 'P';
+        else if (nm.includes('sore'))  kode = 'S';
+        else if (nm.includes('malam')) kode = 'M';
+        else if (nm.includes('libur')) kode = 'L';
+      }
+      return { ...j, kode };
+    });
+
+    // Isi hari yang kosong dalam rentang sebagai Libur
+    const existing = new Set(data.map(j=>j.tanggal));
+    const dates = data.map(j=>toD(j.tanggal)).filter(Boolean);
+    if (dates.length > 0) {
+      let minD = new Date(Math.min(...dates.map(d=>d.getTime())));
+      let maxD = new Date(Math.max(...dates.map(d=>d.getTime())));
       const filled = [];
       for (let d=new Date(minD); d<=maxD; d.setDate(d.getDate()+1)) {
         const s = toS(new Date(d));
@@ -1810,15 +1855,13 @@ async function loadJadwalMingguSaya() {
 
     // Cari index hari ini
     let todayIdx = data.findIndex(j => {
-      const p = String(j.tanggal||'').split('/');
-      return p.length===3 &&
-        new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0])).toDateString()===now.toDateString();
+      const d = toD(j.tanggal);
+      return d && d.toDateString()===now.toDateString();
     });
     if (todayIdx < 0) todayIdx = 0;
 
     const makeRow = (j) => {
-      const p = String(j.tanggal||'').split('/');
-      const d = p.length===3 ? new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0])) : new Date();
+      const d = toD(j.tanggal) || new Date();
       const isToday = d.toDateString()===now.toDateString();
       const isPast  = d<now && !isToday;
       const isLibur = j.kode==='L';
