@@ -251,11 +251,9 @@ async function loadDashboardKaryawan() {
   // Jam realtime - mulai segera
   _startJamRealtime();
 
-  // Cek ulang tahun — tidak perlu tunggu (fire and forget)
-  _cekUltahHariIni().catch(()=>{});
+  // Jam realtime - mulai segera sudah di atas
 
-  // Phase 1: kritis — profil, absen, statistik, pengumuman
-  // Preload periode bersamaan agar tidak sequential saat dibutuhkan
+  // Phase 1: kritis — paralel
   await Promise.allSettled([
     _loadProfilFoto(user),
     loadStatusAbsenHariIni(),
@@ -266,7 +264,10 @@ async function loadDashboardKaryawan() {
     _getPeriode(),
   ]);
 
-  // Phase 2: tidak kritis — ranking, SP, jadwal, surat tugas & izin pending
+  // Cek ulang tahun — tidak blocking
+  _cekUltahHariIni().catch(()=>{});
+
+  // Phase 2: tidak kritis
   Promise.allSettled([
     renderRankingSection('ranking-section'),
     _loadSPSaya(),
@@ -1412,9 +1413,24 @@ async function _loadSuratTugasPendingDashboard() {
     ]);
 
     const dataPending = pending.value || [];
-    const dataSemua   = (semua.value || []).filter(s =>
-      s.status_surat === 'selesai' && String(s.id_karyawan) === idMe
-    );
+    // Hanya tampilkan surat yang masih aktif (tanggal_selesai >= hari ini)
+    const todayStr = new Date().toLocaleDateString('id-ID',{
+      day:'2-digit', month:'2-digit', year:'numeric'
+    }).split('/').join('/');
+    const todaySortable = todayStr.split('/').reverse().join('/'); // yyyy/MM/dd
+    const dataSemua = (semua.value || []).filter(s => {
+      if (s.status_surat !== 'selesai') return false;
+      if (String(s.id_karyawan) !== idMe) return false;
+      // Filter surat yang sudah habis
+      if (s.tanggal_selesai) {
+        const parts = String(s.tanggal_selesai).split('/');
+        const tglSort = parts.length === 3
+          ? parts[2]+'/'+parts[1].padStart(2,'0')+'/'+parts[0].padStart(2,'0')
+          : s.tanggal_selesai;
+        if (tglSort < todaySortable) return false; // sudah habis
+      }
+      return true;
+    });
 
     let html = '';
 
