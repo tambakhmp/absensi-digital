@@ -1786,6 +1786,28 @@ async function loadJadwalMingguSaya() {
     const KC   = {'P':'#1A9E74','S':'#D97706','M':'#6C63FF','L':'#94A3B8'};
     const KN   = {'P':'Pagi 07-15','S':'Sore 15-23','M':'Malam 23-07','L':'Libur'};
 
+    // Isi hari libur yang tidak tersimpan di jadwal
+    // Ambil rentang tanggal dari jadwal, isi hari yang kosong sebagai Libur
+    if (data.length > 0) {
+      const toD = s => { const p=String(s||'').split('/'); return p.length===3?new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0])):null; };
+      const toS = d => String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+      const existing = new Set(data.map(j=>j.tanggal));
+      const dates = data.map(j=>toD(j.tanggal)).filter(Boolean);
+      let minD = new Date(Math.min(...dates)), maxD = new Date(Math.max(...dates));
+      // Tambah hari ini jika dalam range
+      if (now >= minD && now <= maxD) {}
+      const filled = [];
+      for (let d=new Date(minD); d<=maxD; d.setDate(d.getDate()+1)) {
+        const s = toS(new Date(d));
+        if (existing.has(s)) {
+          filled.push(data.find(j=>j.tanggal===s));
+        } else {
+          filled.push({tanggal:s, kode:'L', shift:null, jam_masuk:'', jam_keluar:''});
+        }
+      }
+      data = filled;
+    }
+
     // Cari index hari ini
     let todayIdx = data.findIndex(j => {
       const p = String(j.tanggal||'').split('/');
