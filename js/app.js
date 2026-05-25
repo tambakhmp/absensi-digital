@@ -1770,7 +1770,7 @@ function hapusFotoSPL() {
 // ─── JADWAL SHIFT MINGGU INI (Karyawan) ──────────────────────
 async function loadJadwalMingguSaya() {
   try {
-    const data = await callAPI('getJadwalSaya', {});
+    let data = await callAPI('getJadwalSaya', {});
     const card = document.getElementById('jadwal-minggu-card');
     const list = document.getElementById('jadwal-minggu-list');
     if (!card || !list) return;
