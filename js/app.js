@@ -1061,8 +1061,13 @@ function renderKaryawanLayout() {
           style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;
           text-overflow:ellipsis;max-width:200px">Absensi</span>
       </div>
-      <div class="mobile-header__right">
+      <div class="mobile-header__right" style="display:flex;align-items:center;gap:4px">
         <button class="icon-btn" onclick="switchTab('pengajuan')" title="Notifikasi">🔔</button>
+        <button class="icon-btn" onclick="confirmLogout()" title="Logout"
+          style="background:rgba(239,68,68,.12);color:#EF4444;border-radius:8px;
+          padding:6px 10px;font-size:13px;font-weight:600;border:none;cursor:pointer">
+          🚪
+        </button>
       </div>
     </header>
     <main id="main-content" style="min-height:calc(100vh - 56px - 64px);overflow-y:auto"></main>
