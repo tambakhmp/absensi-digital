@@ -30,7 +30,7 @@ function _makeSearchable(selectId) {
   const opts = Array.from(sel.options).filter(o => o.value);
   function render(q) {
     const filt = opts.filter(o => o.text.toLowerCase().includes(q.toLowerCase()));
-    drop.innerHTML = filt.slice(0,15).map(o => `<div data-val="${o.value}"
+    drop.innerHTML = filt.map(o => `<div data-val="${o.value}"
       style="padding:10px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #F1F5F9">
       <strong>${o.text.split('—')[0].trim()}</strong>
       <span style="color:#94A3B8;font-size:11px"> — ${(o.text.split('—')[1]||'').trim()}</span>
