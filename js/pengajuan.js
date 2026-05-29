@@ -18,9 +18,31 @@ async function loadPengajuanSaya() {
       callAPI('getSuratIzin', {}),
       callAPI('getSuratTugas', {})
     ]);
-    const data = resPgj.value || [];
-    if (!data || data.length === 0) {
+    const rawData = resPgj.value || [];
+    if (!rawData || rawData.length === 0) {
       showEmpty('pengajuan-list', 'Belum ada pengajuan');
+      return;
+    }
+
+    // Filter: sembunyikan pengajuan yang masa berlakunya sudah habis
+    // Pengajuan pending/ditolak → tetap tampil (karyawan perlu tahu statusnya)
+    // Pengajuan disetujui tapi tanggal_selesai sudah lewat → sembunyikan
+    const todayPgj = new Date(); todayPgj.setHours(0,0,0,0);
+    const data = rawData.filter(p => {
+      if (p.status === 'pending' || p.status === 'ditolak') return true;
+      if (p.status === 'disetujui' && p.tanggal_selesai) {
+        const parts = String(p.tanggal_selesai).split('/');
+        if (parts.length === 3) {
+          const tglSelesai = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
+          tglSelesai.setHours(0,0,0,0);
+          if (tglSelesai < todayPgj) return false; // masa berlaku habis → sembunyikan
+        }
+      }
+      return true;
+    });
+
+    if (data.length === 0) {
+      showEmpty('pengajuan-list', 'Belum ada pengajuan aktif');
       return;
     }
 
