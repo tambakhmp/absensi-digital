@@ -1619,10 +1619,27 @@ async function _loadSuratIzinPendingDashboard() {
 
     // Surat milik karyawan ini yang sudah melewati tahap TTD-nya
     // (sedang di atasan/PM/admin, atau sudah selesai) — untuk arsip/lihat
+    // Filter: surat yang masa berlakunya sudah habis TIDAK ditampilkan
+    const todaySI = new Date().toLocaleDateString('id-ID',{
+      day:'2-digit', month:'2-digit', year:'numeric'
+    }).split('/').join('/');
+    const todaySortableSI = todaySI.split('/').reverse().join('/'); // yyyy/MM/dd
+
     const idTTDSet  = new Set(dataTTD.map(s => s.id_surat));
-    const dataMilik = semuaSI.filter(s =>
-      String(s.id_karyawan) === idMe && !idTTDSet.has(s.id_surat)
-    );
+    const dataMilik = semuaSI.filter(s => {
+      if (String(s.id_karyawan) !== idMe) return false;
+      if (idTTDSet.has(s.id_surat)) return false;
+      // Surat yang sudah selesai (disetujui): cek tanggal selesai
+      // Jika tanggal selesai sudah lewat → sembunyikan dari dasbor karyawan
+      if (s.status_surat === 'selesai' && s.tanggal_selesai) {
+        const parts = String(s.tanggal_selesai).split('/');
+        const tglSort = parts.length === 3
+          ? parts[2]+'/'+parts[1].padStart(2,'0')+'/'+parts[0].padStart(2,'0')
+          : s.tanggal_selesai;
+        if (tglSort < todaySortableSI) return false; // masa berlaku habis → sembunyikan
+      }
+      return true;
+    });
 
     let html = '';
 
