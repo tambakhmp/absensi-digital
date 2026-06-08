@@ -1836,18 +1836,39 @@ async function loadJadwalMingguSaya() {
     });
 
     // Isi hari yang kosong dalam rentang sebagai Libur
+    // FIX: Handle jadwal dari 2 periode berbeda (generate lama + generate baru)
+    // Contoh: generate 1 s/d 8 Juni → generate baru 9 s/d 22 Juni
+    // Tgl 8 Juni (libur) tidak ada di sheet → harus muncul sebagai Libur di gap
     const existing = new Set(data.map(j=>j.tanggal));
     const dates = data.map(j=>toD(j.tanggal)).filter(Boolean);
     if (dates.length > 0) {
+      // Tentukan window tampilan: dari hari ini-2 hari s/d max tanggal generate
+      const todayD = new Date(); todayD.setHours(0,0,0,0);
+      const minusD = new Date(todayD.getTime() - 2 * 24*60*60*1000); // 2 hari lalu
       let minD = new Date(Math.min(...dates.map(d=>d.getTime())));
       let maxD = new Date(Math.max(...dates.map(d=>d.getTime())));
+      // Mulai dari yang lebih awal: minD dari data atau 2 hari lalu
+      // Tapi jangan terlalu jauh ke belakang - max 7 hari lalu
+      const batasLalu = new Date(todayD.getTime() - 7 * 24*60*60*1000);
+      if (minD < batasLalu) minD = batasLalu;
       const filled = [];
       for (let d=new Date(minD); d<=maxD; d.setDate(d.getDate()+1)) {
         const s = toS(new Date(d));
         if (existing.has(s)) {
           filled.push(data.find(j=>j.tanggal===s));
         } else {
-          filled.push({tanggal:s, kode:'L', shift:null, jam_masuk:'', jam_keluar:''});
+          // Cek apakah tanggal ini dalam rentang yang pernah di-generate
+          // (antara tanggal pertama dan terakhir di data) → Libur
+          // Kalau di luar rentang → skip (belum di-generate)
+          const dTime = new Date(d.getTime()).getTime();
+          const inRange = dates.some(orig => {
+            // Cek apakah ada 2 data yang mengapit tanggal ini
+            const origTime = orig.getTime();
+            return Math.abs(origTime - dTime) <= 14 * 24*60*60*1000;
+          });
+          if (inRange) {
+            filled.push({tanggal:s, kode:'L', shift:null, jam_masuk:'', jam_keluar:''});
+          }
         }
       }
       data = filled;
